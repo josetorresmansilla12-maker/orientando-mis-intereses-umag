@@ -489,7 +489,7 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
 .linea-estudiante b { color: var(--morado-oscuro); }
 /* cuando va sola al inicio de una página (sin banner encima, páginas de
    continuación), necesita más aire arriba para no quedar pegada al borde */
-.linea-estudiante--inicio { margin-top: 26px; }
+.linea-estudiante--inicio { margin-top: 40px; }
 
 .deco-dots {
   width: 54px;
@@ -693,34 +693,6 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
   color: #2b2140;
 }
 .carreras-lista-bullets li { margin-bottom: 2px; }
-
-.mensaje-generico {
-  margin: 12px 30px 0;
-  background: #fff8e8;
-  border: 1px solid #f0d9a6;
-  border-left: 6px solid #c9a227;
-  border-radius: 8px;
-  padding: 14px 18px;
-}
-.mensaje-generico h3 { margin: 0 0 6px; font-size: 15px; color: #402a63; }
-.mensaje-generico p { margin: 0; font-size: 12.5px; line-height: 1.55; }
-
-.otras-curadas {
-  margin: 10px 30px 0;
-  background: #f7f7f7;
-  border: 1px solid var(--borde);
-  border-radius: 8px;
-  padding: 10px 16px;
-}
-.otras-curadas h5 {
-  margin: 0;
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--morado-oscuro);
-  text-transform: uppercase;
-  letter-spacing: 0.2px;
-}
-.otras-curadas .carreras-lista-bullets { column-count: 3; column-gap: 14px; margin-top: 5px; }
 
 .informe-footer {
   margin: 22px 30px 0;

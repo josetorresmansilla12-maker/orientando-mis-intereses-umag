@@ -143,13 +143,6 @@ const PUNTAJE_MIN = 0;
 const PUNTAJE_MAX = 8;
 const UMBRAL_INTERES = 7; // 7 u 8 = área de interés
 
-const MENSAJE_SIN_AREA = {
-  titulo: "Intereses diversos",
-  texto:
-    "Según tus respuestas, no se identificó un área de interés que destacara claramente por sobre las demás — ¡y eso también dice algo bueno de ti! Significa que tienes una curiosidad amplia y variada, sin encasillarte todavía en un solo camino. A tu edad es completamente normal: recién estás empezando a descubrir qué te apasiona, y tienes mucho tiempo por delante para seguir explorando. " +
-    "Aquí te dejamos todas las carreras que imparte la UMAG, organizadas por área, para que sigas conociendo tus opciones. Este es solo el comienzo de tu camino — ¡y las posibilidades son muchas!",
-};
-
 function calcularAreasDeInteres(puntajes) {
   return AREAS.filter((a) => {
     const p = Number(puntajes[a.id]);

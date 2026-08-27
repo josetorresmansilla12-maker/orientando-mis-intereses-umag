@@ -213,10 +213,22 @@ function construirTarjetaArea(area) {
     </div>`;
 }
 
-function construirEncabezadoResultados(estudiante, areas) {
+// mensaje de la primera página de resultados: en el caso normal dice cuáles son
+// las áreas de interés; en los casos especiales (ninguna área destacó, o
+// destacaron las 6) se cuenta ese resultado en una frase corta y, sin
+// complicarse más, se muestran las 6 áreas igual que si todas hubiesen salido.
+function construirEncabezadoResultados(estudiante, areas, casoEspecial) {
+  let mensaje;
+  if (casoEspecial === "ninguna") {
+    mensaje = "No se identificó un área que destacara claramente por sobre las demás — y eso también dice algo bueno de ti: tienes intereses variados. Aquí te mostramos las 6 áreas, para que sigas conociendo tus opciones:";
+  } else if (casoEspecial === "todas") {
+    mensaje = "¡Te interesan las 6 áreas! Aquí tienes toda la información:";
+  } else {
+    mensaje = `De acuerdo a tus respuestas, ${areas.length === 1 ? "tu área de interés es" : "tus áreas de interés son"}:`;
+  }
   return `
     ${construirCajaEstudiante(estudiante)}
-    <div class="informe-intro"><p>De acuerdo a tus respuestas, ${areas.length === 1 ? "tu área de interés es" : "tus áreas de interés son"}:</p></div>
+    <div class="informe-intro"><p>${mensaje}</p></div>
   `;
 }
 
@@ -290,65 +302,18 @@ function empaquetarTarjetas(alturas, disponible) {
   return [...conVarias, ...sueltas];
 }
 
-// carreras "equivalentes" en otras instituciones, en una lista corta (una por área,
-// bastante más corta que el listado completo de la UMAG) — solo para el caso especial
-// de intereses diversos (ninguna área destacó, o destacaron todas).
-function construirOtrasCarrerasCurada() {
-  const items = AREAS.map((a) => a.carrerasOtras[0]).filter(Boolean);
-  return `
-    <div class="otras-curadas">
-      <h5>Algunas carreras equivalentes en otras instituciones</h5>
-      <ul class="carreras-lista-bullets">${items.map((c) => `<li>${c}</li>`).join("")}</ul>
-    </div>`;
-}
-
-function construirPaginaCasoEspecial(estudiante) {
-  const contenedor = document.createElement("div");
-  contenedor.className = "informe-page";
-  contenedor.innerHTML = `
-    ${construirCajaEstudiante(estudiante)}
-    <div class="mensaje-generico"><h3>${MENSAJE_SIN_AREA.titulo}</h3><p>${MENSAJE_SIN_AREA.texto}</p></div>
-    <div class="informe-intro"><p>Estas son todas las carreras que imparte la UMAG:</p></div>
-    <div class="areas-columna">${AREAS.map(construirFilaAreaPortadaCompacta).join("")}</div>
-    ${construirOtrasCarrerasCurada()}
-  `;
-  return contenedor;
-}
-
 function construirPaginasResultados(estudiante) {
-  const areas = calcularAreasDeInteres(estudiante.puntajes);
+  const areasInteres = calcularAreasDeInteres(estudiante.puntajes);
   // caso especial: ninguna área destacó, o destacaron absolutamente todas — en ambos
-  // casos no hay un foco claro, así que en vez de tarjetas por área se muestra un
-  // resumen compacto con todas las carreras UMAG.
-  const esCasoEspecial = areas.length === 0 || areas.length === AREAS.length;
+  // casos no hay un foco claro, así que en vez de complicarse con una página distinta,
+  // se arma el informe normal mostrando las 6 áreas (como si todas fueran de interés),
+  // con una frase corta al principio contando qué pasó.
+  let casoEspecial = null;
+  if (areasInteres.length === 0) casoEspecial = "ninguna";
+  else if (areasInteres.length === AREAS.length) casoEspecial = "todas";
+  const areas = casoEspecial ? AREAS : areasInteres;
 
-  if (esCasoEspecial) {
-    const pagina = construirPaginaCasoEspecial(estudiante);
-    const altura = medirAlturaFragmento(pagina.innerHTML);
-    if (altura <= ALTO_PAGINA_PX - PADDING_INFERIOR_PX) {
-      return [pagina];
-    }
-    // si no cupo todo en una hoja, se reparte en dos: mensaje en la primera,
-    // carreras y pie en la segunda (con encabezado liviano de continuación).
-    const paginaUno = document.createElement("div");
-    paginaUno.className = "informe-page";
-    paginaUno.innerHTML = `
-      ${construirCajaEstudiante(estudiante)}
-      <div class="mensaje-generico"><h3>${MENSAJE_SIN_AREA.titulo}</h3><p>${MENSAJE_SIN_AREA.texto}</p></div>
-      ${construirAvisoContinua()}
-    `;
-    const paginaDos = document.createElement("div");
-    paginaDos.className = "informe-page";
-    paginaDos.innerHTML = `
-      ${construirLineaEstudiante(estudiante, { inicioPagina: true })}
-      <div class="informe-intro"><p>Estas son todas las carreras que imparte la UMAG:</p></div>
-      <div class="areas-columna">${AREAS.map(construirFilaAreaPortadaCompacta).join("")}</div>
-      ${construirOtrasCarrerasCurada()}
-    `;
-    return [paginaUno, paginaDos];
-  }
-
-  const htmlEncabezado = construirEncabezadoResultados(estudiante, areas);
+  const htmlEncabezado = construirEncabezadoResultados(estudiante, areas, casoEspecial);
   const htmlEncabezadoCont = construirEncabezadoContinuacion(estudiante);
   const htmlAviso = construirAvisoContinua();
   const htmlTarjetas = areas.map(construirTarjetaArea);
