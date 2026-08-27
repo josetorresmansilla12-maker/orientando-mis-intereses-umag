@@ -1,0 +1,87 @@
+CÓMO USAR ESTA APLICACIÓN
+==========================
+
+Qué es
+------
+Es un programa para generar los informes de "Orientando mis Intereses" (8° básico).
+Funciona dentro de esta misma carpeta, en tu navegador (Chrome, Safari, etc.), sin
+necesitar internet una vez que la abres. Todo lo que ingreses queda guardado en este
+computador — no se sube a ningún lado ni se comparte con nadie.
+
+Cómo abrirla
+------------
+1. Entra a esta carpeta.
+2. Haz doble clic en el archivo "index.html".
+3. Se va a abrir en tu navegador. Esa es la aplicación.
+
+Puedes crear un acceso directo a "index.html" en tu Escritorio si quieres abrirla
+más rápido la próxima vez.
+
+Cómo se usa (pensado para ingresar un curso completo de una vez)
+------------------------------------------------------------------
+1. Pestaña "Ingresar datos":
+   - Arriba, en "Datos del curso", escribes una vez el colegio, el curso, la letra
+     y la fecha. Estos datos quedan fijos mientras sigues ingresando estudiantes del
+     mismo curso, para no tener que repetirlos cada vez.
+   - Abajo, en "Agregar estudiante", escribes el nombre y los 6 puntajes (de 0 a 8
+     cada uno) y aprietas "Guardar y agregar siguiente". El formulario se limpia
+     solo para que sigas de inmediato con el próximo estudiante — los datos del
+     curso arriba no se borran.
+   - Cuando termines con ese curso y quieras partir con otro colegio o curso,
+     aprieta "Vaciar datos del curso" antes de seguir.
+
+2. Pestaña "Estudiantes e informes": los estudiantes aparecen agrupados por colegio,
+   y dentro de cada colegio, por curso. Haz clic sobre el nombre del colegio o del
+   curso para desplegar el detalle. Ahí puedes:
+   - Descargar el informe de un estudiante en PDF (botón "Descargar PDF").
+   - Descargar todos los informes de un curso de una vez, en una carpeta comprimida
+     (botón "Descargar este curso (ZIP)", dentro de cada curso desplegado).
+   - Descargar todos los informes que coincidan con el filtro que hayas puesto
+     arriba (botón "Descargar todos (ZIP)").
+   - Filtrar por colegio, curso, letra o buscar por nombre.
+   - Editar los datos de un estudiante si te equivocaste (botón "Editar").
+   - Eliminar a un estudiante (botón "Eliminar") — no se borra para siempre, queda
+     guardado en la Papelera por si lo necesitas recuperar.
+
+3. Pestaña "Estadísticas": un resumen rápido de cuántos estudiantes hay cargados y
+   cuántos salieron con interés alto en cada área.
+
+Cómo se ve el informe
+----------------------
+Cada informe en PDF trae: el nombre del área con un dibujo de color propio (uno para
+cada una de las 6 áreas), una explicación de qué significa esa área escrita para un
+estudiante de 8° básico, una lista de carreras genéricas asociadas, y al final un
+cuadro con "Tus carreras en la UMAG" y "Otras carreras e instituciones" — juntando
+las carreras de todas las áreas en las que el estudiante salió con interés.
+Si un estudiante no obtiene 7 u 8 en ninguna área, el informe igual se genera: le
+explica que tiene intereses variados (no es un problema), y de todas formas le
+muestra las 6 áreas con sus carreras, a modo informativo.
+
+Un detalle importante: la lista de qué carreras corresponden a cada área es una
+primera propuesta mía, armada a partir de las carreras que ya usaban en el informe
+del test de Kuder. Hay casos que podrían ir en más de un área (por ejemplo Psicología
+o Medicina), así que si quieres mover, agregar o sacar alguna carrera de una lista,
+dímelo y lo ajusto — es un archivo fácil de corregir.
+
+4. Pestaña "Papelera": ahí puedes restaurar a un estudiante eliminado, o borrarlo
+   para siempre. También se puede filtrar por colegio, curso o nombre.
+
+Deshacer, rehacer y respaldo en Excel
+---------------------------------------
+Arriba a la derecha hay tres botones:
+- "Deshacer" / "Rehacer": si cometes un error (editaste mal, borraste a alguien sin
+  querer), aprieta "Deshacer" para volver atrás, paso a paso.
+- "Excel de respaldo": descarga una copia de todo lo que tienes cargado (incluyendo
+  la papelera) en un archivo Excel, como respaldo. No es necesario para que la
+  aplicación funcione — es solo una foto de seguridad, útil por si acaso.
+
+Importante
+----------
+- Los datos quedan guardados en este computador específico, dentro del navegador.
+  Si necesitas trabajar desde otro computador, por ahora tendrías que volver a
+  ingresar los datos ahí (esto se puede mejorar más adelante si hace falta).
+- No borres ni muevas las carpetas "css", "js" ni "vendor" — la aplicación las
+  necesita para funcionar. Si algún día necesitas mover la aplicación de lugar,
+  mueve la carpeta completa "Aplicacion de Informes", no solo el archivo index.html.
+
+Cualquier ajuste, cambio o problema, me lo puedes pedir y lo corrijo.

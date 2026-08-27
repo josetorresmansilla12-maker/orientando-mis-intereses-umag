@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Orientando mis Intereses — Informes</title>
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <div class="topbar">
+    <div>
+      <h1>Orientando mis Intereses</h1>
+      <div class="subt">Generador de informes · 8° Básico · Unidad de Admisión y Marketing, UMAG</div>
+    </div>
+    <div class="topbar-acciones">
+      <button id="btn-deshacer" class="chico" title="Deshacer el último cambio">↩ Deshacer</button>
+      <button id="btn-rehacer" class="chico" title="Rehacer">↪ Rehacer</button>
+      <button id="btn-excel" class="chico" title="Descargar una copia de respaldo en Excel">⬇ Excel de respaldo</button>
+      <button id="btn-borrar-todo" class="chico peligro" title="Eliminar todos los datos guardados">🗑 Borrar todo</button>
+    </div>
+  </div>
+
+  <nav class="tabs">
+    <button class="tab-btn activo" data-tab="ingresar">Ingresar datos</button>
+    <button class="tab-btn" data-tab="estudiantes">Estudiantes e informes</button>
+    <button class="tab-btn" data-tab="estadisticas">Estadísticas</button>
+    <button class="tab-btn" data-tab="papelera">Papelera</button>
+  </nav>
+
+  <main>
+
+    <!-- ===================== INGRESAR ===================== -->
+    <section id="panel-ingresar" class="panel activo">
+      <div class="tarjeta">
+        <h2>Datos del curso</h2>
+        <p class="ayuda">Estos datos quedan fijos mientras ingresas a todo un curso, para no tener que repetirlos en cada estudiante. Cámbialos cuando empieces con un colegio o curso distinto.</p>
+        <div class="grid-form">
+          <div>
+            <label>Colegio *</label>
+            <input type="text" id="curso-colegio" />
+          </div>
+          <div>
+            <label>Curso *</label>
+            <input type="text" id="curso-curso" placeholder="Ej: 8vo" />
+          </div>
+          <div>
+            <label>Letra</label>
+            <input type="text" id="curso-letra" maxlength="2" placeholder="Ej: A" />
+          </div>
+          <div>
+            <label>Fecha de aplicación</label>
+            <input type="date" id="curso-fecha" />
+          </div>
+        </div>
+        <div class="acciones-form">
+          <button type="button" id="btn-vaciar-curso" class="secundario chico">Vaciar datos del curso (empezar uno nuevo)</button>
+        </div>
+      </div>
+
+      <div class="tarjeta">
+        <h2 style="font-size:16px;">Importar planilla de corrección (opcional)</h2>
+        <p class="ayuda">Sube el archivo .xlsx ya completado con los puntajes de un curso completo. Se usan el colegio, curso, letra y fecha de arriba para todos los estudiantes del archivo — no hace falta repetirlos.</p>
+        <div class="acciones-form" style="align-items:center;">
+          <input type="file" id="input-planilla" accept=".xlsx,.xls,.csv" style="display:none;" />
+          <button type="button" id="btn-elegir-planilla" class="secundario">📤 Elegir archivo…</button>
+          <span id="nombre-archivo-planilla" class="ayuda" style="margin:0;"></span>
+        </div>
+      </div>
+
+      <div class="tarjeta">
+        <h2 id="titulo-form">Agregar estudiante</h2>
+        <p class="ayuda">Ingresa los puntajes que ya calcularon a partir de la hoja de respuestas en papel (0 a 8 por área). El área queda marcada como "de interés" automáticamente cuando el puntaje es 7 u 8.</p>
+        <form id="form-estudiante">
+          <div class="grid-form">
+            <div class="campo-ancho">
+              <label>Nombre del estudiante *</label>
+              <input type="text" name="nombre" required autofocus />
+            </div>
+            <div class="campo-ancho">
+              <label>RUT (opcional)</label>
+              <input type="text" name="rut" placeholder="Ej: 21.345.678-9" />
+            </div>
+          </div>
+
+          <div class="puntajes-titulo">Puntajes por área (0 a 8)</div>
+          <div class="grid-form" id="campos-puntajes"></div>
+
+          <div class="acciones-form">
+            <button type="submit" id="btn-guardar">Guardar y agregar siguiente</button>
+            <button type="button" id="btn-cancelar-edicion" class="secundario" style="display:none;">Cancelar edición</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="tarjeta">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+          <h2 style="font-size:16px; margin:0;">Datos recientes de este curso</h2>
+          <button type="button" id="btn-actualizar-recientes" class="chico secundario" title="Actualizar esta lista manualmente">🔄 Actualizar</button>
+        </div>
+        <p class="ayuda">Se actualiza a medida que agregas estudiantes, para que puedas revisar que no falte nadie.</p>
+        <div id="datos-recientes"></div>
+      </div>
+    </section>
+
+    <!-- ===================== ESTUDIANTES ===================== -->
+    <section id="panel-estudiantes" class="panel">
+      <div class="tarjeta">
+        <h2>Estudiantes e informes</h2>
+        <div class="filtros">
+          <div>
+            <label>Colegio</label>
+            <select id="f-colegio"></select>
+          </div>
+          <div>
+            <label>Curso</label>
+            <select id="f-curso"></select>
+          </div>
+          <div>
+            <label>Letra</label>
+            <select id="f-letra"></select>
+          </div>
+          <div>
+            <label>Buscar por nombre</label>
+            <input type="text" id="f-nombre" placeholder="Escribe un nombre..." />
+          </div>
+          <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+            <span id="conteo-filtrados" style="font-size:12px; color:#6a6178;"></span>
+            <button id="btn-descarga-masiva">⬇ Descargar todos (ZIP)</button>
+          </div>
+        </div>
+        <div id="grupos-estudiantes"></div>
+      </div>
+    </section>
+
+    <!-- ===================== PAPELERA ===================== -->
+    <section id="panel-papelera" class="panel">
+      <div class="tarjeta">
+        <h2>Papelera</h2>
+        <p class="ayuda">Los estudiantes eliminados quedan aquí hasta que los restaures o los borres para siempre.</p>
+        <div class="filtros">
+          <div>
+            <label>Colegio</label>
+            <select id="p-colegio"></select>
+          </div>
+          <div>
+            <label>Curso</label>
+            <select id="p-curso"></select>
+          </div>
+          <div class="campo-ancho">
+            <label>Buscar por nombre</label>
+            <input type="text" id="p-nombre" placeholder="Escribe un nombre..." />
+          </div>
+          <div style="margin-left:auto;">
+            <button id="btn-vaciar-papelera" class="peligro">Vaciar papelera</button>
+          </div>
+        </div>
+        <div id="lista-papelera"></div>
+      </div>
+    </section>
+
+    <!-- ===================== ESTADÍSTICAS ===================== -->
+    <section id="panel-estadisticas" class="panel">
+      <div class="tarjeta">
+        <h2>Estadísticas</h2>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="num" id="stat-total">0</div><div class="lbl">Estudiantes cargados</div></div>
+          <div class="stat-card"><div class="num" id="stat-informes">0</div><div class="lbl">Informes generados</div></div>
+          <div class="stat-card"><div class="num" id="stat-con-area">0</div><div class="lbl">Con área de interés</div></div>
+          <div class="stat-card"><div class="num" id="stat-sin-area">0</div><div class="lbl">Sin área destacada</div></div>
+          <div class="stat-card"><div class="num" id="stat-colegios">0</div><div class="lbl">Colegios distintos</div></div>
+        </div>
+        <h2 style="font-size:16px;">Estudiantes por área de interés</h2>
+        <div id="barras-areas"></div>
+      </div>
+
+      <div class="tarjeta">
+        <h2 style="font-size:16px;">Desglose por colegio</h2>
+        <div id="desglose-colegio"></div>
+      </div>
+
+      <div class="tarjeta">
+        <h2 style="font-size:16px;">Desglose por fecha de aplicación</h2>
+        <div id="desglose-fecha"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <div id="toast"></div>
+  <div id="render-offscreen"></div>
+
+  <!-- ===================== MODAL DE CONFIRMACIÓN ===================== -->
+  <div id="modal-confirmacion" class="modal-overlay" style="display:none;">
+    <div class="modal-caja">
+      <h3 id="modal-titulo">¿Confirmar?</h3>
+      <p id="modal-texto"></p>
+      <div class="modal-acciones">
+        <button type="button" id="modal-btn-cancelar" class="secundario">Cancelar</button>
+        <button type="button" id="modal-btn-confirmar" class="peligro">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- librerías locales (sin depender de internet) -->
+  <script src="vendor/jszip.min.js"></script>
+  <script src="vendor/html2canvas.min.js"></script>
+  <script src="vendor/jspdf.min.js"></script>
+
+  <script src="vendor/xlsx.min.js"></script>
+
+  <script src="js/data.js"></script>
+  <script src="js/icons.js"></script>
+  <script src="js/logo.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/report.js"></script>
+  <script src="js/excel.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
