@@ -492,7 +492,7 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
    con .informe-page y desaparece del render, y un padding-top en un flex
    container no lo respeta html2canvas — un div con alto fijo sí funciona
    siempre, en el navegador y en la imagen exportada al PDF. */
-.espaciador-inicio-pagina { height: 40px; }
+.espaciador-inicio-pagina { height: 24px; }
 
 .deco-dots {
   width: 54px;
