@@ -55,11 +55,38 @@ function construirListaBulletsCarreras(lista) {
     }`;
 }
 
-function construirLineaEstudiante(estudiante) {
+function construirBanner(titulo, subtitulo) {
   return `
-    <div class="linea-estudiante">
+    <div class="informe-banner">
+      <div class="banner-wave banner-wave-1"></div>
+      <div class="banner-wave banner-wave-2"></div>
+      <div class="informe-logo-badge"><img src="${LOGO_UMAG_DATAURI}" alt="UMAG" class="informe-logo" /></div>
+      <div class="informe-banner-sep"></div>
+      <div class="informe-banner-text">
+        <div class="informe-banner-sub">Unidad de Admisión y Marketing</div>
+        <div class="informe-banner-title">${titulo}</div>
+        ${subtitulo ? `<div class="informe-banner-sub2">${subtitulo}</div>` : ""}
+      </div>
+    </div>`;
+}
+
+// clase "--inicio" cuando esta línea es lo primero de la página (páginas de
+// continuación, sin banner encima) — le da más aire arriba para que no quede
+// pegada al borde de la hoja.
+function construirLineaEstudiante(estudiante, { inicioPagina = false } = {}) {
+  return `
+    <div class="linea-estudiante${inicioPagina ? " linea-estudiante--inicio" : ""}">
       <span><b>Nombre:</b> ${capitalizarNombre(estudiante.nombre) || "—"}</span>
       <span><b>RUT:</b> ${estudiante.rut || "—"}</span>
+    </div>`;
+}
+
+function construirFooter() {
+  return `
+    <div class="informe-footer">
+      <p>Este resultado es una orientación inicial y no reemplaza un proceso de orientación vocacional completo. Los intereses cambian y se van descubriendo con el tiempo — ¡esto es solo el comienzo!</p>
+      <p class="informe-contacto">Unidad de Admisión y Marketing · Ignacio Carrera Pinto 1015, Punta Arenas · Universidad de Magallanes</p>
+      <p class="informe-contacto-extra">Contáctanos al <b>+56 9 7499 7771</b> · Más información en <b>admision.umag.cl</b></p>
     </div>`;
 }
 
@@ -95,7 +122,12 @@ function construirPaginaPortada(estudiante) {
   contenedor.className = "informe-page";
 
   const encabezado = `
+    ${construirBanner("Informe de Intereses Vocacionales", "Orientando mis Intereses (8° Básico) · UMAG")}
     ${construirLineaEstudiante(estudiante)}
+
+    <div class="informe-intro-texto">
+      Este informe presenta los resultados del cuestionario de intereses vocacionales aplicado por personal de la Universidad de Magallanes. A partir de una lista de actividades que podrían ser (o no) de tu interés, exploramos seis grandes áreas vocacionales. No mide inteligencia ni tiene respuestas correctas o incorrectas: es solo un acercamiento a tus posibles intereses. Si el resultado no fue el que esperabas, es normal — pueden aparecer intereses o habilidades en áreas que no sabías que tenías; tómalo como una invitación a explorar, no como un motivo de desánimo. A continuación, todas las carreras que imparte la UMAG en cada una de estas áreas.
+    </div>
   `;
 
   const pie = `
@@ -104,6 +136,7 @@ function construirPaginaPortada(estudiante) {
       <div class="callout-text">Conoce tus resultados<br/>en la página siguiente</div>
       ${puntosDots("callout-dots")}
     </div>
+    ${construirFooter()}
   `;
 
   // se intenta primero el formato con viñetas (profesionales / técnico profesional);
@@ -192,7 +225,7 @@ function construirEncabezadoResultados(estudiante, areas) {
 // resto, igual se sabe de quién es, sin ocupar tanto espacio como la credencial.
 function construirEncabezadoContinuacion(estudiante) {
   return `
-    ${construirLineaEstudiante(estudiante)}
+    ${construirLineaEstudiante(estudiante, { inicioPagina: true })}
   `;
 }
 
@@ -307,7 +340,7 @@ function construirPaginasResultados(estudiante) {
     const paginaDos = document.createElement("div");
     paginaDos.className = "informe-page";
     paginaDos.innerHTML = `
-      ${construirLineaEstudiante(estudiante)}
+      ${construirLineaEstudiante(estudiante, { inicioPagina: true })}
       <div class="informe-intro"><p>Estas son todas las carreras que imparte la UMAG:</p></div>
       <div class="areas-columna">${AREAS.map(construirFilaAreaPortadaCompacta).join("")}</div>
       ${construirOtrasCarrerasCurada()}
