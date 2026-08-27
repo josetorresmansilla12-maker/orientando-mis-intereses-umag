@@ -70,12 +70,13 @@ function construirBanner(titulo, subtitulo) {
     </div>`;
 }
 
-// clase "--inicio" cuando esta línea es lo primero de la página (páginas de
-// continuación, sin banner encima) — le da más aire arriba para que no quede
-// pegada al borde de la hoja.
+// cuando esta línea es lo primero de la página (páginas de continuación, sin
+// banner encima), se le antepone un espaciador real para que no quede pegada
+// al borde de la hoja.
 function construirLineaEstudiante(estudiante, { inicioPagina = false } = {}) {
   return `
-    <div class="linea-estudiante${inicioPagina ? " linea-estudiante--inicio" : ""}">
+    ${inicioPagina ? '<div class="espaciador-inicio-pagina"></div>' : ""}
+    <div class="linea-estudiante">
       <span><b>Nombre:</b> ${capitalizarNombre(estudiante.nombre) || "—"}</span>
       <span><b>RUT:</b> ${estudiante.rut || "—"}</span>
     </div>`;

@@ -487,9 +487,12 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
   color: var(--texto-suave);
 }
 .linea-estudiante b { color: var(--morado-oscuro); }
-/* cuando va sola al inicio de una página (sin banner encima, páginas de
-   continuación), necesita más aire arriba para no quedar pegada al borde */
-.linea-estudiante--inicio { margin-top: 40px; }
+/* espaciador real (no margin/padding) para el inicio de una página que no
+   tiene banner encima (páginas de continuación): un margin-top ahí colapsa
+   con .informe-page y desaparece del render, y un padding-top en un flex
+   container no lo respeta html2canvas — un div con alto fijo sí funciona
+   siempre, en el navegador y en la imagen exportada al PDF. */
+.espaciador-inicio-pagina { height: 40px; }
 
 .deco-dots {
   width: 54px;
