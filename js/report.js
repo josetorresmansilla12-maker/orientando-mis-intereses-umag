@@ -55,35 +55,11 @@ function construirListaBulletsCarreras(lista) {
     }`;
 }
 
-function construirBanner(titulo, subtitulo) {
-  return `
-    <div class="informe-banner">
-      <div class="banner-wave banner-wave-1"></div>
-      <div class="banner-wave banner-wave-2"></div>
-      <div class="informe-logo-badge"><img src="${LOGO_UMAG_DATAURI}" alt="UMAG" class="informe-logo" /></div>
-      <div class="informe-banner-sep"></div>
-      <div class="informe-banner-text">
-        <div class="informe-banner-sub">Unidad de Admisión y Marketing</div>
-        <div class="informe-banner-title">${titulo}</div>
-        ${subtitulo ? `<div class="informe-banner-sub2">${subtitulo}</div>` : ""}
-      </div>
-    </div>`;
-}
-
 function construirLineaEstudiante(estudiante) {
   return `
     <div class="linea-estudiante">
       <span><b>Nombre:</b> ${capitalizarNombre(estudiante.nombre) || "—"}</span>
       <span><b>RUT:</b> ${estudiante.rut || "—"}</span>
-    </div>`;
-}
-
-function construirFooter() {
-  return `
-    <div class="informe-footer">
-      <p>Este resultado es una orientación inicial y no reemplaza un proceso de orientación vocacional completo. Los intereses cambian y se van descubriendo con el tiempo — ¡esto es solo el comienzo!</p>
-      <p class="informe-contacto">Unidad de Admisión y Marketing · Ignacio Carrera Pinto 1015, Punta Arenas · Universidad de Magallanes</p>
-      <p class="informe-contacto-extra">Contáctanos al <b>+56 9 7499 7771</b> · Más información en <b>admision.umag.cl</b></p>
     </div>`;
 }
 
@@ -119,12 +95,7 @@ function construirPaginaPortada(estudiante) {
   contenedor.className = "informe-page";
 
   const encabezado = `
-    ${construirBanner("Informe de Intereses Vocacionales", "Orientando mis Intereses (8° Básico) · UMAG")}
     ${construirLineaEstudiante(estudiante)}
-
-    <div class="informe-intro-texto">
-      Este informe presenta los resultados del cuestionario de intereses vocacionales aplicado por personal de la Universidad de Magallanes. A partir de una lista de actividades que podrían ser (o no) de tu interés, exploramos seis grandes áreas vocacionales. No mide inteligencia ni tiene respuestas correctas o incorrectas: es solo un acercamiento a tus posibles intereses. Si el resultado no fue el que esperabas, es normal — pueden aparecer intereses o habilidades en áreas que no sabías que tenías; tómalo como una invitación a explorar, no como un motivo de desánimo. A continuación, todas las carreras que imparte la UMAG en cada una de estas áreas.
-    </div>
   `;
 
   const pie = `
@@ -133,7 +104,6 @@ function construirPaginaPortada(estudiante) {
       <div class="callout-text">Conoce tus resultados<br/>en la página siguiente</div>
       ${puntosDots("callout-dots")}
     </div>
-    ${construirFooter()}
   `;
 
   // se intenta primero el formato con viñetas (profesionales / técnico profesional);
@@ -158,26 +128,27 @@ function construirPaginaPortada(estudiante) {
 const ESTILO_MARCA_AGUA_SELLO = `background-image:url(${LOGO_SELLO_MARCA_AGUA_DATAURI});background-repeat:no-repeat;`;
 
 // avatar genérico anónimo (silueta simple), mismo estilo a mano que el resto de íconos.
-// fill blanco porque va sobre un círculo de fondo morado (ver .id-card-avatar).
+// fill morado porque va sobre un círculo de fondo blanco (ver .id-card-avatar).
 const ICONO_AVATAR_ANONIMO = `
   <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="24" cy="18" r="8.5" fill="#ffffff"/>
-    <path d="M7 41c0-9.4 7.6-17 17-17s17 7.6 17 17" fill="#ffffff"/>
+    <circle cx="24" cy="18" r="8.5" fill="#5b3b8c"/>
+    <path d="M7 41c0-9.4 7.6-17 17-17s17 7.6 17 17" fill="#5b3b8c"/>
   </svg>`;
 
-// recuadro tipo "credencial institucional": fondo claro (para ahorrar tinta al
-// imprimir, sin la barra morada llena), avatar anónimo genérico, y el sello UMAG
-// como marca de agua tenue al costado — mismo tratamiento que los recuadros de carreras.
+// recuadro tipo "credencial institucional": fondo morado, avatar anónimo genérico,
+// y el logo UMAG completo (símbolo + palabra) — ahora que no queda ningún otro
+// elemento con la marca UMAG en la página, esta caja hace de encabezado.
 function construirCajaEstudiante(estudiante) {
   return `
     <div class="id-card-wrap">
-      <div class="id-card" style="${ESTILO_MARCA_AGUA_SELLO} background-position:right center; background-size:90px;">
+      <div class="id-card">
         <div class="id-card-avatar">${ICONO_AVATAR_ANONIMO}</div>
         <div class="id-card-datos">
           <div class="id-card-nombre">${capitalizarNombre(estudiante.nombre) || "—"}</div>
           <div class="id-card-sub">${(estudiante.curso || "—") + (estudiante.letra || "")} · ${estudiante.colegio || "—"}</div>
           <div class="id-card-sub">RUT: ${estudiante.rut || "—"}</div>
         </div>
+        <div class="id-card-logo"><img src="${LOGO_UMAG_DATAURI}" alt="UMAG" /></div>
       </div>
     </div>`;
 }
@@ -211,15 +182,16 @@ function construirTarjetaArea(area) {
 
 function construirEncabezadoResultados(estudiante, areas) {
   return `
-    ${construirBanner("Te invitamos a conocer tus áreas de interés")}
     ${construirCajaEstudiante(estudiante)}
     <div class="informe-intro"><p>De acuerdo a tus respuestas, ${areas.length === 1 ? "tu área de interés es" : "tus áreas de interés son"}:</p></div>
   `;
 }
 
+// encabezado liviano para páginas de continuación (3ra hoja en adelante): solo la
+// línea de nombre/RUT, sin la credencial completa — así, si una hoja se suelta del
+// resto, igual se sabe de quién es, sin ocupar tanto espacio como la credencial.
 function construirEncabezadoContinuacion(estudiante) {
   return `
-    ${construirBanner("Tus áreas de interés (continuación)")}
     ${construirLineaEstudiante(estudiante)}
   `;
 }
@@ -301,13 +273,11 @@ function construirPaginaCasoEspecial(estudiante) {
   const contenedor = document.createElement("div");
   contenedor.className = "informe-page";
   contenedor.innerHTML = `
-    ${construirBanner("Te invitamos a conocer tus áreas de interés")}
     ${construirCajaEstudiante(estudiante)}
     <div class="mensaje-generico"><h3>${MENSAJE_SIN_AREA.titulo}</h3><p>${MENSAJE_SIN_AREA.texto}</p></div>
     <div class="informe-intro"><p>Estas son todas las carreras que imparte la UMAG:</p></div>
     <div class="areas-columna">${AREAS.map(construirFilaAreaPortadaCompacta).join("")}</div>
     ${construirOtrasCarrerasCurada()}
-    ${construirFooter()}
   `;
   return contenedor;
 }
@@ -330,7 +300,6 @@ function construirPaginasResultados(estudiante) {
     const paginaUno = document.createElement("div");
     paginaUno.className = "informe-page";
     paginaUno.innerHTML = `
-      ${construirBanner("Te invitamos a conocer tus áreas de interés")}
       ${construirCajaEstudiante(estudiante)}
       <div class="mensaje-generico"><h3>${MENSAJE_SIN_AREA.titulo}</h3><p>${MENSAJE_SIN_AREA.texto}</p></div>
       ${construirAvisoContinua()}
@@ -338,25 +307,24 @@ function construirPaginasResultados(estudiante) {
     const paginaDos = document.createElement("div");
     paginaDos.className = "informe-page";
     paginaDos.innerHTML = `
-      ${construirBanner("Tus áreas de interés (continuación)")}
       ${construirLineaEstudiante(estudiante)}
       <div class="informe-intro"><p>Estas son todas las carreras que imparte la UMAG:</p></div>
       <div class="areas-columna">${AREAS.map(construirFilaAreaPortadaCompacta).join("")}</div>
       ${construirOtrasCarrerasCurada()}
-      ${construirFooter()}
     `;
     return [paginaUno, paginaDos];
   }
 
   const htmlEncabezado = construirEncabezadoResultados(estudiante, areas);
   const htmlEncabezadoCont = construirEncabezadoContinuacion(estudiante);
-  const htmlFooter = construirFooter();
   const htmlAviso = construirAvisoContinua();
   const htmlTarjetas = areas.map(construirTarjetaArea);
 
   const altoEncabezado = medirAlturaFragmento(htmlEncabezado);
   const altoEncabezadoCont = medirAlturaFragmento(htmlEncabezadoCont);
-  const altoReservaInferior = Math.max(medirAlturaFragmento(htmlFooter), medirAlturaFragmento(htmlAviso));
+  // la última página no lleva nada al final (ya no hay pie de página); solo las
+  // páginas intermedias necesitan espacio reservado para el aviso de "continúa".
+  const altoReservaInferior = medirAlturaFragmento(htmlAviso);
   const alturasTarjetas = htmlTarjetas.map((html) =>
     medirAlturaFragmento(`<div class="informe-areas" style="margin:0;">${html}</div>`)
   );
@@ -379,7 +347,7 @@ function construirPaginasResultados(estudiante) {
     contenedor.innerHTML = `
       ${esPrimera ? htmlEncabezado : htmlEncabezadoCont}
       <div class="informe-areas">${indices.map((i) => htmlTarjetas[i]).join("")}</div>
-      ${esUltima ? htmlFooter : htmlAviso}
+      ${esUltima ? "" : htmlAviso}
     `;
     return contenedor;
   });
