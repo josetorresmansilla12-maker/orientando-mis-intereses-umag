@@ -180,11 +180,6 @@ function cablearImportacion() {
     if (!archivo) return;
 
     const cursoHeader = leerCursoHeader();
-    if (!cursoHeader.colegio || !cursoHeader.curso) {
-      mostrarToast("Completa colegio y curso arriba antes de importar");
-      input.value = "";
-      return;
-    }
 
     etiquetaArchivo.textContent = archivo.name;
     const textoOriginal = btn.textContent;
@@ -192,12 +187,17 @@ function cablearImportacion() {
     btn.textContent = "Importando…";
 
     try {
-      const { importados, errores } = await importarPlanillaCorreccion(archivo, cursoHeader);
+      const { importados, errores, colegio, curso, letra } = await importarPlanillaCorreccion(archivo, cursoHeader);
       if (importados > 0) {
         mostrarToast(
-          `${importados} ${importados === 1 ? "estudiante importado" : "estudiantes importados"}` +
+          `${importados} ${importados === 1 ? "estudiante importado" : "estudiantes importados"} de ${colegio} ${curso}${letra}` +
             (errores.length ? ` — ${errores.length} fila(s) con problemas` : "")
         );
+        // refleja arriba los datos del curso que se usaron (vinieron de la planilla o de aquí)
+        document.getElementById("curso-colegio").value = colegio;
+        document.getElementById("curso-curso").value = curso;
+        document.getElementById("curso-letra").value = letra;
+        guardarCursoHeaderEnLocal();
       } else {
         mostrarToast("No se importó ningún estudiante desde este archivo.");
       }

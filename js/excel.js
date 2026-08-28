@@ -29,9 +29,11 @@ function exportarExcel() {
 }
 
 // ---------------- importación masiva desde la planilla de corrección (.xlsx) ----------------
-// La planilla trae, por fila: Nombre, RUT, y las 6 columnas de puntaje por área (ya sumadas
-// con fórmulas). Colegio/curso/letra/fecha NO van en la planilla: se toman de los campos
-// "Datos del curso" de la app y se aplican a todas las filas importadas.
+// La planilla trae, por fila: Nombre, RUT (opcional), y las 6 columnas de puntaje por área
+// (ya sumadas con fórmulas). Colegio/Curso/Letra se llenan una sola vez arriba de la
+// planilla (como el archivo completo es siempre un curso de un colegio) y se usan para
+// todas las filas; si no están en la planilla, se cae a los campos "Datos del curso" de
+// la app como respaldo.
 
 // qué ítems del cuestionario (1 a 24) suman para cada área — debe coincidir con
 // "Áreas de interés y sus ítems correspondientes" de la pauta del cuestionario.
@@ -174,24 +176,66 @@ function leerPlanillaCorreccion(arrayBuffer) {
     });
   }
 
-  return { estudiantes, errores };
+  const colegio = buscarValorEtiqueta(filas, "Colegio");
+  const curso = buscarValorEtiqueta(filas, "Curso");
+  const letra = buscarValorEtiqueta(filas, "Letra");
+
+  return { estudiantes, errores, colegio, curso, letra };
+}
+
+// busca, en las primeras filas de la hoja (antes de la tabla), una celda que diga
+// "<etiqueta>:" y devuelve el valor de la celda inmediatamente a su derecha — así se
+// leen los campos sueltos de "Colegio", "Curso" y "Letra" que van arriba de la planilla.
+function buscarValorEtiqueta(filas, etiqueta) {
+  const objetivo = normalizarEncabezado(etiqueta);
+  for (let f = 0; f < Math.min(filas.length, 10); f++) {
+    const fila = filas[f];
+    if (!fila) continue;
+    for (let c = 0; c < fila.length; c++) {
+      const texto = normalizarEncabezado(fila[c]).replace(/:$/, "");
+      if (texto === objetivo) {
+        const valor = fila[c + 1];
+        return valor !== undefined && valor !== null ? String(valor).trim() : "";
+      }
+    }
+  }
+  return "";
 }
 
 async function importarPlanillaCorreccion(archivo, cursoHeader) {
   const arrayBuffer = await archivo.arrayBuffer();
-  const { estudiantes, errores } = leerPlanillaCorreccion(arrayBuffer);
+  const { estudiantes, errores, colegio, curso, letra } = leerPlanillaCorreccion(arrayBuffer);
+
+  // la planilla manda si trae sus propios datos de colegio/curso/letra; si no,
+  // se usan los campos "Datos del curso" de la app como respaldo.
+  const datosCurso = {
+    colegio: colegio || cursoHeader.colegio || "",
+    curso: curso || cursoHeader.curso || "",
+    letra: letra || cursoHeader.letra || "",
+    fecha: cursoHeader.fecha || "",
+  };
+
+  if (!datosCurso.colegio || !datosCurso.curso) {
+    return {
+      importados: 0,
+      errores: [
+        "Falta el Colegio y/o el Curso: complétalos en la planilla (arriba de la tabla) o en los campos \"Datos del curso\" de la app antes de subir el archivo.",
+      ],
+      ...datosCurso,
+    };
+  }
 
   estudiantes.forEach((e) => {
     store.crear({
       nombre: e.nombre,
       rut: e.rut,
-      colegio: cursoHeader.colegio,
-      curso: cursoHeader.curso,
-      letra: cursoHeader.letra,
-      fecha: cursoHeader.fecha,
+      colegio: datosCurso.colegio,
+      curso: datosCurso.curso,
+      letra: datosCurso.letra,
+      fecha: datosCurso.fecha,
       puntajes: e.puntajes,
     });
   });
 
-  return { importados: estudiantes.length, errores };
+  return { importados: estudiantes.length, errores, ...datosCurso };
 }
