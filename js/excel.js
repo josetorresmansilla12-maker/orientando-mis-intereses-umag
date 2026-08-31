@@ -30,10 +30,10 @@ function exportarExcel() {
 
 // ---------------- importación masiva desde la planilla de corrección (.xlsx) ----------------
 // La planilla trae, por fila: Nombre, RUT (opcional), y las 6 columnas de puntaje por área
-// (ya sumadas con fórmulas). Colegio/Curso/Letra se llenan una sola vez arriba de la
-// planilla (como el archivo completo es siempre un curso de un colegio) y se usan para
-// todas las filas; si no están en la planilla, se cae a los campos "Datos del curso" de
-// la app como respaldo.
+// (ya sumadas con fórmulas). Colegio/Curso/Letra son opcionales arriba de la planilla (un
+// solo valor para todo el archivo, ya que cada planilla es siempre un curso de un colegio);
+// si faltan ahí, se usan los campos "Datos del curso" de la app, y si tampoco están, se le
+// preguntan al usuario en un modal al momento de importar (ver cablearImportacion en app.js).
 
 // qué ítems del cuestionario (1 a 24) suman para cada área — debe coincidir con
 // "Áreas de interés y sus ítems correspondientes" de la pauta del cuestionario.
@@ -183,9 +183,10 @@ function leerPlanillaCorreccion(arrayBuffer) {
   return { estudiantes, errores, colegio, curso, letra };
 }
 
-// busca, en las primeras filas de la hoja (antes de la tabla), una celda que diga
-// "<etiqueta>:" y devuelve el valor de la celda inmediatamente a su derecha — así se
-// leen los campos sueltos de "Colegio", "Curso" y "Letra" que van arriba de la planilla.
+// busca, en las primeras filas de la hoja (antes de la tabla), una celda que empiece
+// con "<etiqueta>" (admite variantes como "Colegio (opcional):") y devuelve el valor
+// de la celda inmediatamente a su derecha — así se leen los campos sueltos de
+// "Colegio", "Curso" y "Letra" que van arriba de la planilla.
 function buscarValorEtiqueta(filas, etiqueta) {
   const objetivo = normalizarEncabezado(etiqueta);
   for (let f = 0; f < Math.min(filas.length, 10); f++) {
@@ -193,7 +194,7 @@ function buscarValorEtiqueta(filas, etiqueta) {
     if (!fila) continue;
     for (let c = 0; c < fila.length; c++) {
       const texto = normalizarEncabezado(fila[c]).replace(/:$/, "");
-      if (texto === objetivo) {
+      if (texto === objetivo || texto.startsWith(objetivo + " ")) {
         const valor = fila[c + 1];
         return valor !== undefined && valor !== null ? String(valor).trim() : "";
       }
@@ -202,29 +203,10 @@ function buscarValorEtiqueta(filas, etiqueta) {
   return "";
 }
 
-async function importarPlanillaCorreccion(archivo, cursoHeader) {
-  const arrayBuffer = await archivo.arrayBuffer();
-  const { estudiantes, errores, colegio, curso, letra } = leerPlanillaCorreccion(arrayBuffer);
-
-  // la planilla manda si trae sus propios datos de colegio/curso/letra; si no,
-  // se usan los campos "Datos del curso" de la app como respaldo.
-  const datosCurso = {
-    colegio: colegio || cursoHeader.colegio || "",
-    curso: curso || cursoHeader.curso || "",
-    letra: letra || cursoHeader.letra || "",
-    fecha: cursoHeader.fecha || "",
-  };
-
-  if (!datosCurso.colegio || !datosCurso.curso) {
-    return {
-      importados: 0,
-      errores: [
-        "Falta el Colegio y/o el Curso: complétalos en la planilla (arriba de la tabla) o en los campos \"Datos del curso\" de la app antes de subir el archivo.",
-      ],
-      ...datosCurso,
-    };
-  }
-
+// crea en el store un estudiante por cada fila ya leída, con el colegio/curso/letra/fecha
+// ya resueltos (de la planilla, de los campos de la app, o de lo que se haya preguntado
+// en el modal al momento de importar — a esta altura ya está decidido, sin ambigüedad).
+function crearEstudiantesDesdeImportacion(estudiantes, datosCurso) {
   estudiantes.forEach((e) => {
     store.crear({
       nombre: e.nombre,
@@ -236,6 +218,5 @@ async function importarPlanillaCorreccion(archivo, cursoHeader) {
       puntajes: e.puntajes,
     });
   });
-
-  return { importados: estudiantes.length, errores, ...datosCurso };
+  return { importados: estudiantes.length };
 }

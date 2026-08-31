@@ -370,6 +370,10 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
 .modal-caja p { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--texto); }
 .modal-acciones { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
 
+/* variante informativa (no destructiva), para el modal que pide colegio/curso al importar */
+.modal-caja--info { border-top-color: var(--morado); }
+.modal-caja--info h3 { color: var(--morado-oscuro); }
+
 /* ---------- toast ---------- */
 #toast {
   position: fixed;

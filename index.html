@@ -60,7 +60,7 @@
 
       <div class="tarjeta">
         <h2 style="font-size:16px;">Importar planilla de corrección (opcional)</h2>
-        <p class="ayuda">Sube el archivo .xlsx ya completado con los puntajes de un curso completo. El colegio, curso y letra se completan una sola vez arriba de la planilla y valen para todos los estudiantes del archivo — si la planilla no los trae, se usan los campos de arriba en la app. La fecha siempre se toma de aquí.</p>
+        <p class="ayuda">Sube el archivo .xlsx ya completado con los puntajes de un curso completo. El colegio y curso son opcionales en la planilla (arriba de la tabla) — si no los completaste ahí ni en los campos de arriba en la app, te los va a preguntar justo al subir el archivo.</p>
         <div class="acciones-form" style="align-items:center;">
           <input type="file" id="input-planilla" accept=".xlsx,.xls,.csv" style="display:none;" />
           <button type="button" id="btn-elegir-planilla" class="secundario">📤 Elegir archivo…</button>
@@ -203,6 +203,32 @@
       <div class="modal-acciones">
         <button type="button" id="modal-btn-cancelar" class="secundario">Cancelar</button>
         <button type="button" id="modal-btn-confirmar" class="peligro">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== MODAL: DATOS DEL CURSO AL IMPORTAR (si la planilla no los trae) ===================== -->
+  <div id="modal-datos-curso" class="modal-overlay" style="display:none;">
+    <div class="modal-caja modal-caja--info">
+      <h3>¿Colegio y curso de estos estudiantes?</h3>
+      <p style="margin-bottom:14px;">Esta planilla no traía el colegio y el curso completos. Complétalos aquí — se van a usar para todos los estudiantes de este archivo.</p>
+      <div style="margin-bottom:10px;">
+        <label>Colegio *</label>
+        <input type="text" id="modal-dc-colegio" />
+      </div>
+      <div style="display:flex; gap:10px;">
+        <div style="flex:2;">
+          <label>Curso *</label>
+          <input type="text" id="modal-dc-curso" placeholder="Ej: 8vo" />
+        </div>
+        <div style="flex:1;">
+          <label>Letra</label>
+          <input type="text" id="modal-dc-letra" maxlength="2" placeholder="Ej: A" />
+        </div>
+      </div>
+      <div class="modal-acciones">
+        <button type="button" id="modal-dc-btn-cancelar" class="secundario">Cancelar</button>
+        <button type="button" id="modal-dc-btn-guardar">Continuar</button>
       </div>
     </div>
   </div>

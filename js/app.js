@@ -168,6 +168,50 @@ function cablearCursoHeader() {
 
 // ---------------- importación masiva desde planilla de corrección ----------------
 
+// muestra el modal que pregunta colegio/curso/letra cuando la planilla no los trae y
+// tampoco están completos los campos "Datos del curso" de la app. Devuelve una promesa
+// que resuelve con {colegio, curso, letra} si el usuario completa y confirma, o con
+// null si cancela.
+function pedirDatosCurso() {
+  return new Promise((resolve) => {
+    const modal = document.getElementById("modal-datos-curso");
+    const inpColegio = document.getElementById("modal-dc-colegio");
+    const inpCurso = document.getElementById("modal-dc-curso");
+    const inpLetra = document.getElementById("modal-dc-letra");
+    const btnGuardar = document.getElementById("modal-dc-btn-guardar");
+    const btnCancelar = document.getElementById("modal-dc-btn-cancelar");
+
+    inpColegio.value = "";
+    inpCurso.value = "";
+    inpLetra.value = "";
+    modal.style.display = "flex";
+    inpColegio.focus();
+
+    function limpiar() {
+      modal.style.display = "none";
+      btnGuardar.removeEventListener("click", onGuardar);
+      btnCancelar.removeEventListener("click", onCancelar);
+    }
+    function onGuardar() {
+      const colegio = inpColegio.value.trim();
+      const curso = inpCurso.value.trim();
+      const letra = inpLetra.value.trim().toUpperCase();
+      if (!colegio || !curso) {
+        mostrarToast("Completa colegio y curso");
+        return;
+      }
+      limpiar();
+      resolve({ colegio, curso, letra });
+    }
+    function onCancelar() {
+      limpiar();
+      resolve(null);
+    }
+    btnGuardar.addEventListener("click", onGuardar);
+    btnCancelar.addEventListener("click", onCancelar);
+  });
+}
+
 function cablearImportacion() {
   const input = document.getElementById("input-planilla");
   const btn = document.getElementById("btn-elegir-planilla");
@@ -179,21 +223,49 @@ function cablearImportacion() {
     const archivo = input.files[0];
     if (!archivo) return;
 
-    const cursoHeader = leerCursoHeader();
-
     etiquetaArchivo.textContent = archivo.name;
     const textoOriginal = btn.textContent;
     btn.disabled = true;
-    btn.textContent = "Importando…";
+    btn.textContent = "Leyendo…";
 
     try {
-      const { importados, errores, colegio, curso, letra } = await importarPlanillaCorreccion(archivo, cursoHeader);
+      const arrayBuffer = await archivo.arrayBuffer();
+      const lectura = leerPlanillaCorreccion(arrayBuffer);
+      const cursoHeader = leerCursoHeader();
+
+      // colegio/curso/letra: primero lo que traiga la planilla, si no lo que ya
+      // esté escrito arriba en la app; si ninguno de los dos los tiene, se le
+      // pregunta al usuario justo ahora, en vez de bloquear la importación.
+      let colegio = lectura.colegio || cursoHeader.colegio;
+      let curso = lectura.curso || cursoHeader.curso;
+      let letra = lectura.letra || cursoHeader.letra;
+
+      if (!colegio || !curso) {
+        btn.disabled = false;
+        btn.textContent = textoOriginal;
+        const datos = await pedirDatosCurso();
+        if (!datos) {
+          input.value = "";
+          return; // el usuario canceló
+        }
+        colegio = datos.colegio;
+        curso = datos.curso;
+        letra = datos.letra;
+        btn.disabled = true;
+      }
+      btn.textContent = "Importando…";
+
+      const datosCurso = { colegio, curso, letra, fecha: cursoHeader.fecha || "" };
+      const { importados } = crearEstudiantesDesdeImportacion(lectura.estudiantes, datosCurso);
+      const errores = lectura.errores;
+
       if (importados > 0) {
         mostrarToast(
           `${importados} ${importados === 1 ? "estudiante importado" : "estudiantes importados"} de ${colegio} ${curso}${letra}` +
             (errores.length ? ` — ${errores.length} fila(s) con problemas` : "")
         );
-        // refleja arriba los datos del curso que se usaron (vinieron de la planilla o de aquí)
+        // refleja arriba los datos del curso que se usaron (vinieron de la planilla, de
+        // los campos de la app, o de lo que se acaba de escribir en el modal)
         document.getElementById("curso-colegio").value = colegio;
         document.getElementById("curso-curso").value = curso;
         document.getElementById("curso-letra").value = letra;
