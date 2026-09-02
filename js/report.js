@@ -221,7 +221,7 @@ function construirTarjetaArea(area) {
 function construirEncabezadoResultados(estudiante, areas, casoEspecial) {
   let mensaje;
   if (casoEspecial === "ninguna") {
-    mensaje = "No se identificó un área que destacara claramente por sobre las demás — y eso también dice algo bueno de ti: tienes intereses variados. Aquí te mostramos las 6 áreas, para que sigas conociendo tus opciones:";
+    mensaje = "Tus puntajes fueron muy diversos en todas las áreas (y eso también dice algo bueno de ti: tienes intereses variados). Aquí te mostramos las 6 áreas, para que sigas conociendo tus opciones:";
   } else if (casoEspecial === "todas") {
     mensaje = "¡Te interesan las 6 áreas! Aquí tienes toda la información:";
   } else {
@@ -338,16 +338,43 @@ function construirPaginasResultados(estudiante) {
 
   const grupos = empaquetarTarjetas(alturasTarjetas, Math.min(disponiblePrimera, disponibleCont));
 
+  // el presupuesto de arriba es una estimación (suma de fragmentos medidos por
+  // separado); antes de armar las páginas de verdad, se arma cada grupo tal cual
+  // va a quedar y se mide su alto real. Si algún grupo igual quedó más alto que
+  // una hoja (la estimación se quedó corta), se le saca la última tarjeta y pasa
+  // a la página siguiente, repitiendo hasta que todas las páginas quepan de
+  // verdad — así no depende de que la estimación sea perfecta.
+  const LIMITE_PAGINA_PX = ALTO_PAGINA_PX - PADDING_INFERIOR_PX;
+  function armarHtmlPagina(indices, esPrimera, esUltima) {
+    return `
+      ${esPrimera ? htmlEncabezado : htmlEncabezadoCont}
+      <div class="informe-areas">${indices.map((i) => htmlTarjetas[i]).join("")}</div>
+      ${esUltima ? "" : htmlAviso}
+    `;
+  }
+  for (let i = 0; i < grupos.length; i++) {
+    let intentos = 0;
+    while (grupos[i].length > 1 && intentos < 10) {
+      const esPrimera = i === 0;
+      const esUltima = i === grupos.length - 1;
+      const alto = medirAlturaFragmento(armarHtmlPagina(grupos[i], esPrimera, esUltima));
+      if (alto <= LIMITE_PAGINA_PX) break;
+      const sobrante = grupos[i].pop();
+      if (i + 1 < grupos.length) {
+        grupos[i + 1].unshift(sobrante);
+      } else {
+        grupos.push([sobrante]);
+      }
+      intentos++;
+    }
+  }
+
   return grupos.map((indices, idx) => {
     const esPrimera = idx === 0;
     const esUltima = idx === grupos.length - 1;
     const contenedor = document.createElement("div");
     contenedor.className = "informe-page";
-    contenedor.innerHTML = `
-      ${esPrimera ? htmlEncabezado : htmlEncabezadoCont}
-      <div class="informe-areas">${indices.map((i) => htmlTarjetas[i]).join("")}</div>
-      ${esUltima ? "" : htmlAviso}
-    `;
+    contenedor.innerHTML = armarHtmlPagina(indices, esPrimera, esUltima);
     return contenedor;
   });
 }

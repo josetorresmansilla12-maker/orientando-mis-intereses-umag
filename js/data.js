@@ -55,7 +55,7 @@ const AREAS = [
     icono: "🎭",
     color: "#57BFC9",
     descripcion:
-      "¿Tienes una libreta llena de dibujos, un playlist para cada estado de ánimo, o simplemente necesitas expresarte de alguna forma? Si vives creando —dibujando, bailando, actuando, cantando o inventando algo nuevo— esta área es para ti. Aquí el arte no es un hobby más, es tu forma de comunicar lo que sientes.",
+      "¿Tienes una libreta llena de dibujos, un playlist para cada estado de ánimo, o simplemente necesitas expresarte de alguna forma? Si vives creando (dibujando, bailando, actuando, cantando o inventando algo nuevo) esta área es para ti. Aquí el arte no es un hobby más, es tu forma de comunicar lo que sientes.",
     descripcionCorta: "¿Te gusta expresarte creando: dibujo, música, baile, actuación o diseño?",
     carrerasUMAG: [
       "Arquitectura",
