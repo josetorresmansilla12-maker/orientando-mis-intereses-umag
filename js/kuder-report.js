@@ -138,9 +138,9 @@ function construirStatsKuder(estudiantes, conteos, total) {
       <div class="stat-card"><div class="num">${con4oMas}</div><div class="lbl">Estudiantes con perfil amplio: 4 o más áreas de interés (${pct4oMas}%)</div></div>
       <div class="stat-card"><div class="num">${areasDistintas}</div><div class="lbl">Áreas de interés distintas representadas (de ${AREAS_KUDER.length})</div></div>
       <div class="stat-card"><div class="num">${maximoAreas}</div><div class="lbl">Máximo de áreas de interés en un mismo estudiante</div></div>
-      <div class="stat-card kuder-stat-ancho"><div class="num kuder-stat-num-area">${top1.nombre}</div><div class="lbl">Área más elegida (${top1.c}, ${top1.pct}%)</div></div>
-      <div class="stat-card kuder-stat-ancho"><div class="num kuder-stat-num-area">${top2.nombre}</div><div class="lbl">Segunda área más elegida (${top2.c}, ${top2.pct}%)</div></div>
-      <div class="stat-card kuder-stat-ancho"><div class="num kuder-stat-num-area">${ultima.nombre}</div><div class="lbl">Área menos elegida (${ultima.c}, ${ultima.pct}%)</div></div>
+      <div class="stat-card kuder-stat-ancho"><div class="num kuder-stat-num-area">${top1.nombre}</div><div class="lbl">Área más elegida: ${top1.c} de ${total} (${top1.pct}%)</div></div>
+      <div class="stat-card kuder-stat-ancho"><div class="num kuder-stat-num-area">${top2.nombre}</div><div class="lbl">Segunda área más elegida: ${top2.c} de ${total} (${top2.pct}%)</div></div>
+      <div class="stat-card kuder-stat-ancho"><div class="num kuder-stat-num-area">${ultima.nombre}</div><div class="lbl">Área menos elegida: ${ultima.c} de ${total} (${ultima.pct}%)</div></div>
       <div class="stat-card kuder-stat-ancho"><div class="num kuder-stat-num-area">${mayorPromedio.nombre}</div><div class="lbl">Mayor puntaje promedio del curso (${promedioArea(mayorPromedio).toFixed(1)} pts)</div></div>
       <div class="stat-card kuder-stat-ancho"><div class="num kuder-stat-num-area">${menorPromedio.nombre}</div><div class="lbl">Menor puntaje promedio del curso (${promedioArea(menorPromedio).toFixed(1)} pts)</div></div>
     </div>`;
@@ -298,14 +298,31 @@ function obtenerAreaMasCercanaKuder(puntajes) {
   return { nombres, puntaje: maximo };
 }
 
+// el ícono de cada área (mismo set que ya se usa en el gráfico de resultados y en
+// las tarjetas de área) va al lado de su nombre para diferenciarlas más rápido en
+// una lista larga de estudiantes — son textos fijos de la app (no vienen de la
+// planilla), así que no necesitan escaparse.
 function celdaAreasEstudianteKuder(estudiante) {
   const areas = calcularAreasDeInteresKuder(estudiante.puntajes);
   if (areas.length > 0) {
-    return escaparHtmlKuder(areas.map((a) => a.nombre).join(", "));
+    return areas.map((a) => `${a.icono} ${escaparHtmlKuder(a.nombre)}`).join(", ");
   }
   const cercana = obtenerAreaMasCercanaKuder(estudiante.puntajes);
   if (!cercana) return "—";
   return `<span class="kuder-lista-sin-area">No tiene área de interés</span> <span class="kuder-lista-cercana">(más cercana: ${escaparHtmlKuder(cercana.nombres.join(" / "))}, ${cercana.puntaje} pts)</span>`;
+}
+
+// da formato estándar al RUT chileno: puntos cada 3 dígitos en el cuerpo y un guion
+// antes del dígito verificador (ej. "222676584" → "22.267.658-4"). Si el valor no
+// trae al menos 2 caracteres útiles (dígitos o K), se muestra tal cual venía en la
+// planilla en vez de forzar un formato que no correspondería.
+function formatearRutKuder(rutCrudo) {
+  const limpio = (rutCrudo || "").toString().trim().replace(/[^0-9kK]/g, "");
+  if (limpio.length < 2) return (rutCrudo || "").toString().trim();
+  const cuerpo = limpio.slice(0, -1);
+  const dv = limpio.slice(-1).toUpperCase();
+  const cuerpoConPuntos = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `${cuerpoConPuntos}-${dv}`;
 }
 
 function construirFilaEstudianteKuder(n, estudiante) {
@@ -315,7 +332,7 @@ function construirFilaEstudianteKuder(n, estudiante) {
     <tr>
       <td class="num">${n}</td>
       <td>${escaparHtmlKuder(nombre)}</td>
-      <td>${rut ? escaparHtmlKuder(rut) : "—"}</td>
+      <td>${rut ? escaparHtmlKuder(formatearRutKuder(rut)) : "—"}</td>
       <td>${celdaAreasEstudianteKuder(estudiante)}</td>
     </tr>`;
 }
@@ -527,10 +544,17 @@ function construirListaCarrerasKuder(titulo, carreras, clase) {
     </div>`;
 }
 
-function construirTarjetaAreaKuder(area, conteo, total) {
+// "espaciosa" (opcional): agrega la clase "kuder-area-card-espaciosa", que en
+// css/styles.css agranda el padding y el interlineado SOLO dentro de esa tarjeta,
+// sin tocar las reglas base (.area-card, compartidas con el informe de 8°). Se usa
+// nada más para la tarjeta que termina sola en su página (ver
+// construirPaginasAreasKuder) — agrandar también las que comparten página con otra
+// arriesgaría que dejen de caber juntas, así que esas se arman con el tamaño
+// compacto de siempre.
+function construirTarjetaAreaKuder(area, conteo, total, espaciosa) {
   const pct = total > 0 ? Math.round((conteo / total) * 100) : 0;
   return `
-    <div class="area-card" style="border-left-color:${area.color};">
+    <div class="area-card${espaciosa ? " kuder-area-card-espaciosa" : ""}" style="border-left-color:${area.color};">
       <div class="area-card-header">
         ${iconoCirculoKuder(area, 42)}
         <h3 style="color:${area.color};">${area.nombre}</h3>
@@ -581,7 +605,8 @@ function empaquetarTarjetasEnOrdenKuder(alturas, disponible) {
 // cuántas tarjetas caben, así ninguna tarjeta termina empujando al pie fuera de la hoja.
 function construirPaginasAreasKuder(datosCurso, conteos, total) {
   const areasOrdenadas = [...AREAS_KUDER].sort((a, b) => (conteos[b.id] || 0) - (conteos[a.id] || 0));
-  const htmlTarjetas = areasOrdenadas.map((area) => construirTarjetaAreaKuder(area, conteos[area.id] || 0, total));
+  const htmlTarjetas = areasOrdenadas.map((area) => construirTarjetaAreaKuder(area, conteos[area.id] || 0, total, false));
+  const htmlTarjetasEspaciosas = areasOrdenadas.map((area) => construirTarjetaAreaKuder(area, conteos[area.id] || 0, total, true));
   const htmlEncabezadoCont = construirLineaCursoKuder(datosCurso);
   const htmlAviso = construirAvisoContinua();
   const htmlFooter = construirFooterKuder();
@@ -596,6 +621,9 @@ function construirPaginasAreasKuder(datosCurso, conteos, total) {
   const grupos = empaquetarTarjetasEnOrdenKuder(alturasTarjetas, disponible);
 
   const LIMITE_PAGINA_PX = ALTO_PAGINA_PX - PADDING_INFERIOR_PX;
+  // arma la página siempre con las tarjetas compactas: el cálculo de cuáles caben
+  // juntas (arriba y en el ciclo de abajo) se hizo midiendo esas alturas, así que
+  // usar acá la versión espaciosa podría invalidarlo.
   function armarHtmlPagina(indices, esUltima) {
     return `
       ${htmlEncabezadoCont}
@@ -617,11 +645,27 @@ function construirPaginasAreasKuder(datosCurso, conteos, total) {
     }
   }
 
+  // recién con los grupos ya definitivos: a la tarjeta que quedó sola en su
+  // página (sin pareja, por orden y por espacio) se le da la versión "espaciosa"
+  // — más aire interno — para que la página no se vea tan vacía debajo del pie.
+  // Las tarjetas que comparten página con otra se dejan compactas, tal como se
+  // calculó que cabían. Se verifica igual que la versión espaciosa quepa bajo el
+  // límite antes de usarla; si por algún motivo no cupiera, se deja la compacta.
   return grupos.map((indices, idx) => {
     const esUltima = idx === grupos.length - 1;
+    let html = armarHtmlPagina(indices, esUltima);
+    if (indices.length === 1) {
+      const htmlEspacioso = `
+        ${htmlEncabezadoCont}
+        <div class="informe-areas">${htmlTarjetasEspaciosas[indices[0]]}</div>
+        ${esUltima ? "" : htmlAviso}
+        ${htmlFooter}
+      `;
+      if (medirAlturaFragmento(htmlEspacioso) <= LIMITE_PAGINA_PX) html = htmlEspacioso;
+    }
     const contenedor = document.createElement("div");
     contenedor.className = "informe-page";
-    contenedor.innerHTML = armarHtmlPagina(indices, esUltima);
+    contenedor.innerHTML = html;
     return contenedor;
   });
 }

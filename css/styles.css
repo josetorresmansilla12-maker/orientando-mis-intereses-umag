@@ -894,3 +894,17 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
 .kuder-tabla-estudiantes tbody tr:nth-child(odd) td { background: var(--lila-fondo); }
 .kuder-lista-sin-area { color: var(--texto-suave); font-style: italic; }
 .kuder-lista-cercana { color: var(--texto-suave); }
+
+/* ---------- tarjeta de área de Kuder que queda SOLA en su página ----------
+   js/kuder-report.js calcula qué tarjetas caben junto a otra y cuáles quedan solas
+   en una hoja (sin pareja, por orden y por espacio); solo a esas últimas se les
+   agrega esta clase con más "aire" interno, para que no se vea tan vacía la parte
+   de abajo de la página. Las tarjetas que SÍ comparten página con otra se dejan
+   con el tamaño compacto de siempre (.area-card base, compartida con el informe de
+   8°) — agrandarlas también arriesgaría romper el cálculo de cuáles caben juntas. */
+.kuder-area-card-espaciosa { padding: 20px 22px; }
+.kuder-area-card-espaciosa .area-card-header { margin-bottom: 11px; }
+.kuder-area-card-espaciosa .area-card-desc { margin: 0 0 15px; line-height: 1.7; }
+.kuder-area-card-espaciosa .carreras-mini { padding: 15px 18px; }
+.kuder-area-card-espaciosa .carreras-lista-bullets { line-height: 1.7; }
+.kuder-area-card-espaciosa .carreras-lista-bullets li { margin-bottom: 4.5px; }
