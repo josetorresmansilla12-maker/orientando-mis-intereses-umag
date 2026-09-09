@@ -769,6 +769,16 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
 .kuder-stat-ancho { grid-column: span 2; }
 .kuder-stats-wrap .stat-card .num.kuder-stat-num-area { font-size: 19px; }
 
+/* nota chica bajo la grilla de estadísticas, aclarando "elegida" vs. "puntaje
+   promedio" — una sola línea, sin ocupar espacio de sobra en la página. */
+.kuder-stats-nota {
+  margin: 6px 30px 0;
+  font-size: 8.5px;
+  line-height: 1.35;
+  color: var(--texto-suave);
+}
+.kuder-stats-nota b { color: #402a63; }
+
 .kuder-resumen-wrap { margin: 18px 30px 0; }
 .kuder-resumen-titulo {
   font-size: 13px;
@@ -889,6 +899,7 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
   border-bottom: 2px solid var(--borde);
 }
 .kuder-tabla-estudiantes th.num, .kuder-tabla-estudiantes td.num { width: 1.6em; text-align: right; color: var(--texto-suave); }
+.kuder-tabla-estudiantes td.rut { white-space: nowrap; }
 .kuder-tabla-estudiantes td { padding: 3px 6px; border-bottom: 1px solid var(--borde); color: #2b2140; line-height: 1.35; }
 .kuder-tabla-estudiantes tr:last-child td { border-bottom: none; }
 .kuder-tabla-estudiantes tbody tr:nth-child(odd) td { background: var(--lila-fondo); }

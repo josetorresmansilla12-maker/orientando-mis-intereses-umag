@@ -187,6 +187,17 @@ function construirFooterKuder() {
 // página 1 queda dedicada solo a los recuadros (con más cifras, ver
 // construirStatsKuder) y el gráfico se mueve a su propia página de "resultados".
 
+// aclara en una sola línea chica la diferencia entre los recuadros "elegida" (más/
+// segunda/menos) y "puntaje promedio": los primeros cuentan estudiantes que
+// cruzaron el umbral de interés, el segundo promedia el puntaje bruto de todo el
+// curso en esa área — son dos miradas distintas y pueden nombrar áreas distintas.
+function construirNotaStatsKuder() {
+  return `
+    <div class="kuder-stats-nota">
+      <b>Elegida</b> = puntaje ≥ 7 en el área. <b>Puntaje promedio</b> = promedio bruto de todo el curso en esa área (sin umbral) — por eso pueden ser distintas.
+    </div>`;
+}
+
 function construirPaginaStatsKuder(datosCurso, estudiantes, conteos, total) {
   const contenedor = document.createElement("div");
   contenedor.className = "informe-page";
@@ -195,6 +206,7 @@ function construirPaginaStatsKuder(datosCurso, estudiantes, conteos, total) {
     ${construirCajaCursoKuder(datosCurso, total)}
     ${construirIntroKuder()}
     ${construirStatsKuder(estudiantes, conteos, total)}
+    ${construirNotaStatsKuder()}
     ${construirFooterKuder()}
   `;
   return contenedor;
@@ -332,7 +344,7 @@ function construirFilaEstudianteKuder(n, estudiante) {
     <tr>
       <td class="num">${n}</td>
       <td>${escaparHtmlKuder(nombre)}</td>
-      <td>${rut ? escaparHtmlKuder(formatearRutKuder(rut)) : "—"}</td>
+      <td class="rut">${rut ? escaparHtmlKuder(formatearRutKuder(rut)) : "—"}</td>
       <td>${celdaAreasEstudianteKuder(estudiante)}</td>
     </tr>`;
 }
@@ -340,7 +352,7 @@ function construirFilaEstudianteKuder(n, estudiante) {
 function construirTablaEstudiantesColumnaKuder(filas) {
   return `
     <table class="kuder-tabla-estudiantes">
-      <thead><tr><th class="num">#</th><th>Nombre</th><th>RUT</th><th>Área(s) de interés</th></tr></thead>
+      <thead><tr><th class="num">#</th><th>Nombre</th><th class="rut">RUT</th><th>Área(s) de interés</th></tr></thead>
       <tbody>${filas.join("")}</tbody>
     </table>`;
 }
