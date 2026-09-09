@@ -12,7 +12,10 @@
 // las carreras UMAG / otras carreras asociadas.
 //
 // Con 2 o más cursos hay dos formas de generar el PDF (ver js/kuder.js):
-// - Informe GLOBAL (generarInformeGlobalKuderPdf): un solo PDF que suma los cursos.
+// - Informe GLOBAL (generarInformeGlobalKuderPdf): un solo PDF que suma los cursos —
+//   misma estructura de página 1 (estadísticas) y página 2 (resultados) que el
+//   informe por curso, pero sin la lista de estudiantes (serían de varios colegios
+//   y cursos a la vez, no tiene el mismo sentido que en un solo curso).
 // - Informes POR CURSO (generarInformesPorCursoKuderZip): un PDF de informe grupal
 //   por cada curso (construirBlobInformeGrupalKuder), entregados juntos en un ZIP.
 
@@ -143,33 +146,6 @@ function construirStatsKuder(estudiantes, conteos, total) {
       <div class="stat-card kuder-stat-ancho"><div class="num kuder-stat-num-area">${ultima.nombre}</div><div class="lbl">Área menos elegida: ${ultima.c} de ${total} (${ultima.pct}%)</div></div>
       <div class="stat-card kuder-stat-ancho"><div class="num kuder-stat-num-area">${mayorPromedio.nombre}</div><div class="lbl">Mayor puntaje promedio del curso (${promedioArea(mayorPromedio).toFixed(1)} pts)</div></div>
       <div class="stat-card kuder-stat-ancho"><div class="num kuder-stat-num-area">${menorPromedio.nombre}</div><div class="lbl">Menor puntaje promedio del curso (${promedioArea(menorPromedio).toFixed(1)} pts)</div></div>
-    </div>`;
-}
-
-// las barras van en 2 columnas (en vez de una sola columna de 10 filas) para que el
-// resumen completo quepa cómodamente en una sola página — el orden de mayor a menor
-// se sigue leyendo con naturalidad porque la grilla llena primero la fila (área 1 y 2
-// arriba, 3 y 4 debajo, etc.), no una columna entera antes de pasar a la otra.
-function construirResumenBarrasKuder(conteos, total) {
-  const areasOrdenadas = [...AREAS_KUDER].sort((a, b) => (conteos[b.id] || 0) - (conteos[a.id] || 0));
-  const maxConteo = Math.max(1, ...areasOrdenadas.map((a) => conteos[a.id] || 0));
-  return `
-    <div class="kuder-resumen-wrap">
-      <div class="kuder-resumen-titulo">Áreas de interés del curso, de mayor a menor</div>
-      <div class="kuder-barras-grid">
-        ${areasOrdenadas
-          .map((a) => {
-            const c = conteos[a.id] || 0;
-            const pct = total > 0 ? Math.round((c / total) * 100) : 0;
-            const anchoBarra = Math.round((c / maxConteo) * 100);
-            return `
-            <div class="barra-area">
-              <div class="etiqueta-area"><span>${a.icono} ${a.nombre}</span><span>${c} (${pct}%)</span></div>
-              <div class="barra-fondo"><div class="barra-rellena" style="width:${anchoBarra}%; background:${a.color};"></div></div>
-            </div>`;
-          })
-          .join("")}
-      </div>
     </div>`;
 }
 
@@ -446,8 +422,8 @@ function construirPaginasListaEstudiantesKuder(datosCurso, estudiantes) {
   if (intento.cabe) return [crearPagina(intento.html)];
 
   // curso excepcionalmente numeroso: se reparte en 2 páginas en vez de cortar
-  // contenido, mismo criterio de resguardo que usa
-  // construirPaginasResumenGlobalKuder para el informe global.
+  // contenido (mismo criterio de resguardo — nunca cortar, repartir si hace
+  // falta — que se usa en otras partes de este archivo).
   const htmlAviso = construirAvisoContinua();
   const mitad = Math.ceil(filas.length / 2);
   const parte1 = empaquetarListaEstudiantesKuder(filas.slice(0, mitad), htmlEncabezado, disponible - medirAlturaFragmento(htmlAviso));
@@ -496,40 +472,45 @@ function construirCajaGlobalKuder(resumenPorCurso, totalEstudiantes, fecha) {
     </div>`;
 }
 
-// a diferencia del informe de un solo curso (donde la página 1 siempre cabe holgada),
-// el informe global suma una lista de cursos (1 a 6) de largo variable — con varios
-// cursos, los chips de "cursos incluidos" pueden ocupar 2 líneas. Las barras en 2
-// columnas (ver construirResumenBarrasKuder) dejan margen de sobra para que esto
-// siga cabiendo en una sola página en el uso normal; igual se mide el contenido real
-// antes de decidir, y si de verdad no cupiera (nombres de colegio muy largos, por
-// ejemplo), el resumen de las 10 áreas pasa a una segunda página en vez de cortarse
-// a la mitad — es un resguardo, no el camino esperado.
-function construirPaginasResumenGlobalKuder(resumenPorCurso, estudiantes, conteos, total, fecha) {
-  const htmlBanner = construirBanner("Informe Global · Test Vocacional de Kuder", "Enseñanza Media · Unidad de Admisión y Marketing");
-  const htmlCaja = construirCajaGlobalKuder(resumenPorCurso, total, fecha);
-  const htmlCursos = construirCursosIncluidosKuder(resumenPorCurso);
-  const htmlIntro = construirIntroGlobalKuder(resumenPorCurso.length);
-  const htmlStats = construirStatsKuder(estudiantes, conteos, total);
-  const htmlBarras = construirResumenBarrasKuder(conteos, total);
-  const htmlFooter = construirFooterKuder();
+// misma separación que el informe por curso (ver construirPaginaStatsKuder /
+// construirPaginaResultadosKuder): página 1 = solo estadísticas, página 2 =
+// resultados con el gráfico grande. La lista de "cursos incluidos" (chips) va en
+// la página de resultados y no en la de estadísticas: con hasta 6 cursos esos
+// chips pueden ocupar 2 líneas, y sumados a los 15 recuadros de estadísticas no
+// siempre cabían en una sola hoja; la página de resultados, en cambio, tiene de
+// sobra (solo intro + gráfico), así que ahí no arriesga desbordar.
+function construirPaginaStatsGlobalKuder(resumenPorCurso, estudiantes, conteos, total, fecha) {
+  const contenedor = document.createElement("div");
+  contenedor.className = "informe-page";
+  contenedor.innerHTML = `
+    ${construirBanner("Informe Global · Test Vocacional de Kuder", "Enseñanza Media · Unidad de Admisión y Marketing")}
+    ${construirCajaGlobalKuder(resumenPorCurso, total, fecha)}
+    ${construirIntroGlobalKuder(resumenPorCurso.length)}
+    ${construirStatsKuder(estudiantes, conteos, total)}
+    ${construirNotaStatsKuder()}
+    ${construirFooterKuder()}
+  `;
+  return contenedor;
+}
 
-  const crearPagina = (html) => {
-    const contenedor = document.createElement("div");
-    contenedor.className = "informe-page";
-    contenedor.innerHTML = html;
-    return contenedor;
-  };
+function construirIntroResultadosGlobalKuder(nCursos) {
+  return `
+    <div class="informe-intro-texto kuder-intro-texto">
+      A continuación se muestra, de mayor a menor, el porcentaje del total combinado de estudiantes (de los ${nCursos} cursos incluidos) que tiene cada área como área de interés (puntaje 7 o más).
+    </div>`;
+}
 
-  const LIMITE_PAGINA_PX = ALTO_PAGINA_PX - PADDING_INFERIOR_PX;
-  const htmlCompleto = htmlBanner + htmlCaja + htmlCursos + htmlIntro + htmlStats + htmlBarras + htmlFooter;
-  if (medirAlturaFragmento(htmlCompleto) <= LIMITE_PAGINA_PX) {
-    return [crearPagina(htmlCompleto)];
-  }
-
-  const htmlAviso = construirAvisoContinua();
-  const pagina1 = crearPagina(htmlBanner + htmlCaja + htmlCursos + htmlIntro + htmlStats + htmlAviso);
-  const pagina2 = crearPagina(`<div class="espaciador-inicio-pagina"></div>${htmlBarras}${htmlFooter}`);
-  return [pagina1, pagina2];
+function construirPaginaResultadosGlobalKuder(datosCursoContinuacion, resumenPorCurso, conteos, total) {
+  const contenedor = document.createElement("div");
+  contenedor.className = "informe-page";
+  contenedor.innerHTML = `
+    ${construirLineaCursoKuder(datosCursoContinuacion)}
+    ${construirCursosIncluidosKuder(resumenPorCurso)}
+    ${construirIntroResultadosGlobalKuder(resumenPorCurso.length)}
+    ${construirBloqueResultadosKuder(conteos, total)}
+    ${construirFooterKuder()}
+  `;
+  return contenedor;
 }
 
 function nombreArchivoGlobalKuder(resumenPorCurso) {
@@ -555,7 +536,8 @@ async function construirBlobInformeGlobalKuder(resumenPorCurso, estudiantes, fec
   const datosCursoContinuacion = { colegio: `${resumenPorCurso.length} cursos (informe global)`, curso: "" };
 
   const paginas = [
-    ...construirPaginasResumenGlobalKuder(resumenPorCurso, estudiantes, conteos, total, fecha),
+    construirPaginaStatsGlobalKuder(resumenPorCurso, estudiantes, conteos, total, fecha),
+    construirPaginaResultadosGlobalKuder(datosCursoContinuacion, resumenPorCurso, conteos, total),
     ...construirPaginasAreasKuder(datosCursoContinuacion, conteos, total),
   ];
   return paginasAPdfBlob(paginas);

@@ -779,14 +779,12 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
 }
 .kuder-stats-nota b { color: #402a63; }
 
-.kuder-resumen-wrap { margin: 18px 30px 0; }
 .kuder-resumen-titulo {
   font-size: 13px;
   font-weight: 800;
   color: var(--morado-oscuro);
   margin-bottom: 8px;
 }
-.kuder-barras-grid .etiqueta-area { font-size: 13.5px; }
 
 .area-card-conteo {
   margin-left: auto;
@@ -803,27 +801,24 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
 .kuder-avisos-lista li.error { color: var(--rojo); }
 .kuder-avisos-lista li.advertencia { color: #96690a; }
 
-/* informe consolidado (varios cursos a la vez): chips compactos en vez de tabla,
-   para que la página 1 siga cabiendo en una sola hoja */
-.kuder-cursos-incluidos { margin: 16px 30px 0; }
-.kuder-cursos-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+/* informe global (varios cursos a la vez): chips compactos en vez de tabla, en la
+   página de resultados — con hasta 6 cursos pueden ocupar 2 líneas, así que se
+   mantienen compactos para dejar margen de sobra junto al gráfico grande. */
+.kuder-cursos-incluidos { margin: 10px 30px 0; }
+.kuder-cursos-incluidos .kuder-resumen-titulo { margin-bottom: 5px; font-size: 12px; }
+.kuder-cursos-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
 .kuder-curso-chip {
   background: var(--lila-fondo);
   border: 1px solid var(--borde);
   border-radius: 999px;
-  padding: 4px 10px;
-  font-size: 10.5px;
+  padding: 3px 9px;
+  font-size: 10px;
   color: #402a63;
 }
 .kuder-curso-chip b { color: var(--morado-oscuro); }
 
 .kuder-fila-incluir-label { display: flex; align-items: center; gap: 7px; cursor: pointer; }
 .kuder-fila-incluir-label input[type="checkbox"] { width: auto; cursor: pointer; }
-
-/* barras del resumen de áreas en 2 columnas (no 1 columna de 10 filas), para que la
-   página 1 del informe quepa siempre en una sola hoja */
-.kuder-barras-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 22px; }
-.kuder-barras-grid .barra-area { margin-bottom: 6px; }
 
 /* ---------- informe interno de Kuder (Admisión y Marketing): tablas de ranking ---------- */
 /* bloque "flowable": se usa suelto (no envuelto en un contenedor con margen propio,
@@ -871,8 +866,8 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
    toda una página solo para él (sin compartirla con las tarjetas de estadísticas),
    aprovecha mejor el espacio disponible. El ancho de etiqueta/valor no cambia para
    no tener que recalcular la posición de .kuder-chart-gridlines. */
-.kuder-chart-bloque-grande .kuder-chart-fila { height: 69px; }
-.kuder-chart-bloque-grande .kuder-chart-track { height: 40px; }
+.kuder-chart-bloque-grande .kuder-chart-fila { height: 65px; }
+.kuder-chart-bloque-grande .kuder-chart-track { height: 38px; }
 .kuder-chart-bloque-grande .kuder-chart-etiqueta { font-size: 16px; }
 .kuder-chart-bloque-grande .kuder-chart-valor { font-size: 14.5px; }
 
