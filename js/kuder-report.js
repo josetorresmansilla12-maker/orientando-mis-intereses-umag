@@ -5,10 +5,11 @@
 // mantiene el mismo formato visual, pero es un módulo aparte: no modifica ni depende
 // de datos propios de ese cuestionario (áreas, ids, colores distintos).
 //
-// Estructura del PDF: página 1 = resumen del curso (datos generales + resumen de las
-// 10 áreas en una grilla de barras, todo en una sola hoja); páginas siguientes = una
-// tarjeta por cada una de las 10 áreas de Kuder, con cuántos estudiantes del curso la
-// tienen como interés y las carreras UMAG / otras carreras asociadas.
+// Estructura del PDF (informe grupal, por curso): página 1 = estadísticas del curso;
+// página 2 = resultados (gráfico de las 10 áreas); página(s) 3 = lista de estudiantes
+// evaluados con su(s) área(s) de interés; páginas siguientes = una tarjeta por cada una
+// de las 10 áreas de Kuder, con cuántos estudiantes del curso la tienen como interés y
+// las carreras UMAG / otras carreras asociadas.
 //
 // Con 2 o más cursos hay dos formas de generar el PDF (ver js/kuder.js):
 // - Informe GLOBAL (generarInformeGlobalKuderPdf): un solo PDF que suma los cursos.
@@ -74,19 +75,30 @@ function construirIntroKuder() {
     </div>`;
 }
 
-// 8 recuadros en total: los primeros 4 son cifras simples (una sola línea de texto en
-// la etiqueta); los otros 4 nombran un área específica y su cifra entre paréntesis, así
-// que van con el doble de ancho (.kuder-stat-ancho) para que ese texto más largo — el
-// caso reportado fue "Servicio Social ... (14, 25%)" — tenga espacio de sobra y no
-// necesite cortarse ni cambiar de línea a media palabra.
+// 15 recuadros en total: 10 son cifras simples (una sola línea de texto en la
+// etiqueta) y 5 nombran un área específica con su cifra o su puntaje promedio entre
+// paréntesis, así que van con el doble de ancho (.kuder-stat-ancho) para que ese
+// texto más largo — el caso reportado fue "Servicio Social ... (14, 25%)" — tenga
+// espacio de sobra y no necesite cortarse ni cambiar de línea a media palabra.
+// La combinación (10 × 1 columna + 5 × 2 columnas = 20 unidades) llena exactamente 5
+// filas completas de la grilla de 4 columnas, para que la página de estadísticas
+// (que ahora va sola, sin el gráfico de barras al lado) quede bien ocupada.
 function construirStatsKuder(estudiantes, conteos, total) {
   const areasPorEstudiante = estudiantes.map((e) => calcularAreasDeInteresKuder(e.puntajes).length);
   const sinArea = areasPorEstudiante.filter((n) => n === 0).length;
   const conArea = total - sinArea;
   const pctConArea = total > 0 ? Math.round((conArea / total) * 100) : 0;
+  const con1 = areasPorEstudiante.filter((n) => n === 1).length;
+  const pct1 = total > 0 ? Math.round((con1 / total) * 100) : 0;
+  const con2 = areasPorEstudiante.filter((n) => n === 2).length;
+  const pct2 = total > 0 ? Math.round((con2 / total) * 100) : 0;
   const con3oMas = areasPorEstudiante.filter((n) => n >= 3).length;
   const pct3oMas = total > 0 ? Math.round((con3oMas / total) * 100) : 0;
+  const con4oMas = areasPorEstudiante.filter((n) => n >= 4).length;
+  const pct4oMas = total > 0 ? Math.round((con4oMas / total) * 100) : 0;
   const promedio = total > 0 ? (areasPorEstudiante.reduce((acc, n) => acc + n, 0) / total).toFixed(1) : "0.0";
+  const areasDistintas = AREAS_KUDER.filter((a) => (conteos[a.id] || 0) > 0).length;
+  const maximoAreas = areasPorEstudiante.length ? Math.max(...areasPorEstudiante) : 0;
 
   const areasOrdenadas = [...AREAS_KUDER].sort((a, b) => (conteos[b.id] || 0) - (conteos[a.id] || 0));
   const fmtArea = (area) => {
@@ -98,16 +110,39 @@ function construirStatsKuder(estudiantes, conteos, total) {
   const top2 = fmtArea(areasOrdenadas[1]);
   const ultima = fmtArea(areasOrdenadas[areasOrdenadas.length - 1]);
 
+  // puntaje promedio bruto por área (no solo si superó el umbral de 7 o más): una
+  // segunda mirada a la inclinación general del curso, complementaria a "cuántos
+  // estudiantes la eligieron como área de interés".
+  const sumaPuntajes = {};
+  AREAS_KUDER.forEach((a) => (sumaPuntajes[a.id] = 0));
+  estudiantes.forEach((e) => {
+    AREAS_KUDER.forEach((a) => {
+      const p = Number(e.puntajes[a.id]);
+      if (Number.isFinite(p)) sumaPuntajes[a.id] += p;
+    });
+  });
+  const promedioArea = (area) => (total > 0 ? sumaPuntajes[area.id] / total : 0);
+  const areasPorPromedio = [...AREAS_KUDER].sort((a, b) => promedioArea(b) - promedioArea(a));
+  const mayorPromedio = areasPorPromedio[0];
+  const menorPromedio = areasPorPromedio[areasPorPromedio.length - 1];
+
   return `
     <div class="stats-grid kuder-stats-wrap">
       <div class="stat-card"><div class="num">${total}</div><div class="lbl">Estudiantes evaluados</div></div>
-      <div class="stat-card"><div class="num">${sinArea}</div><div class="lbl">Sin área de interés clara</div></div>
       <div class="stat-card"><div class="num">${conArea}</div><div class="lbl">Con al menos un área de interés (${pctConArea}%)</div></div>
+      <div class="stat-card"><div class="num">${sinArea}</div><div class="lbl">Sin área de interés clara</div></div>
       <div class="stat-card"><div class="num">${promedio}</div><div class="lbl">Áreas de interés promedio por estudiante (de ${AREAS_KUDER.length} en total)</div></div>
+      <div class="stat-card"><div class="num">${con1}</div><div class="lbl">Estudiantes con exactamente 1 área de interés (${pct1}%)</div></div>
+      <div class="stat-card"><div class="num">${con2}</div><div class="lbl">Estudiantes con exactamente 2 áreas de interés (${pct2}%)</div></div>
+      <div class="stat-card"><div class="num">${con3oMas}</div><div class="lbl">Estudiantes con 3 o más áreas de interés (${pct3oMas}%)</div></div>
+      <div class="stat-card"><div class="num">${con4oMas}</div><div class="lbl">Estudiantes con perfil amplio: 4 o más áreas de interés (${pct4oMas}%)</div></div>
+      <div class="stat-card"><div class="num">${areasDistintas}</div><div class="lbl">Áreas de interés distintas representadas (de ${AREAS_KUDER.length})</div></div>
+      <div class="stat-card"><div class="num">${maximoAreas}</div><div class="lbl">Máximo de áreas de interés en un mismo estudiante</div></div>
       <div class="stat-card kuder-stat-ancho"><div class="num kuder-stat-num-area">${top1.nombre}</div><div class="lbl">Área más elegida (${top1.c}, ${top1.pct}%)</div></div>
       <div class="stat-card kuder-stat-ancho"><div class="num kuder-stat-num-area">${top2.nombre}</div><div class="lbl">Segunda área más elegida (${top2.c}, ${top2.pct}%)</div></div>
       <div class="stat-card kuder-stat-ancho"><div class="num kuder-stat-num-area">${ultima.nombre}</div><div class="lbl">Área menos elegida (${ultima.c}, ${ultima.pct}%)</div></div>
-      <div class="stat-card kuder-stat-ancho"><div class="num">${con3oMas}</div><div class="lbl">Estudiantes con 3 o más áreas de interés (${pct3oMas}%)</div></div>
+      <div class="stat-card kuder-stat-ancho"><div class="num kuder-stat-num-area">${mayorPromedio.nombre}</div><div class="lbl">Mayor puntaje promedio del curso (${promedioArea(mayorPromedio).toFixed(1)} pts)</div></div>
+      <div class="stat-card kuder-stat-ancho"><div class="num kuder-stat-num-area">${menorPromedio.nombre}</div><div class="lbl">Menor puntaje promedio del curso (${promedioArea(menorPromedio).toFixed(1)} pts)</div></div>
     </div>`;
 }
 
@@ -147,9 +182,12 @@ function construirFooterKuder() {
     </div>`;
 }
 
-// ==================== PÁGINA 1: resumen del curso ====================
+// ==================== PÁGINA 1: solo estadísticas del curso ====================
+// antes las estadísticas compartían la página 1 con el gráfico de barras; ahora la
+// página 1 queda dedicada solo a los recuadros (con más cifras, ver
+// construirStatsKuder) y el gráfico se mueve a su propia página de "resultados".
 
-function construirPaginaResumenKuder(datosCurso, estudiantes, conteos, total) {
+function construirPaginaStatsKuder(datosCurso, estudiantes, conteos, total) {
   const contenedor = document.createElement("div");
   contenedor.className = "informe-page";
   contenedor.innerHTML = `
@@ -157,10 +195,206 @@ function construirPaginaResumenKuder(datosCurso, estudiantes, conteos, total) {
     ${construirCajaCursoKuder(datosCurso, total)}
     ${construirIntroKuder()}
     ${construirStatsKuder(estudiantes, conteos, total)}
-    ${construirResumenBarrasKuder(conteos, total)}
     ${construirFooterKuder()}
   `;
   return contenedor;
+}
+
+// ==================== PÁGINA 2: resultados (gráfico de áreas) ====================
+// mismo estilo de gráfico "honesto" (barras a escala absoluta de 0 a 100%, con
+// grilla y eje) introducido en el informe interno (js/kuder-internal-report.js:
+// construirBloqueGraficoAreasInterno) — acá va en una función propia porque ese
+// archivo no se puede importar desde este módulo, pero SÍ comparte las mismas
+// clases CSS (.kuder-chart-*), reutilizadas tal cual. En su propia página, con más
+// espacio disponible, las barras van más altas y con letra más grande
+// (.kuder-chart-bloque-grande) para que se vean bien en una sola plana.
+
+function construirIntroResultadosKuder() {
+  return `
+    <div class="informe-intro-texto kuder-intro-texto">
+      A continuación se muestra, de mayor a menor, el porcentaje de estudiantes del curso que tiene cada área como área de interés (puntaje 7 o más). Esto permite identificar de un vistazo las tendencias vocacionales predominantes del curso.
+    </div>`;
+}
+
+function construirBloqueResultadosKuder(conteos, total) {
+  const areasOrdenadas = [...AREAS_KUDER].sort((a, b) => (conteos[b.id] || 0) - (conteos[a.id] || 0));
+  const filas = areasOrdenadas.map((a) => {
+    const c = conteos[a.id] || 0;
+    const pct = total > 0 ? Math.round((c / total) * 100) : 0;
+    return { area: a, c, pct };
+  });
+  const maxPct = Math.max(10, ...filas.map((f) => f.pct));
+  const dominioMax = Math.ceil(maxPct / 10) * 10;
+  const marcas = [];
+  for (let m = 0; m <= dominioMax; m += 10) marcas.push(m);
+
+  return `
+    <div class="kuder-chart-bloque kuder-chart-bloque-grande">
+      <div class="kuder-resumen-titulo">Resultados: áreas de interés del curso, de mayor a menor</div>
+      <div class="kuder-chart-plot">
+        <div class="kuder-chart-gridlines">
+          ${marcas.map((m) => `<div class="kuder-chart-gridline" style="left:${(m / dominioMax) * 100}%;"><span>${m}%</span></div>`).join("")}
+        </div>
+        <div class="kuder-chart-filas">
+          ${filas
+            .map(
+              ({ area, c, pct }) => `
+            <div class="kuder-chart-fila">
+              <div class="kuder-chart-etiqueta">${area.icono} ${area.nombre}</div>
+              <div class="kuder-chart-track"><div class="kuder-chart-barra" style="width:${(pct / dominioMax) * 100}%; background:${area.color};"></div></div>
+              <div class="kuder-chart-valor">${c} (${pct}%)</div>
+            </div>`
+            )
+            .join("")}
+        </div>
+      </div>
+    </div>`;
+}
+
+function construirPaginaResultadosKuder(datosCurso, conteos, total) {
+  const contenedor = document.createElement("div");
+  contenedor.className = "informe-page";
+  contenedor.innerHTML = `
+    ${construirLineaCursoKuder(datosCurso)}
+    ${construirIntroResultadosKuder()}
+    ${construirBloqueResultadosKuder(conteos, total)}
+    ${construirFooterKuder()}
+  `;
+  return contenedor;
+}
+
+// ==================== PÁGINA 3: lista de estudiantes ====================
+// lista completa del curso (nombre corregido a formato título, RUT si la planilla lo
+// trae, y área(s) de interés) condensada en 1 a 4 columnas — según cuántos
+// estudiantes tenga el curso — para que quepa en una sola página; esta página NO
+// lleva el pie de página (construirFooterKuder), a diferencia de todas las demás,
+// para aprovechar el máximo de espacio posible para la lista (ver
+// empaquetarListaEstudiantesKuder).
+
+// "juan pérez" / "JUAN PÉREZ" → "Juan Pérez": primera letra de cada palabra en
+// mayúscula (también después de guion o apóstrofe), el resto en minúscula. Regla
+// simple y pareja para todos los nombres, sin excepciones para conectores ("de",
+// "la"), tal como se pidió.
+function capitalizarNombreKuder(s) {
+  return (s || "")
+    .toString()
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase()
+    .replace(/(^|[\s\-'])(\S)/g, (m, sep, letra) => sep + letra.toUpperCase());
+}
+
+// para un estudiante sin ningún área sobre el umbral (7), busca el/los puntaje(s)
+// más alto(s) de sus 10 áreas — al ser el puntaje más alto por debajo de 7, es por
+// definición el más cercano a convertirse en un área de interés.
+function obtenerAreaMasCercanaKuder(puntajes) {
+  let maximo = -Infinity;
+  AREAS_KUDER.forEach((a) => {
+    const p = Number(puntajes[a.id]);
+    if (Number.isFinite(p) && p > maximo) maximo = p;
+  });
+  if (maximo === -Infinity) return null;
+  const nombres = AREAS_KUDER.filter((a) => Number(puntajes[a.id]) === maximo).map((a) => a.nombre);
+  return { nombres, puntaje: maximo };
+}
+
+function celdaAreasEstudianteKuder(estudiante) {
+  const areas = calcularAreasDeInteresKuder(estudiante.puntajes);
+  if (areas.length > 0) {
+    return escaparHtmlKuder(areas.map((a) => a.nombre).join(", "));
+  }
+  const cercana = obtenerAreaMasCercanaKuder(estudiante.puntajes);
+  if (!cercana) return "—";
+  return `<span class="kuder-lista-sin-area">No tiene área de interés</span> <span class="kuder-lista-cercana">(más cercana: ${escaparHtmlKuder(cercana.nombres.join(" / "))}, ${cercana.puntaje} pts)</span>`;
+}
+
+function construirFilaEstudianteKuder(n, estudiante) {
+  const nombre = capitalizarNombreKuder(estudiante.nombre);
+  const rut = (estudiante.rut || "").toString().trim();
+  return `
+    <tr>
+      <td class="num">${n}</td>
+      <td>${escaparHtmlKuder(nombre)}</td>
+      <td>${rut ? escaparHtmlKuder(rut) : "—"}</td>
+      <td>${celdaAreasEstudianteKuder(estudiante)}</td>
+    </tr>`;
+}
+
+function construirTablaEstudiantesColumnaKuder(filas) {
+  return `
+    <table class="kuder-tabla-estudiantes">
+      <thead><tr><th class="num">#</th><th>Nombre</th><th>RUT</th><th>Área(s) de interés</th></tr></thead>
+      <tbody>${filas.join("")}</tbody>
+    </table>`;
+}
+
+// reparte las filas ya renderizadas en 1 a 4 columnas, probando primero con la menor
+// cantidad de columnas posible; para cada cantidad de columnas se prueba de mayor a
+// menor tamaño de letra y se usa el primero (más grande) que quepa. Así, en vez de
+// arrancar siempre achicando la letra al mínimo, un curso con pocos estudiantes cabe
+// en 1 columna con letra grande y usa bien el espacio de la página — tal como pide
+// que esta página "use toda la página disponible para la lista" — mientras que un
+// curso con muchos estudiantes va agregando columnas y, solo si hace falta, achica
+// la letra.
+function empaquetarListaEstudiantesKuder(filas, htmlEncabezado, disponible) {
+  const TAMANOS_FUENTE_PX = [15, 14, 13, 12, 11, 10, 9.5, 9, 8.5];
+  const armar = (cols, tamano) => {
+    const porColumna = Math.ceil(filas.length / cols);
+    const columnas = [];
+    for (let i = 0; i < cols; i++) {
+      const parte = filas.slice(i * porColumna, (i + 1) * porColumna);
+      if (parte.length) columnas.push(parte);
+    }
+    const htmlGrid = `<div class="kuder-lista-estudiantes-grid" style="grid-template-columns:repeat(${columnas.length},1fr); font-size:${tamano}px;">${columnas
+      .map((c) => construirTablaEstudiantesColumnaKuder(c))
+      .join("")}</div>`;
+    return htmlEncabezado + htmlGrid;
+  };
+
+  for (let cols = 1; cols <= 4; cols++) {
+    for (const tamano of TAMANOS_FUENTE_PX) {
+      const html = armar(cols, tamano);
+      if (medirAlturaFragmento(html) <= disponible) return { html, cabe: true };
+    }
+  }
+  // resguardo: no debería ocurrir con el tamaño real de un curso (4 columnas al
+  // tamaño de letra más chico alcanza para bastante más de 45 estudiantes), pero
+  // por si acaso nunca se corta contenido — se entrega igual y el llamador decide
+  // si reparte la lista en más de una página.
+  return { html: armar(4, TAMANOS_FUENTE_PX[TAMANOS_FUENTE_PX.length - 1]), cabe: false };
+}
+
+function construirPaginasListaEstudiantesKuder(datosCurso, estudiantes) {
+  const ordenados = [...estudiantes].sort((a, b) =>
+    capitalizarNombreKuder(a.nombre).localeCompare(capitalizarNombreKuder(b.nombre), "es")
+  );
+  const filas = ordenados.map((e, i) => construirFilaEstudianteKuder(i + 1, e));
+  const htmlEncabezado =
+    construirLineaCursoKuder(datosCurso) +
+    `<div class="kuder-lista-estudiantes-titulo">Lista de estudiantes evaluados (${estudiantes.length})</div>`;
+
+  const LIMITE_PAGINA_PX = ALTO_PAGINA_PX - PADDING_INFERIOR_PX;
+  const MARGEN_SEGURIDAD_PX = 10;
+  const disponible = LIMITE_PAGINA_PX - MARGEN_SEGURIDAD_PX;
+
+  const crearPagina = (html) => {
+    const contenedor = document.createElement("div");
+    contenedor.className = "informe-page";
+    contenedor.innerHTML = html;
+    return contenedor;
+  };
+
+  const intento = empaquetarListaEstudiantesKuder(filas, htmlEncabezado, disponible);
+  if (intento.cabe) return [crearPagina(intento.html)];
+
+  // curso excepcionalmente numeroso: se reparte en 2 páginas en vez de cortar
+  // contenido, mismo criterio de resguardo que usa
+  // construirPaginasResumenGlobalKuder para el informe global.
+  const htmlAviso = construirAvisoContinua();
+  const mitad = Math.ceil(filas.length / 2);
+  const parte1 = empaquetarListaEstudiantesKuder(filas.slice(0, mitad), htmlEncabezado, disponible - medirAlturaFragmento(htmlAviso));
+  const parte2 = empaquetarListaEstudiantesKuder(filas.slice(mitad), htmlEncabezado, disponible);
+  return [crearPagina(parte1.html + htmlAviso), crearPagina(parte2.html)];
 }
 
 // ==================== informe GLOBAL (2 a 6 cursos a la vez) ====================
@@ -341,14 +575,19 @@ function empaquetarTarjetasEnOrdenKuder(alturas, disponible) {
 // las tienen como interés, igual que el resumen de la página 1 — por eso el empaquetado
 // usa empaquetarTarjetasEnOrdenKuder() y no empaquetarTarjetas() de report.js: esa última
 // reordena las tarjetas para aprovechar mejor el espacio, lo que rompería el orden.
+//
+// El pie de página (construirFooterKuder) va en TODAS estas páginas, no solo en la
+// última — se reserva su altura completa (más el aviso de continuación) al calcular
+// cuántas tarjetas caben, así ninguna tarjeta termina empujando al pie fuera de la hoja.
 function construirPaginasAreasKuder(datosCurso, conteos, total) {
   const areasOrdenadas = [...AREAS_KUDER].sort((a, b) => (conteos[b.id] || 0) - (conteos[a.id] || 0));
   const htmlTarjetas = areasOrdenadas.map((area) => construirTarjetaAreaKuder(area, conteos[area.id] || 0, total));
   const htmlEncabezadoCont = construirLineaCursoKuder(datosCurso);
   const htmlAviso = construirAvisoContinua();
+  const htmlFooter = construirFooterKuder();
 
   const altoEncabezadoCont = medirAlturaFragmento(htmlEncabezadoCont);
-  const altoReservaInferior = medirAlturaFragmento(htmlAviso);
+  const altoReservaInferior = medirAlturaFragmento(htmlAviso + htmlFooter);
   const alturasTarjetas = htmlTarjetas.map((html) => medirAlturaFragmento(`<div class="informe-areas" style="margin:0;">${html}</div>`));
 
   const MARGEN_SEGURIDAD_PX = 20;
@@ -362,6 +601,7 @@ function construirPaginasAreasKuder(datosCurso, conteos, total) {
       ${htmlEncabezadoCont}
       <div class="informe-areas">${indices.map((i) => htmlTarjetas[i]).join("")}</div>
       ${esUltima ? "" : htmlAviso}
+      ${htmlFooter}
     `;
   }
   for (let i = 0; i < grupos.length; i++) {
@@ -411,12 +651,17 @@ function calcularConteosPorAreaKuder(estudiantes) {
   return conteos;
 }
 
+// orden del PDF: 1) estadísticas del curso, 2) resultados (gráfico de áreas),
+// 3) lista de estudiantes (1 o 2 páginas, sin pie de página), 4) en adelante, una
+// tarjeta por área con sus carreras (igual que antes).
 async function construirBlobInformeGrupalKuder(datosCurso, estudiantes) {
   const total = estudiantes.length;
   const conteos = calcularConteosPorAreaKuder(estudiantes);
 
   const paginas = [
-    construirPaginaResumenKuder(datosCurso, estudiantes, conteos, total),
+    construirPaginaStatsKuder(datosCurso, estudiantes, conteos, total),
+    construirPaginaResultadosKuder(datosCurso, conteos, total),
+    ...construirPaginasListaEstudiantesKuder(datosCurso, estudiantes),
     ...construirPaginasAreasKuder(datosCurso, conteos, total),
   ];
   return paginasAPdfBlob(paginas);

@@ -855,3 +855,42 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
 .kuder-chart-track { flex: 1; height: 16px; position: relative; }
 .kuder-chart-barra { height: 100%; border-radius: 2px; }
 .kuder-chart-valor { width: 70px; flex-shrink: 0; text-align: right; font-size: 11.5px; font-weight: 700; color: var(--morado-oscuro); }
+
+/* ---------- informe por curso: página de "resultados" dedicada al gráfico ----------
+   mismo gráfico (.kuder-chart-*), pero más alto y con letra más grande: al tener
+   toda una página solo para él (sin compartirla con las tarjetas de estadísticas),
+   aprovecha mejor el espacio disponible. El ancho de etiqueta/valor no cambia para
+   no tener que recalcular la posición de .kuder-chart-gridlines. */
+.kuder-chart-bloque-grande .kuder-chart-fila { height: 69px; }
+.kuder-chart-bloque-grande .kuder-chart-track { height: 40px; }
+.kuder-chart-bloque-grande .kuder-chart-etiqueta { font-size: 16px; }
+.kuder-chart-bloque-grande .kuder-chart-valor { font-size: 14.5px; }
+
+/* ---------- informe por curso: página de lista de estudiantes ---------- */
+.kuder-lista-estudiantes-titulo {
+  margin: 18px 30px 8px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--morado-oscuro);
+}
+/* el tamaño de letra y la cantidad de columnas los decide en tiempo de ejecución
+   empaquetarListaEstudiantesKuder() (estilo inline en este contenedor), según
+   cuántos estudiantes tenga el curso, para que la lista siempre quepa en 1 página. */
+.kuder-lista-estudiantes-grid { display: grid; column-gap: 16px; margin: 0 30px; align-items: start; }
+.kuder-tabla-estudiantes { width: 100%; border-collapse: collapse; }
+.kuder-tabla-estudiantes th {
+  text-align: left;
+  font-size: 0.78em;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--texto-suave);
+  padding: 3px 6px;
+  border-bottom: 2px solid var(--borde);
+}
+.kuder-tabla-estudiantes th.num, .kuder-tabla-estudiantes td.num { width: 1.6em; text-align: right; color: var(--texto-suave); }
+.kuder-tabla-estudiantes td { padding: 3px 6px; border-bottom: 1px solid var(--borde); color: #2b2140; line-height: 1.35; }
+.kuder-tabla-estudiantes tr:last-child td { border-bottom: none; }
+.kuder-tabla-estudiantes tbody tr:nth-child(odd) td { background: var(--lila-fondo); }
+.kuder-lista-sin-area { color: var(--texto-suave); font-style: italic; }
+.kuder-lista-cercana { color: var(--texto-suave); }
