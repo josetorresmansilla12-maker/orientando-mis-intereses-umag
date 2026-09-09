@@ -343,7 +343,7 @@ function construirFilaEstudianteKuder(n, estudiante) {
   return `
     <tr>
       <td class="num">${n}</td>
-      <td>${escaparHtmlKuder(nombre)}</td>
+      <td class="nombre">${escaparHtmlKuder(nombre)}</td>
       <td class="rut">${rut ? escaparHtmlKuder(formatearRutKuder(rut)) : "—"}</td>
       <td>${celdaAreasEstudianteKuder(estudiante)}</td>
     </tr>`;
@@ -352,7 +352,7 @@ function construirFilaEstudianteKuder(n, estudiante) {
 function construirTablaEstudiantesColumnaKuder(filas) {
   return `
     <table class="kuder-tabla-estudiantes">
-      <thead><tr><th class="num">#</th><th>Nombre</th><th class="rut">RUT</th><th>Área(s) de interés</th></tr></thead>
+      <thead><tr><th class="num">#</th><th class="nombre">Nombre</th><th class="rut">RUT</th><th>Área(s) de interés</th></tr></thead>
       <tbody>${filas.join("")}</tbody>
     </table>`;
 }
@@ -365,8 +365,35 @@ function construirTablaEstudiantesColumnaKuder(filas) {
 // que esta página "use toda la página disponible para la lista" — mientras que un
 // curso con muchos estudiantes va agregando columnas y, solo si hace falta, achica
 // la letra.
+// mide el ancho real (con overflow incluido) de un fragmento ya armado al ancho
+// fijo de página (794px, igual que .informe-page) — mismo mecanismo offscreen que
+// medirAlturaFragmento() de report.js (reutiliza el mismo contenedor
+// #render-offscreen), pero devolviendo el ancho en vez del alto; no se toca
+// report.js porque esa función es genérica y la usa también el informe de 8°.
+function medirAnchoFragmentoKuder(html) {
+  const host = document.getElementById("render-offscreen");
+  host.innerHTML = "";
+  const envoltura = document.createElement("div");
+  envoltura.className = "informe-page";
+  envoltura.style.paddingBottom = "0";
+  envoltura.innerHTML = html;
+  host.appendChild(envoltura);
+  const ancho = envoltura.scrollWidth;
+  host.innerHTML = "";
+  return ancho;
+}
+
+// el nombre y el RUT van con white-space:nowrap (ver css/styles.css) para que no
+// se corte un apellido o un RUT a mitad de palabra — pero un nombre genuinamente
+// largo en una columna angosta (curso numeroso, forzado a 4 columnas) podría
+// entonces desbordar el ancho de la página en vez de solo su alto. Por eso, junto
+// con medirAlturaFragmento (alto) se verifica también medirAnchoFragmentoKuder
+// (ancho de 794px): si una combinación de columnas/letra no cabe en cualquiera de
+// los dos sentidos, se descarta igual, prefiriendo menos columnas (nombres con más
+// espacio) o letra más chica antes que aceptar un desborde horizontal.
 function empaquetarListaEstudiantesKuder(filas, htmlEncabezado, disponible) {
   const TAMANOS_FUENTE_PX = [15, 14, 13, 12, 11, 10, 9.5, 9, 8.5];
+  const ANCHO_PAGINA_PX = 794;
   const armar = (cols, tamano) => {
     const porColumna = Math.ceil(filas.length / cols);
     const columnas = [];
@@ -383,10 +410,12 @@ function empaquetarListaEstudiantesKuder(filas, htmlEncabezado, disponible) {
   for (let cols = 1; cols <= 4; cols++) {
     for (const tamano of TAMANOS_FUENTE_PX) {
       const html = armar(cols, tamano);
-      if (medirAlturaFragmento(html) <= disponible) return { html, cabe: true };
+      if (medirAlturaFragmento(html) <= disponible && medirAnchoFragmentoKuder(html) <= ANCHO_PAGINA_PX) {
+        return { html, cabe: true };
+      }
     }
   }
-  // resguardo: no debería ocurrir con el tamaño real de un curso (4 columnas al
+  // resguardo: con nombres de largo normal no debería ocurrir (4 columnas al
   // tamaño de letra más chico alcanza para bastante más de 45 estudiantes), pero
   // por si acaso nunca se corta contenido — se entrega igual y el llamador decide
   // si reparte la lista en más de una página.

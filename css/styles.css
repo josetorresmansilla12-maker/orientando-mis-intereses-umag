@@ -900,6 +900,7 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
 }
 .kuder-tabla-estudiantes th.num, .kuder-tabla-estudiantes td.num { width: 1.6em; text-align: right; color: var(--texto-suave); }
 .kuder-tabla-estudiantes td.rut { white-space: nowrap; }
+.kuder-tabla-estudiantes td.nombre { white-space: nowrap; }
 .kuder-tabla-estudiantes td { padding: 3px 6px; border-bottom: 1px solid var(--borde); color: #2b2140; line-height: 1.35; }
 .kuder-tabla-estudiantes tr:last-child td { border-bottom: none; }
 .kuder-tabla-estudiantes tbody tr:nth-child(odd) td { background: var(--lila-fondo); }
