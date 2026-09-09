@@ -133,6 +133,7 @@ const AREAS = [
       "Técnico de Nivel Superior en Turismo Sostenible",
       "Técnico de Nivel Superior en Análisis de Sistemas Computacionales",
       "Ingeniería en Computación e Informática",
+      "Ingeniería Civil en Computación e Informática",
       "Derecho",
     ],
     carrerasOtras: ["Economía", "Administración de Empresas", "Contabilidad", "Marketing", "Logística", "Relaciones Internacionales"],

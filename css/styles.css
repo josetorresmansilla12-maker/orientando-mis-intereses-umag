@@ -374,6 +374,32 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
 .modal-caja--info { border-top-color: var(--morado); }
 .modal-caja--info h3 { color: var(--morado-oscuro); }
 
+/* variante ancha, para el modal que lista uno o varios archivos a importar */
+.modal-caja--ancha { max-width: 640px; }
+.lista-importar-archivos { max-height: 50vh; overflow-y: auto; margin: 4px 0 0; }
+.fila-importar-archivo {
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.fila-importar-archivo:last-child { margin-bottom: 0; }
+.fila-importar-archivo-nombre {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--morado-oscuro);
+}
+.fila-importar-archivo-info { font-weight: 400; font-size: 12px; color: var(--texto-suave); }
+.fila-importar-archivo .grid-form { grid-template-columns: repeat(3, 1fr); margin-top: 8px; }
+@media (max-width: 800px) {
+  .fila-importar-archivo .grid-form { grid-template-columns: 1fr; }
+}
+
 /* ---------- toast ---------- */
 #toast {
   position: fixed;
@@ -614,6 +640,13 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
   font-weight: 800;
   color: white;
 }
+.id-card-num {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  margin-right: 6px;
+}
 .id-card-sub {
   margin-top: 2px;
   font-size: 11px;
@@ -712,3 +745,113 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
 .informe-contacto { font-weight: 600; color: #402a63; }
 .informe-contacto-extra { color: var(--texto-suave); }
 .informe-contacto-extra b { color: var(--morado); }
+
+/* =====================================================
+   Test Vocacional de Kuder (Enseñanza Media) — módulo aparte.
+   Reutiliza clases genéricas de arriba (.tarjeta, .grid-form, .informe-page,
+   .id-card, .area-card, .stats-grid, .barra-area, etc.) tal cual están; estas
+   reglas son solo las que le hacían falta a ese módulo y no existían antes.
+   ===================================================== */
+.kuder-intro-texto { font-size: 12.5px; }
+
+/* grilla de 4 columnas fijas (no el auto-fit genérico de .stats-grid) para que
+   .kuder-stat-ancho (grid-column: span 2) reparta el espacio de forma predecible;
+   letra un poco más grande que el tamaño base de .stat-card, para aprovechar mejor
+   el alto de página que dejaron libre las barras en 2 columnas. */
+.stats-grid.kuder-stats-wrap { grid-template-columns: repeat(4, 1fr); margin: 18px 30px 0; }
+.kuder-stats-wrap .stat-card { padding: 17px 14px; }
+.kuder-stats-wrap .stat-card .num { font-size: 27px; }
+.kuder-stats-wrap .stat-card .lbl { font-size: 12.5px; }
+/* recuadros que nombran un área (más elegida, segunda, menos elegida) — el doble de
+   ancho para que el nombre del área + su cifra entre paréntesis (ej. "Servicio
+   Social ... (14, 25%)") tengan espacio de sobra y no necesiten cortarse a media
+   palabra ni encimarse con el recuadro de al lado. */
+.kuder-stat-ancho { grid-column: span 2; }
+.kuder-stats-wrap .stat-card .num.kuder-stat-num-area { font-size: 19px; }
+
+.kuder-resumen-wrap { margin: 18px 30px 0; }
+.kuder-resumen-titulo {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--morado-oscuro);
+  margin-bottom: 8px;
+}
+.kuder-barras-grid .etiqueta-area { font-size: 13.5px; }
+
+.area-card-conteo {
+  margin-left: auto;
+  color: white;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.kuder-avisos-lista { margin: 10px 0 0; padding-left: 18px; font-size: 12.5px; line-height: 1.5; }
+.kuder-avisos-lista li { margin-bottom: 4px; }
+.kuder-avisos-lista li.error { color: var(--rojo); }
+.kuder-avisos-lista li.advertencia { color: #96690a; }
+
+/* informe consolidado (varios cursos a la vez): chips compactos en vez de tabla,
+   para que la página 1 siga cabiendo en una sola hoja */
+.kuder-cursos-incluidos { margin: 16px 30px 0; }
+.kuder-cursos-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.kuder-curso-chip {
+  background: var(--lila-fondo);
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 10.5px;
+  color: #402a63;
+}
+.kuder-curso-chip b { color: var(--morado-oscuro); }
+
+.kuder-fila-incluir-label { display: flex; align-items: center; gap: 7px; cursor: pointer; }
+.kuder-fila-incluir-label input[type="checkbox"] { width: auto; cursor: pointer; }
+
+/* barras del resumen de áreas en 2 columnas (no 1 columna de 10 filas), para que la
+   página 1 del informe quepa siempre en una sola hoja */
+.kuder-barras-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 22px; }
+.kuder-barras-grid .barra-area { margin-bottom: 6px; }
+
+/* ---------- informe interno de Kuder (Admisión y Marketing): tablas de ranking ---------- */
+/* bloque "flowable": se usa suelto (no envuelto en un contenedor con margen propio,
+   como sí pasaba en el diseño anterior), así que trae su propio margen de página. */
+.kuder-ranking-bloque { margin: 18px 30px 0; }
+.kuder-tabla-ranking { width: 100%; border-collapse: collapse; font-size: 12px; }
+.kuder-tabla-ranking th {
+  text-align: left;
+  font-size: 9.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--texto-suave);
+  padding: 6px 8px;
+  border-bottom: 2px solid var(--borde);
+}
+.kuder-tabla-ranking th.cant, .kuder-tabla-ranking td.cant { text-align: right; }
+.kuder-tabla-ranking td { padding: 6px 8px; border-bottom: 1px solid var(--borde); color: #2b2140; }
+.kuder-tabla-ranking tr:last-child td { border-bottom: none; }
+.kuder-tabla-ranking tbody tr:nth-child(odd) td { background: var(--lila-fondo); }
+
+/* ---------- informe interno de Kuder: gráfico de áreas con eje y grilla ---------- */
+.kuder-chart-bloque { margin: 18px 30px 0; }
+.kuder-chart-plot { position: relative; margin-top: 10px; padding-bottom: 20px; }
+.kuder-chart-gridlines { position: absolute; top: 0; bottom: 20px; left: 172px; right: 76px; }
+.kuder-chart-gridline { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--borde); }
+.kuder-chart-gridline span {
+  position: absolute;
+  bottom: -18px;
+  left: 0;
+  transform: translateX(-50%);
+  font-size: 9px;
+  color: var(--texto-suave);
+  white-space: nowrap;
+}
+.kuder-chart-filas { position: relative; z-index: 1; }
+.kuder-chart-fila { display: flex; align-items: center; gap: 8px; height: 27px; }
+.kuder-chart-etiqueta { width: 164px; flex-shrink: 0; font-size: 12px; font-weight: 600; color: #2b2140; }
+.kuder-chart-track { flex: 1; height: 16px; position: relative; }
+.kuder-chart-barra { height: 100%; border-radius: 2px; }
+.kuder-chart-valor { width: 70px; flex-shrink: 0; text-align: right; font-size: 11.5px; font-weight: 700; color: var(--morado-oscuro); }

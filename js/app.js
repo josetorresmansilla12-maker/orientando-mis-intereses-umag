@@ -168,46 +168,100 @@ function cablearCursoHeader() {
 
 // ---------------- importación masiva desde planilla de corrección ----------------
 
-// muestra el modal que pregunta colegio/curso/letra cuando la planilla no los trae y
-// tampoco están completos los campos "Datos del curso" de la app. Devuelve una promesa
-// que resuelve con {colegio, curso, letra} si el usuario completa y confirma, o con
-// null si cancela.
-function pedirDatosCurso() {
-  return new Promise((resolve) => {
-    const modal = document.getElementById("modal-datos-curso");
-    const inpColegio = document.getElementById("modal-dc-colegio");
-    const inpCurso = document.getElementById("modal-dc-curso");
-    const inpLetra = document.getElementById("modal-dc-letra");
-    const btnGuardar = document.getElementById("modal-dc-btn-guardar");
-    const btnCancelar = document.getElementById("modal-dc-btn-cancelar");
+function escaparHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
 
-    inpColegio.value = "";
-    inpCurso.value = "";
-    inpLetra.value = "";
+// muestra el modal con un renglón por archivo (nombre + cuántos estudiantes trae) para
+// que el usuario confirme o complete el colegio/curso/letra de cada uno antes de
+// importar. Cada campo viene precargado con lo que traiga la propia planilla y, si no,
+// con los "Datos del curso" que ya están escritos arriba en la app. Devuelve una
+// promesa que resuelve con un arreglo [{archivo, lectura, datosCurso}, ...] si el
+// usuario confirma, o con null si cancela.
+function pedirDatosPorArchivo(lecturas, cursoHeader) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById("modal-importar");
+    const cont = document.getElementById("lista-importar-archivos");
+    const btnContinuar = document.getElementById("modal-imp-btn-continuar");
+    const btnCancelar = document.getElementById("modal-imp-btn-cancelar");
+
+    cont.innerHTML = lecturas
+      .map(({ archivo, lectura }, i) => {
+        const colegioPre = lectura.colegio || cursoHeader.colegio || "";
+        const cursoPre = lectura.curso || cursoHeader.curso || "";
+        const letraPre = lectura.letra || cursoHeader.letra || "";
+        const n = lectura.estudiantes.length;
+        const nErrores = lectura.errores.length;
+        const info =
+          `${n} ${n === 1 ? "estudiante detectado" : "estudiantes detectados"}` +
+          (nErrores ? `, ${nErrores} ${nErrores === 1 ? "fila con problemas" : "filas con problemas"}` : "");
+        return `
+        <div class="fila-importar-archivo">
+          <div class="fila-importar-archivo-nombre">
+            <span>📄 ${escaparHtml(archivo.name)}</span>
+            <span class="fila-importar-archivo-info">${info}</span>
+          </div>
+          <div class="grid-form">
+            <div>
+              <label>Colegio *</label>
+              <input type="text" class="imp-colegio" data-idx="${i}" value="${escaparHtml(colegioPre)}" />
+            </div>
+            <div>
+              <label>Curso *</label>
+              <input type="text" class="imp-curso" data-idx="${i}" value="${escaparHtml(cursoPre)}" placeholder="Ej: 8vo" />
+            </div>
+            <div>
+              <label>Letra</label>
+              <input type="text" class="imp-letra" data-idx="${i}" maxlength="2" value="${escaparHtml(letraPre)}" placeholder="Ej: A" />
+            </div>
+          </div>
+        </div>`;
+      })
+      .join("");
+
     modal.style.display = "flex";
-    inpColegio.focus();
+    const primerCampo = cont.querySelector(".imp-colegio");
+    if (primerCampo) primerCampo.focus();
 
     function limpiar() {
       modal.style.display = "none";
-      btnGuardar.removeEventListener("click", onGuardar);
+      btnContinuar.removeEventListener("click", onContinuar);
       btnCancelar.removeEventListener("click", onCancelar);
     }
-    function onGuardar() {
-      const colegio = inpColegio.value.trim();
-      const curso = inpCurso.value.trim();
-      const letra = inpLetra.value.trim().toUpperCase();
-      if (!colegio || !curso) {
-        mostrarToast("Completa colegio y curso");
+    function onContinuar() {
+      const inpsColegio = cont.querySelectorAll(".imp-colegio");
+      const inpsCurso = cont.querySelectorAll(".imp-curso");
+      const inpsLetra = cont.querySelectorAll(".imp-letra");
+
+      let ok = true;
+      const resultado = lecturas.map((item, i) => {
+        const colegio = inpsColegio[i].value.trim();
+        const curso = inpsCurso[i].value.trim();
+        const letra = inpsLetra[i].value.trim().toUpperCase();
+        const falta = !colegio || !curso;
+        inpsColegio[i].classList.toggle("invalido", !colegio);
+        inpsCurso[i].classList.toggle("invalido", !curso);
+        if (falta) ok = false;
+        return {
+          archivo: item.archivo,
+          lectura: item.lectura,
+          datosCurso: { colegio, curso, letra, fecha: cursoHeader.fecha || "" },
+        };
+      });
+
+      if (!ok) {
+        mostrarToast("Completa colegio y curso de cada archivo");
         return;
       }
+
       limpiar();
-      resolve({ colegio, curso, letra });
+      resolve(resultado);
     }
     function onCancelar() {
       limpiar();
       resolve(null);
     }
-    btnGuardar.addEventListener("click", onGuardar);
+    btnContinuar.addEventListener("click", onContinuar);
     btnCancelar.addEventListener("click", onCancelar);
   });
 }
@@ -220,66 +274,77 @@ function cablearImportacion() {
   btn.addEventListener("click", () => input.click());
 
   input.addEventListener("change", async () => {
-    const archivo = input.files[0];
-    if (!archivo) return;
+    const archivos = Array.from(input.files || []);
+    if (archivos.length === 0) return;
 
-    etiquetaArchivo.textContent = archivo.name;
+    etiquetaArchivo.textContent =
+      archivos.length === 1 ? archivos[0].name : `${archivos.length} archivos seleccionados`;
     const textoOriginal = btn.textContent;
     btn.disabled = true;
     btn.textContent = "Leyendo…";
 
     try {
-      const arrayBuffer = await archivo.arrayBuffer();
-      const lectura = leerPlanillaCorreccion(arrayBuffer);
       const cursoHeader = leerCursoHeader();
-
-      // colegio/curso/letra: primero lo que traiga la planilla, si no lo que ya
-      // esté escrito arriba en la app; si ninguno de los dos los tiene, se le
-      // pregunta al usuario justo ahora, en vez de bloquear la importación.
-      let colegio = lectura.colegio || cursoHeader.colegio;
-      let curso = lectura.curso || cursoHeader.curso;
-      let letra = lectura.letra || cursoHeader.letra;
-
-      if (!colegio || !curso) {
-        btn.disabled = false;
-        btn.textContent = textoOriginal;
-        const datos = await pedirDatosCurso();
-        if (!datos) {
-          input.value = "";
-          return; // el usuario canceló
+      const lecturas = [];
+      for (const archivo of archivos) {
+        let lectura;
+        try {
+          const arrayBuffer = await archivo.arrayBuffer();
+          lectura = leerPlanillaCorreccion(arrayBuffer);
+        } catch (err) {
+          console.error(err);
+          lectura = { estudiantes: [], errores: ["No se pudo leer este archivo. ¿Es un .xlsx válido?"], colegio: "", curso: "", letra: "" };
         }
-        colegio = datos.colegio;
-        curso = datos.curso;
-        letra = datos.letra;
-        btn.disabled = true;
+        lecturas.push({ archivo, lectura });
       }
+
+      btn.disabled = false;
+      btn.textContent = textoOriginal;
+      const resultado = await pedirDatosPorArchivo(lecturas, cursoHeader);
+      if (!resultado) {
+        input.value = "";
+        return; // el usuario canceló
+      }
+      btn.disabled = true;
       btn.textContent = "Importando…";
 
-      const datosCurso = { colegio, curso, letra, fecha: cursoHeader.fecha || "" };
-      const { importados } = crearEstudiantesDesdeImportacion(lectura.estudiantes, datosCurso);
-      const errores = lectura.errores;
+      let totalImportados = 0;
+      const erroresTotales = [];
+      let ultimoDatosCurso = null;
 
-      if (importados > 0) {
-        mostrarToast(
-          `${importados} ${importados === 1 ? "estudiante importado" : "estudiantes importados"} de ${colegio} ${curso}${letra}` +
-            (errores.length ? ` — ${errores.length} fila(s) con problemas` : "")
-        );
-        // refleja arriba los datos del curso que se usaron (vinieron de la planilla, de
-        // los campos de la app, o de lo que se acaba de escribir en el modal)
-        document.getElementById("curso-colegio").value = colegio;
-        document.getElementById("curso-curso").value = curso;
-        document.getElementById("curso-letra").value = letra;
-        guardarCursoHeaderEnLocal();
-      } else {
-        mostrarToast("No se importó ningún estudiante desde este archivo.");
+      for (const { archivo, lectura, datosCurso } of resultado) {
+        const { importados } = crearEstudiantesDesdeImportacion(lectura.estudiantes, datosCurso);
+        totalImportados += importados;
+        if (lectura.errores.length > 0) {
+          erroresTotales.push(`Archivo "${archivo.name}":`, ...lectura.errores.map((e) => "  " + e));
+        }
+        ultimoDatosCurso = datosCurso;
       }
-      if (errores.length > 0) {
-        alert("Algunas filas no se pudieron importar:\n\n" + errores.join("\n"));
+
+      if (totalImportados > 0) {
+        mostrarToast(
+          `${totalImportados} ${totalImportados === 1 ? "estudiante importado" : "estudiantes importados"}` +
+            (resultado.length > 1 ? ` de ${resultado.length} archivos` : "") +
+            (erroresTotales.length ? ` — algunas filas con problemas` : "")
+        );
+        // refleja arriba los datos del último archivo importado, como punto de partida
+        // para lo próximo que se ingrese a mano
+        if (ultimoDatosCurso) {
+          document.getElementById("curso-colegio").value = ultimoDatosCurso.colegio;
+          document.getElementById("curso-curso").value = ultimoDatosCurso.curso;
+          document.getElementById("curso-letra").value = ultimoDatosCurso.letra;
+          guardarCursoHeaderEnLocal();
+        }
+      } else {
+        mostrarToast("No se importó ningún estudiante desde estos archivos.");
+      }
+      if (erroresTotales.length > 0) {
+        alert("Algunas filas no se pudieron importar:\n\n" + erroresTotales.join("\n"));
       }
       render();
     } catch (err) {
       console.error(err);
-      mostrarToast("No se pudo leer el archivo. ¿Es la planilla .xlsx correcta?");
+      mostrarToast("No se pudo leer alguno de los archivos.");
     } finally {
       btn.disabled = false;
       btn.textContent = textoOriginal;

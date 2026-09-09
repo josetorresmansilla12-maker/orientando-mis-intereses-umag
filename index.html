@@ -26,6 +26,8 @@
     <button class="tab-btn" data-tab="estudiantes">Estudiantes e informes</button>
     <button class="tab-btn" data-tab="estadisticas">Estadísticas</button>
     <button class="tab-btn" data-tab="papelera">Papelera</button>
+    <button class="tab-btn" data-tab="kuder">Test Vocacional de Kuder</button>
+    <button class="tab-btn" data-tab="kuder-interno">Kuder — Uso Interno</button>
   </nav>
 
   <main>
@@ -60,10 +62,10 @@
 
       <div class="tarjeta">
         <h2 style="font-size:16px;">Importar planilla de corrección (opcional)</h2>
-        <p class="ayuda">Sube el archivo .xlsx ya completado con los puntajes de un curso completo. El colegio y curso son opcionales en la planilla (arriba de la tabla) — si no los completaste ahí ni en los campos de arriba en la app, te los va a preguntar justo al subir el archivo.</p>
+        <p class="ayuda">Sube uno o varios archivos .xlsx ya completados con los puntajes de un curso. El colegio y curso son opcionales en la planilla (arriba de la tabla) — antes de importar te va a mostrar cada archivo por su nombre para que confirmes o completes el colegio, curso y letra de cada uno.</p>
         <div class="acciones-form" style="align-items:center;">
-          <input type="file" id="input-planilla" accept=".xlsx,.xls,.csv" style="display:none;" />
-          <button type="button" id="btn-elegir-planilla" class="secundario">📤 Elegir archivo…</button>
+          <input type="file" id="input-planilla" accept=".xlsx,.xls,.csv" multiple style="display:none;" />
+          <button type="button" id="btn-elegir-planilla" class="secundario">📤 Elegir archivo(s)…</button>
           <span id="nombre-archivo-planilla" class="ayuda" style="margin:0;"></span>
         </div>
         <div class="acciones-form">
@@ -190,6 +192,95 @@
       </div>
     </section>
 
+    <!-- ===================== TEST VOCACIONAL DE KUDER (Enseñanza Media) ===================== -->
+    <section id="panel-kuder" class="panel">
+      <div class="tarjeta">
+        <h2>Test Vocacional de Kuder — Informe grupal por curso</h2>
+        <p class="ayuda">Este módulo es independiente del cuestionario de 8° básico. Sube el archivo Excel/CSV con los puntajes ya corregidos de un curso de enseñanza media, o hasta 6 archivos a la vez (uno por curso). Con varios cursos puedes generar un informe global que suma los porcentajes entre ellos, o un informe separado por cada curso. Dirigido a los orientadores del colegio: cuántos estudiantes tienen cada área como interés (puntaje 7 o más) y las carreras UMAG y otras carreras asociadas. Por ahora no genera informes individuales para cada estudiante.</p>
+        <div class="acciones-form" style="align-items:center;">
+          <input type="file" id="kuder-input-planilla" accept=".xlsx,.xls,.csv" multiple style="display:none;" />
+          <button type="button" id="kuder-btn-elegir-planilla" class="secundario">📤 Elegir archivo(s)…</button>
+          <span id="kuder-nombre-archivo" class="ayuda" style="margin:0;"></span>
+        </div>
+      </div>
+
+      <div class="tarjeta" id="kuder-revision" style="display:none;">
+        <h2 style="font-size:16px;">Revisar antes de generar el informe</h2>
+        <p class="ayuda">Revisa el colegio y curso detectados de cada archivo (se pueden corregir), y desmarca la casilla junto al nombre del archivo si no quieres incluir ese curso. Con 2 o más cursos marcados, "Generar informe global" los suma en un solo PDF; "Generar por curso" entrega un PDF separado por cada uno, juntos en un ZIP.</p>
+        <div id="kuder-lista-archivos" class="lista-importar-archivos"></div>
+        <div class="grid-form" style="margin-top:12px;">
+          <div>
+            <label>Fecha de aplicación (opcional)</label>
+            <input type="date" id="kuder-rev-fecha" />
+          </div>
+        </div>
+        <div id="kuder-rev-avisos"></div>
+        <div class="acciones-form">
+          <button type="button" id="kuder-btn-generar">📄 Generar informe PDF</button>
+          <button type="button" id="kuder-btn-generar-por-curso" class="secundario">📦 Generar por curso (ZIP)</button>
+          <button type="button" id="kuder-btn-cancelar-revision" class="secundario">Cancelar</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== KUDER — INFORME INTERNO (Admisión y Marketing) ===================== -->
+    <section id="panel-kuder-interno" class="panel">
+      <div class="tarjeta">
+        <h2>Informe Interno de Kuder — Admisión y Marketing</h2>
+        <p class="ayuda">Uso interno de la unidad — no está pensado para orientadores ni estudiantes. Sube hasta 20 archivos Excel/CSV de aplicaciones del Test de Kuder (uno por curso) para un informe consolidado: estadísticas de aplicaciones, qué colegios y niveles (2°, 4°, etc.) solicitan el test con más frecuencia, qué áreas de interés concentran más demanda, y las carreras UMAG de cada área junto con carreras que la universidad podría incorporar a futuro. Sin límite de páginas — es un documento de uso interno.</p>
+        <div class="acciones-form" style="align-items:center;">
+          <input type="file" id="kuder-interno-input-planilla" accept=".xlsx,.xls,.csv" multiple style="display:none;" />
+          <button type="button" id="kuder-interno-btn-elegir-planilla" class="secundario">📤 Elegir archivo(s)…</button>
+          <span id="kuder-interno-nombre-archivo" class="ayuda" style="margin:0;"></span>
+        </div>
+      </div>
+
+      <div class="tarjeta" id="kuder-interno-revision" style="display:none;">
+        <h2 style="font-size:16px;">Revisar antes de generar el informe</h2>
+        <p class="ayuda" id="kuder-interno-rev-resumen"></p>
+        <div id="kuder-interno-lista-archivos" class="lista-importar-archivos"></div>
+
+        <div style="margin-top:14px;">
+          <label style="margin-bottom:2px;">Período que abarca el informe (opcional)</label>
+          <p class="ayuda" style="margin:0 0 8px;">Completa solo lo que quieras indicar — por ejemplo, mes y año sin el día. Si dejas todo en blanco, el informe no muestra período.</p>
+          <div class="grid-form">
+            <div>
+              <label>Día</label>
+              <input type="number" id="kuder-interno-periodo-dia" min="1" max="31" placeholder="Ej: 15" />
+            </div>
+            <div>
+              <label>Mes</label>
+              <select id="kuder-interno-periodo-mes">
+                <option value="">—</option>
+                <option value="1">Enero</option>
+                <option value="2">Febrero</option>
+                <option value="3">Marzo</option>
+                <option value="4">Abril</option>
+                <option value="5">Mayo</option>
+                <option value="6">Junio</option>
+                <option value="7">Julio</option>
+                <option value="8">Agosto</option>
+                <option value="9">Septiembre</option>
+                <option value="10">Octubre</option>
+                <option value="11">Noviembre</option>
+                <option value="12">Diciembre</option>
+              </select>
+            </div>
+            <div>
+              <label>Año</label>
+              <input type="number" id="kuder-interno-periodo-anio" min="2000" max="2100" placeholder="Ej: 2026" />
+            </div>
+          </div>
+        </div>
+
+        <div id="kuder-interno-rev-avisos"></div>
+        <div class="acciones-form">
+          <button type="button" id="kuder-interno-btn-generar">📄 Generar informe interno PDF</button>
+          <button type="button" id="kuder-interno-btn-cancelar-revision" class="secundario">Cancelar</button>
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <div id="toast"></div>
@@ -207,28 +298,15 @@
     </div>
   </div>
 
-  <!-- ===================== MODAL: DATOS DEL CURSO AL IMPORTAR (si la planilla no los trae) ===================== -->
-  <div id="modal-datos-curso" class="modal-overlay" style="display:none;">
-    <div class="modal-caja modal-caja--info">
-      <h3>¿Colegio y curso de estos estudiantes?</h3>
-      <p style="margin-bottom:14px;">Esta planilla no traía el colegio y el curso completos. Complétalos aquí — se van a usar para todos los estudiantes de este archivo.</p>
-      <div style="margin-bottom:10px;">
-        <label>Colegio *</label>
-        <input type="text" id="modal-dc-colegio" />
-      </div>
-      <div style="display:flex; gap:10px;">
-        <div style="flex:2;">
-          <label>Curso *</label>
-          <input type="text" id="modal-dc-curso" placeholder="Ej: 8vo" />
-        </div>
-        <div style="flex:1;">
-          <label>Letra</label>
-          <input type="text" id="modal-dc-letra" maxlength="2" placeholder="Ej: A" />
-        </div>
-      </div>
+  <!-- ===================== MODAL: COLEGIO/CURSO/LETRA DE CADA ARCHIVO AL IMPORTAR ===================== -->
+  <div id="modal-importar" class="modal-overlay" style="display:none;">
+    <div class="modal-caja modal-caja--info modal-caja--ancha">
+      <h3>Confirma colegio, curso y letra</h3>
+      <p style="margin-bottom:14px;">Revisa cada archivo por su nombre y completa o corrige su colegio, curso y letra antes de importar.</p>
+      <div id="lista-importar-archivos" class="lista-importar-archivos"></div>
       <div class="modal-acciones">
-        <button type="button" id="modal-dc-btn-cancelar" class="secundario">Cancelar</button>
-        <button type="button" id="modal-dc-btn-guardar">Continuar</button>
+        <button type="button" id="modal-imp-btn-cancelar" class="secundario">Cancelar</button>
+        <button type="button" id="modal-imp-btn-continuar">Importar</button>
       </div>
     </div>
   </div>
@@ -247,5 +325,18 @@
   <script src="js/report.js"></script>
   <script src="js/excel.js"></script>
   <script src="js/app.js"></script>
+
+  <!-- módulo aparte: Test Vocacional de Kuder (Enseñanza Media) -->
+  <script src="js/kuder-data.js"></script>
+  <script src="js/kuder-icons.js"></script>
+  <script src="js/kuder-report.js"></script>
+  <script src="js/kuder.js"></script>
+
+  <!-- módulo aparte: Informe Interno de Kuder (Admisión y Marketing) — reutiliza el
+       lector de planillas de js/kuder.js y varias utilidades genéricas de
+       js/kuder-report.js, pero no modifica ninguno de los dos -->
+  <script src="js/kuder-internal-data.js"></script>
+  <script src="js/kuder-internal-report.js"></script>
+  <script src="js/kuder-internal.js"></script>
 </body>
 </html>

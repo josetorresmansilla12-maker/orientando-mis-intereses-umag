@@ -23,6 +23,32 @@ function capitalizarNombre(str) {
     .join(" ");
 }
 
+// orden alfabético (sin distinguir mayúsculas ni tildes) usado tanto para numerar
+// como para que ese número coincida con el orden en que va a aparecer el archivo
+// dentro de la carpeta/ZIP al imprimir (el explorador de archivos ordena por nombre).
+function compararNombres(a, b) {
+  return (a || "").localeCompare(b || "", "es", { sensitivity: "base" });
+}
+
+// número de lista del estudiante dentro de su propio colegio+curso+letra (1, 2, 3...),
+// en el mismo orden alfabético con el que va a aparecer su informe dentro de la carpeta
+// al descargar el curso completo. Se recalcula en cada informe (no se guarda en el
+// estudiante) para que siempre refleje el curso tal como está ahora mismo.
+function calcularNumeroEnGrupo(estudiante) {
+  if (typeof store === "undefined") return null;
+  const grupo = store
+    .listar()
+    .filter(
+      (e) =>
+        (e.colegio || "") === (estudiante.colegio || "") &&
+        (e.curso || "") === (estudiante.curso || "") &&
+        (e.letra || "") === (estudiante.letra || "")
+    )
+    .sort((a, b) => compararNombres(a.nombre, b.nombre));
+  const idx = grupo.findIndex((e) => e.id === estudiante.id);
+  return idx === -1 ? null : idx + 1;
+}
+
 function iconoCirculo(area, tamano) {
   return `<div class="icon-circle" style="background:${area.color}; width:${tamano}px; height:${tamano}px;">${ICONOS_SVG[area.id] || ""}</div>`;
 }
@@ -74,9 +100,11 @@ function construirBanner(titulo, subtitulo) {
 // banner encima), se le antepone un espaciador real para que no quede pegada
 // al borde de la hoja.
 function construirLineaEstudiante(estudiante, { inicioPagina = false } = {}) {
+  const numero = calcularNumeroEnGrupo(estudiante);
   return `
     ${inicioPagina ? '<div class="espaciador-inicio-pagina"></div>' : ""}
     <div class="linea-estudiante">
+      ${numero ? `<span>N° ${numero}</span>` : ""}
       <span><b>Nombre:</b> ${capitalizarNombre(estudiante.nombre) || "—"}</span>
       <span><b>RUT:</b> ${estudiante.rut || "—"}</span>
     </div>`;
@@ -173,12 +201,13 @@ const ICONO_AVATAR_ANONIMO = `
 // y el logo UMAG completo (símbolo + palabra) — ahora que no queda ningún otro
 // elemento con la marca UMAG en la página, esta caja hace de encabezado.
 function construirCajaEstudiante(estudiante) {
+  const numero = calcularNumeroEnGrupo(estudiante);
   return `
     <div class="id-card-wrap">
       <div class="id-card">
         <div class="id-card-avatar">${ICONO_AVATAR_ANONIMO}</div>
         <div class="id-card-datos">
-          <div class="id-card-nombre">${capitalizarNombre(estudiante.nombre) || "—"}</div>
+          <div class="id-card-nombre">${numero ? `<span class="id-card-num">N° ${numero}</span>` : ""}${capitalizarNombre(estudiante.nombre) || "—"}</div>
           <div class="id-card-sub">${(estudiante.curso || "—") + (estudiante.letra || "")} · ${estudiante.colegio || "—"}</div>
           <div class="id-card-sub">RUT: ${estudiante.rut || "—"}</div>
         </div>
