@@ -70,14 +70,116 @@ body {
   margin-right: 4px;
 }
 
-/* ---------- pestañas ---------- */
-.tabs {
-  display: flex;
-  gap: 4px;
-  padding: 10px 22px 0;
+/* ---------- selector de test (paso 1: elegir con qué test se trabaja) ---------- */
+.selector-test {
   background: var(--blanco);
   border-bottom: 1px solid var(--borde);
+  padding: 14px 22px 12px;
+}
+.selector-test-inner,
+.tabs-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
   flex-wrap: wrap;
+}
+.selector-test-titulo,
+.tabs-paso {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--texto-suave);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.selector-test-opciones { display: flex; gap: 10px; flex-wrap: wrap; }
+.test-btn {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  background: white;
+  color: var(--texto);
+  border: 2px solid var(--borde);
+  border-radius: 12px;
+  padding: 9px 16px 9px 12px;
+  text-align: left;
+  font-weight: 400;
+  min-width: 250px;
+}
+.test-btn:hover { background: var(--lila-fondo); }
+.test-btn-icono { font-size: 24px; line-height: 1; }
+.test-btn-texto b { display: block; font-size: 15px; color: var(--morado-oscuro); }
+.test-btn-texto small { display: block; font-size: 11.5px; color: var(--texto-suave); margin-top: 1px; }
+.test-btn-conteo {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--texto-suave);
+  background: var(--lila-fondo);
+  border-radius: 999px;
+  padding: 2px 9px;
+  white-space: nowrap;
+}
+.test-btn-conteo:empty { display: none; }
+.test-btn.activo[data-test="octavo"] {
+  border-color: var(--morado);
+  background: var(--lila-fondo);
+  box-shadow: 0 0 0 3px rgba(91, 59, 140, 0.16);
+}
+.test-btn.activo[data-test="kuder"] {
+  border-color: var(--teal);
+  background: #eef8f6;
+  box-shadow: 0 0 0 3px rgba(63, 167, 150, 0.2);
+}
+.test-btn.activo[data-test="kuder"] .test-btn-texto b { color: #1f6f63; }
+.test-btn.activo .test-btn-conteo { background: white; }
+
+/* lo que solo corresponde a uno de los dos tests (textos de ayuda, pestañas, botones) */
+body.test-octavo [data-solo-test="kuder"],
+body.test-kuder [data-solo-test="octavo"] { display: none !important; }
+
+/* aviso fijo de qué test está activo, arriba de cada pestaña */
+.aviso-test-activo {
+  font-size: 12.5px;
+  color: var(--morado-oscuro);
+  background: white;
+  border: 1px solid var(--borde);
+  border-left: 5px solid var(--morado);
+  border-radius: 8px;
+  padding: 8px 14px;
+  margin-bottom: 16px;
+}
+body.test-kuder .aviso-test-activo { border-left-color: var(--teal); color: #1f5a51; }
+
+/* etiqueta junto al título de cada pestaña con el test activo */
+.badge-test {
+  display: inline-block;
+  vertical-align: middle;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 2px 10px;
+  margin-left: 6px;
+  background: var(--lila-fondo);
+  color: var(--morado);
+  border: 1px solid var(--borde);
+}
+body.test-kuder .badge-test { background: #eef8f6; color: #1f6f63; border-color: #cfe9e4; }
+
+/* ---------- pestañas ---------- */
+.tabs {
+  padding: 8px 22px 0;
+  background: var(--blanco);
+  border-bottom: 1px solid var(--borde);
+}
+.tabs-inner { gap: 2px; }
+.tabs-paso { margin-right: 8px; }
+/* en pantallas medianas se oculta el rótulo "2. ¿Qué necesitas hacer?" para que
+   las pestañas quepan en una sola línea */
+@media (max-width: 1240px) {
+  .tabs-paso { display: none; }
+  .tabs .tab-btn { padding: 10px 12px; font-size: 13.5px; }
 }
 .tab-btn {
   border: none;
@@ -89,10 +191,12 @@ body {
   border-bottom: 3px solid transparent;
   font-weight: 600;
 }
+.tab-btn:hover { background: var(--lila-fondo); color: var(--morado); }
 .tab-btn.activo {
   color: var(--morado);
   border-bottom-color: var(--morado);
 }
+body.test-kuder .tab-btn.activo { color: #1f6f63; border-bottom-color: var(--teal); }
 
 main {
   padding: 22px;
@@ -366,6 +470,9 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
   width: 100%;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
 }
+/* si el contenido es más alto que la pantalla, la ventana se desplaza por dentro
+   (si no, los botones de abajo quedan fuera de la vista en pantallas bajas) */
+.modal-caja { max-height: calc(100vh - 40px); overflow-y: auto; }
 .modal-caja h3 { margin: 0 0 10px; color: var(--rojo); font-size: 17px; }
 .modal-caja p { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--texto); }
 .modal-acciones { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
@@ -395,6 +502,12 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
   color: var(--morado-oscuro);
 }
 .fila-importar-archivo-info { font-weight: 400; font-size: 12px; color: var(--texto-suave); }
+/* aviso de que el colegio/curso/letra escritos ya tienen estudiantes cargados */
+.imp-aviso-existente { font-size: 12px; font-weight: 600; color: #96690a; }
+/* archivo sin estudiantes válidos (o del otro test) en la ventana de importación */
+.fila-importar-archivo--vacia { background: #fdf6f5; border-color: #f1d0cb; }
+.imp-archivo-error { margin-top: 6px; font-size: 12.5px; color: var(--rojo); line-height: 1.45; }
+.imp-aviso-existente:not(:empty) { margin-top: 8px; }
 .fila-importar-archivo .grid-form { grid-template-columns: repeat(3, 1fr); margin-top: 8px; }
 @media (max-width: 800px) {
   .fila-importar-archivo .grid-form { grid-template-columns: 1fr; }
@@ -800,6 +913,7 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
 .kuder-avisos-lista li { margin-bottom: 4px; }
 .kuder-avisos-lista li.error { color: var(--rojo); }
 .kuder-avisos-lista li.advertencia { color: #96690a; }
+.kuder-avisos-lista li.info { color: var(--texto-suave); }
 
 /* informe global (varios cursos a la vez): chips compactos en vez de tabla, en la
    página de resultados — con hasta 6 cursos pueden ocupar 2 líneas, así que se
@@ -870,6 +984,12 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
 .kuder-chart-bloque-grande .kuder-chart-track { height: 38px; }
 .kuder-chart-bloque-grande .kuder-chart-etiqueta { font-size: 16px; }
 .kuder-chart-bloque-grande .kuder-chart-valor { font-size: 14.5px; }
+/* informe grupal de 8° básico: 6 áreas en vez de 10, así que cada barra va más alta
+   para que la página de resultados quede igual de llena */
+.kuder-chart-bloque-grande.kuder-chart-pocas-areas .kuder-chart-fila { height: 104px; }
+.kuder-chart-bloque-grande.kuder-chart-pocas-areas .kuder-chart-track { height: 50px; }
+.kuder-chart-bloque-grande.kuder-chart-pocas-areas .kuder-chart-etiqueta { font-size: 15.5px; line-height: 1.25; }
+.kuder-chart-bloque-grande.kuder-chart-pocas-areas .kuder-chart-valor { font-size: 15.5px; }
 
 /* ---------- informe por curso: página de lista de estudiantes ---------- */
 .kuder-lista-estudiantes-titulo {
@@ -915,3 +1035,195 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
 .kuder-area-card-espaciosa .carreras-mini { padding: 15px 18px; }
 .kuder-area-card-espaciosa .carreras-lista-bullets { line-height: 1.7; }
 .kuder-area-card-espaciosa .carreras-lista-bullets li { margin-bottom: 4.5px; }
+
+/* =====================================================
+   Informe INDIVIDUAL del Test de Kuder (js/kuder-individual-report.js).
+   Mismo diseño que el informe de 8° (reutiliza .informe-banner, .linea-estudiante,
+   .id-card, .area-card, .carreras-mini, .callout-siguiente, .informe-footer); estas
+   reglas son solo las piezas nuevas de la hoja informativa, con clases propias para
+   no alterar el informe de 8°.
+   ===================================================== */
+.kuder-inf-intro { font-size: 10.5px; line-height: 1.45; margin-top: 8px; }
+.kuder-inf-intro p { margin: 0 0 3px; }
+.kuder-inf-intro p:last-child { margin-bottom: 0; }
+.kuder-inf-intro b { color: var(--morado); }
+
+/* supuestos básicos y principios: dos cuadros lado a lado */
+.kuder-inf-modelo { display: flex; gap: 12px; margin: 8px 30px 0; }
+.kuder-inf-modelo-caja {
+  flex: 1;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 6px 12px 7px;
+  background: white;
+}
+.kuder-inf-modelo-titulo {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--morado-oscuro);
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+}
+.kuder-inf-modelo ol { margin: 3px 0 0; padding-left: 15px; font-size: 9.5px; line-height: 1.38; color: #2b2140; }
+.kuder-inf-modelo li { margin-bottom: 1px; }
+
+/* las 10 áreas con sus carreras UMAG: dos columnas independientes */
+.kuder-inf-areas-titulo {
+  margin: 10px 30px 0;
+  font-family: "Century Gothic", "Trebuchet MS", Verdana, sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--morado-oscuro);
+}
+.kuder-inf-areas-sub {
+  margin-left: 10px;
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--texto-suave);
+}
+.kuder-inf-areas { display: flex; gap: 12px; margin: 5px 30px 0; align-items: flex-start; }
+.kuder-inf-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.kuder-inf-area { display: flex; align-items: flex-start; gap: 7px; }
+.kuder-inf-area .icon-circle svg { width: 18px; height: 18px; }
+.kuder-inf-area-caja {
+  flex: 1;
+  min-width: 0;
+  background: var(--lila-fondo);
+  border: 1px solid var(--borde);
+  border-left: 4px solid var(--morado);
+  border-radius: 7px;
+  padding: 3px 10px 4px;
+}
+.kuder-inf-area-caja h4 { margin: 0; font-size: 12px; }
+.kuder-inf-area-desc { margin-left: 6px; font-size: 9.5px; font-weight: 400; font-style: italic; color: #402a63; }
+.kuder-inf-area-carreras { margin-top: 2px; font-size: 9.5px; line-height: 1.35; color: #2b2140; }
+.kuder-inf-area-carreras b { color: var(--morado-oscuro); }
+
+/* aviso "Conoce tus resultados..." de la hoja informativa: un poco más separado de
+   las áreas que en 8°, para que su marcador (▽) no toque el último cuadro */
+.callout-siguiente.kuder-inf-callout { margin-top: 16px; }
+
+/* variantes más apretadas de la hoja informativa, solo si la normal no cabe en una
+   hoja (por ejemplo, con otra fuente del sistema en otro computador): la "ajustada"
+   achica solo la introducción y los supuestos/principios; la "compacta", además, las
+   carreras */
+.kuder-inf-ajustada .kuder-inf-intro { font-size: 10px; line-height: 1.4; }
+.kuder-inf-ajustada .kuder-inf-modelo ol { font-size: 9px; line-height: 1.32; }
+.kuder-inf-compacta .kuder-inf-intro { font-size: 10px; line-height: 1.4; }
+.kuder-inf-compacta .kuder-inf-modelo ol { font-size: 9px; line-height: 1.32; }
+.kuder-inf-compacta .kuder-inf-area-carreras { font-size: 9px; line-height: 1.3; }
+.kuder-inf-compacta .kuder-inf-areas-titulo { margin-top: 8px; }
+
+/* tarjeta de resultados con una lista UMAG larga: ese cuadro toma dos tercios del
+   ancho y reparte sus carreras en dos columnas (de arriba a abajo, sin alinear filas,
+   para que una carrera de dos líneas no deje un hueco al lado), así la tarjeta no
+   queda tan alta */
+.kuder-split-umag-ancho .carreras-mini.umag { flex: 2; }
+.kuder-split-umag-ancho .carreras-mini.umag .carreras-lista-bullets {
+  column-count: 2;
+  column-gap: 18px;
+}
+.kuder-split-umag-ancho .carreras-mini.umag .carreras-lista-bullets li { break-inside: avoid; }
+
+/* =====================================================
+   Revisión de traspaso del Test de Kuder (las 10 áreas deben sumar 45).
+   Amarillo = el error podría cambiar los resultados (hay que buscarlo);
+   gris = no los cambia (no hace falta buscarlo); verde = todo bien.
+   ===================================================== */
+.traspaso-aviso {
+  margin-top: 5px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--texto-suave);
+  background: #f4f3f6;
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+.traspaso-aviso b { color: inherit; }
+.traspaso-aviso.afecta { color: #7a5200; background: #fff4e0; border: 1px solid #f0d9a6; }
+
+.revision-traspaso {
+  margin-top: 10px;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  background: #fbfaff;
+}
+.revision-traspaso.ok { color: #1f7a52; background: #eefaf3; border-color: #bfe6d0; font-weight: 600; }
+.revision-traspaso-titulo { font-weight: 700; color: var(--morado-oscuro); margin-bottom: 4px; }
+.revision-traspaso-grupo { margin-top: 6px; color: var(--texto-suave); }
+.revision-traspaso-grupo.afecta { color: #7a5200; }
+.revision-traspaso-sub { font-weight: 700; }
+.revision-traspaso-grupo ul { margin: 3px 0 0; padding-left: 18px; }
+.revision-traspaso-grupo li { margin-bottom: 2px; }
+.revision-traspaso-nota { margin-top: 7px; font-size: 11.5px; color: var(--texto-suave); font-style: italic; }
+
+.resumen-traspaso {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  background: #f4f3f6;
+  color: var(--texto);
+  border: 1px solid var(--borde);
+}
+.resumen-traspaso.afecta { background: #fff4e0; border-color: #f0d9a6; color: #5f4000; }
+.resumen-traspaso.ok { background: #eefaf3; border-color: #bfe6d0; color: #1f7a52; font-weight: 600; }
+.resumen-traspaso button { flex-shrink: 0; }
+
+.suma-puntajes { margin-top: 12px; font-size: 12.5px; line-height: 1.45; color: var(--texto-suave); padding: 7px 10px; border-radius: 7px; background: #f4f3f6; }
+.suma-puntajes:empty { display: none; }
+.suma-puntajes.ok { color: #1f7a52; background: #eefaf3; }
+.suma-puntajes.afecta { color: #7a5200; background: #fff4e0; }
+
+/* ícono ⚠ junto al nombre de un estudiante con el test mal traspasado (abre la
+   corrección rápida de puntajes) y aviso en el encabezado de su colegio/curso */
+.btn-traspaso {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  color: var(--texto-suave);
+  background: #f4f3f6;
+  border: 1px solid var(--borde);
+  vertical-align: middle;
+}
+.btn-traspaso:hover { background: #ebe8f1; }
+.btn-traspaso.afecta { color: #7a5200; background: #fff4e0; border-color: #e8c77f; }
+.btn-traspaso.afecta:hover { background: #ffe9c2; }
+.chip.chip-traspaso { background: #fff4e0; color: #7a5200; border-color: #f0d9a6; }
+details.grupo-colegio > summary .chip.chip-traspaso { background: #fff4e0; color: #7a5200; border-color: #f0d9a6; }
+
+/* corrección rápida: las áreas que podrían cambiar de lado del 7 van marcadas */
+#mp-campos { grid-template-columns: repeat(4, 1fr); }
+#mp-campos .mp-candidata label { color: #7a5200; }
+#mp-campos .mp-candidata input { border-color: #e8c77f; background: #fff9ec; }
+#modal-puntajes .modal-caja { max-width: 720px; }
+#modal-puntajes .suma-puntajes { margin-top: 12px; }
+
+/* ventana de importación de Kuder: explicación de las dos maneras de terminar la carga
+   cuando hay tests mal traspasados, y fila de botones que puede pasar a dos líneas */
+.modal-imp-eleccion:empty { display: none; }
+.modal-imp-eleccion {
+  margin-top: 12px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #5f4000;
+  background: #fff4e0;
+  border: 1px solid #f0d9a6;
+  border-radius: 8px;
+  padding: 9px 12px;
+}
+.modal-imp-eleccion ul { margin: 5px 0 0; padding-left: 18px; }
+.modal-imp-eleccion li { margin-bottom: 3px; }
+.modal-acciones--opciones { flex-wrap: wrap; }

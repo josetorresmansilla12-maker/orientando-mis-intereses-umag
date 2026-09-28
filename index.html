@@ -4,38 +4,85 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Orientando mis Intereses — Informes</title>
-<link rel="stylesheet" href="css/styles.css" />
+<link rel="stylesheet" href="css/styles.css?v=20260926" />
 </head>
-<body>
+<body class="test-octavo">
 
   <div class="topbar">
     <div>
       <h1>Orientando mis Intereses</h1>
-      <div class="subt">Generador de informes · 8° Básico · Unidad de Admisión y Marketing, UMAG</div>
+      <div class="subt">Generador de informes vocacionales · Unidad de Admisión y Marketing, UMAG</div>
     </div>
     <div class="topbar-acciones">
-      <button id="btn-deshacer" class="chico" title="Deshacer el último cambio">↩ Deshacer</button>
+      <button id="btn-deshacer" class="chico" title="Deshacer el último cambio del test elegido">↩ Deshacer</button>
       <button id="btn-rehacer" class="chico" title="Rehacer">↪ Rehacer</button>
-      <button id="btn-excel" class="chico" title="Descargar una copia de respaldo en Excel">⬇ Excel de respaldo</button>
-      <button id="btn-borrar-todo" class="chico peligro" title="Eliminar todos los datos guardados">🗑 Borrar todo</button>
+      <button id="btn-excel" class="chico" title="Descargar una copia de respaldo en Excel del test elegido">⬇ Excel de respaldo</button>
+      <button id="btn-borrar-todo" class="chico peligro" title="Eliminar todos los datos guardados del test elegido">🗑 Borrar todo</button>
+    </div>
+  </div>
+
+  <!-- ===================== SELECTOR DE TEST ===================== -->
+  <!-- Lo primero es elegir el test: todas las pestañas de abajo muestran solo los
+       datos e informes del test elegido (cada test tiene su propio guardado). -->
+  <div class="selector-test">
+    <div class="selector-test-inner">
+      <div class="selector-test-titulo">1. Elige el test</div>
+      <div class="selector-test-opciones">
+        <button type="button" class="test-btn" data-test="octavo">
+          <span class="test-btn-icono">🧭</span>
+          <span class="test-btn-texto"><b>Test 8vos</b><small>Orientando mis Intereses · 8° básico · 6 áreas</small></span>
+          <span class="test-btn-conteo" id="conteo-test-octavo"></span>
+        </button>
+        <button type="button" class="test-btn" data-test="kuder">
+          <span class="test-btn-icono">🎓</span>
+          <span class="test-btn-texto"><b>Test de Kuder</b><small>Enseñanza media · 10 áreas</small></span>
+          <span class="test-btn-conteo" id="conteo-test-kuder"></span>
+        </button>
+      </div>
     </div>
   </div>
 
   <nav class="tabs">
-    <button class="tab-btn activo" data-tab="ingresar">Ingresar datos</button>
-    <button class="tab-btn" data-tab="estudiantes">Estudiantes e informes</button>
-    <button class="tab-btn" data-tab="estadisticas">Estadísticas</button>
-    <button class="tab-btn" data-tab="papelera">Papelera</button>
-    <button class="tab-btn" data-tab="kuder">Test Vocacional de Kuder</button>
-    <button class="tab-btn" data-tab="kuder-interno">Kuder — Uso Interno</button>
+    <div class="tabs-inner">
+      <span class="tabs-paso">2. ¿Qué necesitas hacer?</span>
+      <button class="tab-btn activo" data-tab="ingresar">📝 Ingresar datos</button>
+      <button class="tab-btn" data-tab="estudiantes">👥 Estudiantes e informes</button>
+      <button class="tab-btn" data-tab="estadisticas">📊 Estadísticas</button>
+      <button class="tab-btn" data-tab="kuder">🏫 Informes para orientadores</button>
+      <button class="tab-btn" data-tab="kuder-interno" data-solo-test="kuder">🔒 Uso interno</button>
+      <button class="tab-btn" data-tab="papelera">🗑 Papelera</button>
+    </div>
   </nav>
 
   <main>
 
+    <!-- aviso fijo de qué test está activo, visible en todas las pestañas -->
+    <div class="aviso-test-activo">
+      <span data-solo-test="octavo">Estás trabajando con el <b>Test 8vos</b> (Orientando mis Intereses, 8° básico). Los estudiantes e informes de este test se guardan aparte de los de Kuder.</span>
+      <span data-solo-test="kuder">Estás trabajando con el <b>Test de Kuder</b> (enseñanza media). Los estudiantes e informes de este test se guardan aparte de los de 8° básico.</span>
+    </div>
+
     <!-- ===================== INGRESAR ===================== -->
     <section id="panel-ingresar" class="panel activo">
       <div class="tarjeta">
-        <h2>Datos del curso</h2>
+        <h2>Importar planilla(s) de un curso <span class="badge-test" data-badge-test></span></h2>
+        <p class="ayuda" data-solo-test="octavo">La forma más rápida de cargar un curso completo. Sube uno o varios archivos .xlsx de la planilla de corrección ya completados. Antes de importar vas a ver cada archivo por su nombre para confirmar o completar su colegio, curso y letra.</p>
+        <p class="ayuda" data-solo-test="kuder">La forma más rápida de cargar un curso completo. Sube uno o varios archivos CSV/Excel exportados del sistema de Kuder (uno por curso), con los puntajes ya corregidos. Antes de importar vas a ver cada archivo por su nombre para confirmar o completar su colegio, curso y letra (se leen solos del archivo cuando vienen), y la <b>revisión de traspaso</b>: qué estudiantes no suman 45 puntos y si vale la pena buscar el error (solo si podría cambiar sus resultados).</p>
+        <div class="acciones-form" style="align-items:center; flex-wrap:wrap;">
+          <input type="file" id="input-planilla" accept=".xlsx,.xls,.csv" multiple style="display:none;" />
+          <button type="button" id="btn-elegir-planilla">📤 Elegir archivo(s)…</button>
+          <span id="nombre-archivo-planilla" class="ayuda" style="margin:0;"></span>
+        </div>
+        <div class="acciones-form">
+          <a href="assets/Planilla_de_correccion.xlsx" download="Planilla_de_correccion.xlsx" data-solo-test="octavo">
+            <button type="button" class="secundario chico">⬇ Descargar planilla en blanco</button>
+          </a>
+          <button type="button" id="btn-planilla-kuder" class="secundario chico" data-solo-test="kuder">⬇ Descargar planilla en blanco (Kuder)</button>
+        </div>
+      </div>
+
+      <div class="tarjeta">
+        <h2 style="font-size:16px;">O ingresa a mano: datos del curso</h2>
         <p class="ayuda">Estos datos quedan fijos mientras ingresas a todo un curso, para no tener que repetirlos en cada estudiante. Cámbialos cuando empieces con un colegio o curso distinto.</p>
         <div class="grid-form">
           <div>
@@ -61,28 +108,14 @@
       </div>
 
       <div class="tarjeta">
-        <h2 style="font-size:16px;">Importar planilla de corrección (opcional)</h2>
-        <p class="ayuda">Sube uno o varios archivos .xlsx ya completados con los puntajes de un curso. El colegio y curso son opcionales en la planilla (arriba de la tabla) — antes de importar te va a mostrar cada archivo por su nombre para que confirmes o completes el colegio, curso y letra de cada uno.</p>
-        <div class="acciones-form" style="align-items:center;">
-          <input type="file" id="input-planilla" accept=".xlsx,.xls,.csv" multiple style="display:none;" />
-          <button type="button" id="btn-elegir-planilla" class="secundario">📤 Elegir archivo(s)…</button>
-          <span id="nombre-archivo-planilla" class="ayuda" style="margin:0;"></span>
-        </div>
-        <div class="acciones-form">
-          <a href="assets/Planilla_de_correccion.xlsx" download="Planilla_de_correccion.xlsx">
-            <button type="button" class="secundario chico">⬇ Descargar planilla en blanco</button>
-          </a>
-        </div>
-      </div>
-
-      <div class="tarjeta">
-        <h2 id="titulo-form">Agregar estudiante</h2>
-        <p class="ayuda">Ingresa los puntajes que ya calcularon a partir de la hoja de respuestas en papel (0 a 8 por área). El área queda marcada como "de interés" automáticamente cuando el puntaje es 7 u 8.</p>
+        <h2 id="titulo-form" style="font-size:16px;">Agregar estudiante</h2>
+        <p class="ayuda" data-solo-test="octavo">Ingresa los puntajes que ya calcularon a partir de la hoja de respuestas en papel (0 a 8 por área). El área queda marcada como "de interés" automáticamente cuando el puntaje es 7 u 8.</p>
+        <p class="ayuda" data-solo-test="kuder">Ingresa los puntajes ya corregidos de cada área (0 a 9 por área; las 10 áreas de un estudiante suman 45). El área queda marcada como "de interés" automáticamente cuando el puntaje es 7 o más.</p>
         <form id="form-estudiante">
           <div class="grid-form">
             <div class="campo-ancho">
               <label>Nombre del estudiante *</label>
-              <input type="text" name="nombre" required autofocus />
+              <input type="text" name="nombre" required />
             </div>
             <div class="campo-ancho">
               <label>RUT (opcional)</label>
@@ -90,8 +123,9 @@
             </div>
           </div>
 
-          <div class="puntajes-titulo">Puntajes por área (0 a 8)</div>
+          <div class="puntajes-titulo" id="puntajes-titulo">Puntajes por área (0 a 8)</div>
           <div class="grid-form" id="campos-puntajes"></div>
+          <div id="suma-puntajes" class="suma-puntajes" data-solo-test="kuder"></div>
 
           <div class="acciones-form">
             <button type="submit" id="btn-guardar">Guardar y agregar siguiente</button>
@@ -113,7 +147,9 @@
     <!-- ===================== ESTUDIANTES ===================== -->
     <section id="panel-estudiantes" class="panel">
       <div class="tarjeta">
-        <h2>Estudiantes e informes</h2>
+        <h2>Estudiantes e informes <span class="badge-test" data-badge-test></span></h2>
+        <p class="ayuda" data-solo-test="octavo">Haz clic en un colegio y luego en un curso para ver a sus estudiantes. Puedes descargar el informe de cada estudiante en PDF, o todos los de un curso juntos en un ZIP (numerados en orden alfabético, igual que en la carpeta).</p>
+        <p class="ayuda" data-solo-test="kuder">Haz clic en un colegio y luego en un curso para ver a sus estudiantes. Puedes descargar el informe individual de cada estudiante en PDF, todos los de un curso juntos en un ZIP (numerados en orden alfabético, igual que en la carpeta), o el informe grupal del curso para el orientador.</p>
         <div class="filtros">
           <div>
             <label>Colegio</label>
@@ -136,6 +172,7 @@
             <button id="btn-descarga-masiva">⬇ Descargar todos (ZIP)</button>
           </div>
         </div>
+        <div id="resumen-traspaso" data-solo-test="kuder"></div>
         <div id="grupos-estudiantes"></div>
       </div>
     </section>
@@ -143,7 +180,7 @@
     <!-- ===================== PAPELERA ===================== -->
     <section id="panel-papelera" class="panel">
       <div class="tarjeta">
-        <h2>Papelera</h2>
+        <h2>Papelera <span class="badge-test" data-badge-test></span></h2>
         <p class="ayuda">Los estudiantes eliminados quedan aquí hasta que los restaures o los borres para siempre.</p>
         <div class="filtros">
           <div>
@@ -169,13 +206,14 @@
     <!-- ===================== ESTADÍSTICAS ===================== -->
     <section id="panel-estadisticas" class="panel">
       <div class="tarjeta">
-        <h2>Estadísticas</h2>
+        <h2>Estadísticas <span class="badge-test" data-badge-test></span></h2>
         <div class="stats-grid">
           <div class="stat-card"><div class="num" id="stat-total">0</div><div class="lbl">Estudiantes cargados</div></div>
           <div class="stat-card"><div class="num" id="stat-informes">0</div><div class="lbl">Informes generados</div></div>
           <div class="stat-card"><div class="num" id="stat-con-area">0</div><div class="lbl">Con área de interés</div></div>
           <div class="stat-card"><div class="num" id="stat-sin-area">0</div><div class="lbl">Sin área destacada</div></div>
           <div class="stat-card"><div class="num" id="stat-colegios">0</div><div class="lbl">Colegios distintos</div></div>
+          <div class="stat-card" data-solo-test="kuder"><div class="num" id="stat-traspaso">0</div><div class="lbl" id="stat-traspaso-lbl">Tests mal traspasados (no suman 45)</div></div>
         </div>
         <h2 style="font-size:16px;">Estudiantes por área de interés</h2>
         <div id="barras-areas"></div>
@@ -192,11 +230,12 @@
       </div>
     </section>
 
-    <!-- ===================== TEST VOCACIONAL DE KUDER (Enseñanza Media) ===================== -->
+    <!-- ===================== KUDER: INFORMES PARA ORIENTADORES ===================== -->
     <section id="panel-kuder" class="panel">
       <div class="tarjeta">
-        <h2>Test Vocacional de Kuder — Informe grupal por curso</h2>
-        <p class="ayuda">Este módulo es independiente del cuestionario de 8° básico. Sube el archivo Excel/CSV con los puntajes ya corregidos de un curso de enseñanza media, o hasta 6 archivos a la vez (uno por curso). Con varios cursos puedes generar un informe global que suma los porcentajes entre ellos, o un informe separado por cada curso. Dirigido a los orientadores del colegio: cuántos estudiantes tienen cada área como interés (puntaje 7 o más) y las carreras UMAG y otras carreras asociadas. Por ahora no genera informes individuales para cada estudiante.</p>
+        <h2>Informes para orientadores <span class="badge-test" data-badge-test></span></h2>
+        <p class="ayuda" data-solo-test="kuder">Informe grupal dirigido a los orientadores del colegio (no a los estudiantes): cuántos estudiantes tienen cada área como interés (puntaje 7 o más), la lista del curso y las carreras UMAG y otras carreras asociadas. Sube el archivo Excel/CSV de un curso, o hasta 6 a la vez (uno por curso): con varios cursos puedes generar un informe global que los suma, o un informe separado por cada curso. Si el curso ya está cargado en la app, también puedes generar su informe grupal desde "Estudiantes e informes", sin volver a subir el archivo.</p>
+        <p class="ayuda" data-solo-test="octavo">Informe grupal dirigido a los orientadores del colegio (no a los estudiantes): cuántos estudiantes tienen cada una de las 6 áreas como interés (7 u 8 puntos), la lista del curso y las carreras UMAG y otras carreras asociadas. Sube la planilla de corrección (.xlsx) de un curso, o hasta 6 a la vez (una por curso): con varios cursos puedes generar un informe global que los suma, o un informe separado por cada curso. Si el curso ya está cargado en la app, también puedes generar su informe grupal desde "Estudiantes e informes", sin volver a subir el archivo.</p>
         <div class="acciones-form" style="align-items:center;">
           <input type="file" id="kuder-input-planilla" accept=".xlsx,.xls,.csv" multiple style="display:none;" />
           <button type="button" id="kuder-btn-elegir-planilla" class="secundario">📤 Elegir archivo(s)…</button>
@@ -223,10 +262,10 @@
       </div>
     </section>
 
-    <!-- ===================== KUDER — INFORME INTERNO (Admisión y Marketing) ===================== -->
+    <!-- ===================== KUDER: INFORME INTERNO (Admisión y Marketing) ===================== -->
     <section id="panel-kuder-interno" class="panel">
       <div class="tarjeta">
-        <h2>Informe Interno de Kuder — Admisión y Marketing</h2>
+        <h2>Informe interno — Admisión y Marketing <span class="badge-test" data-badge-test></span></h2>
         <p class="ayuda">Uso interno de la unidad — no está pensado para orientadores ni estudiantes. Sube hasta 20 archivos Excel/CSV de aplicaciones del Test de Kuder (uno por curso) para un informe consolidado: estadísticas de aplicaciones, qué colegios y niveles (2°, 4°, etc.) solicitan el test con más frecuencia, qué áreas de interés concentran más demanda, y las carreras UMAG de cada área junto con carreras que la universidad podría incorporar a futuro. Sin límite de páginas — es un documento de uso interno.</p>
         <div class="acciones-form" style="align-items:center;">
           <input type="file" id="kuder-interno-input-planilla" accept=".xlsx,.xls,.csv" multiple style="display:none;" />
@@ -298,15 +337,42 @@
     </div>
   </div>
 
+  <!-- ===================== MODAL: ELEGIR ENTRE VARIAS OPCIONES (ej. generar con estudiantes pendientes) ===================== -->
+  <div id="modal-opciones" class="modal-overlay" style="display:none;">
+    <div class="modal-caja modal-caja--info modal-caja--ancha">
+      <h3 id="mo-titulo"></h3>
+      <p id="mo-texto"></p>
+      <div class="modal-acciones modal-acciones--opciones" id="mo-botones"></div>
+    </div>
+  </div>
+
+  <!-- ===================== MODAL: CORRECCIÓN RÁPIDA DE PUNTAJES (ícono ⚠ de un test mal traspasado) ===================== -->
+  <div id="modal-puntajes" class="modal-overlay" style="display:none;">
+    <div class="modal-caja modal-caja--info modal-caja--ancha">
+      <h3 id="mp-titulo">Corregir puntajes</h3>
+      <p id="mp-sub" style="margin-bottom:12px;"></p>
+      <div class="grid-form" id="mp-campos"></div>
+      <div id="mp-suma" class="suma-puntajes"></div>
+      <p class="ayuda" style="margin:10px 0 0;">Al guardar se recalculan sus áreas de interés y su informe sale con los puntajes corregidos.</p>
+      <div class="modal-acciones">
+        <button type="button" id="mp-cancelar" class="secundario">Cancelar</button>
+        <button type="button" id="mp-guardar-descargar" class="secundario">Guardar y descargar su informe</button>
+        <button type="button" id="mp-guardar">Guardar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===================== MODAL: COLEGIO/CURSO/LETRA DE CADA ARCHIVO AL IMPORTAR ===================== -->
   <div id="modal-importar" class="modal-overlay" style="display:none;">
     <div class="modal-caja modal-caja--info modal-caja--ancha">
-      <h3>Confirma colegio, curso y letra</h3>
+      <h3>Confirma colegio, curso y letra <span class="badge-test" data-badge-test></span></h3>
       <p style="margin-bottom:14px;">Revisa cada archivo por su nombre y completa o corrige su colegio, curso y letra antes de importar.</p>
       <div id="lista-importar-archivos" class="lista-importar-archivos"></div>
-      <div class="modal-acciones">
+      <div id="modal-imp-eleccion" class="modal-imp-eleccion"></div>
+      <div class="modal-acciones modal-acciones--opciones">
         <button type="button" id="modal-imp-btn-cancelar" class="secundario">Cancelar</button>
-        <button type="button" id="modal-imp-btn-continuar">Importar</button>
+        <button type="button" id="modal-imp-btn-continuar" class="secundario">Importar</button>
+        <button type="button" id="modal-imp-btn-descargar" data-solo-test="kuder">📦 Cargar y descargar la carpeta del curso</button>
       </div>
     </div>
   </div>
@@ -318,25 +384,31 @@
 
   <script src="vendor/xlsx.min.js"></script>
 
-  <script src="js/data.js"></script>
-  <script src="js/icons.js"></script>
-  <script src="js/logo.js"></script>
-  <script src="js/store.js"></script>
-  <script src="js/report.js"></script>
-  <script src="js/excel.js"></script>
-  <script src="js/app.js"></script>
+  <!-- el "?v=..." de cada archivo obliga al navegador a bajar la versión nueva después de
+       cada actualización (si no, puede mezclar archivos nuevos con otros guardados en
+       caché y la app deja de funcionar); se cambia cada vez que se publica una versión -->
+  <!-- datos de cada test (van primero: js/store.js arma un guardado por test) -->
+  <script src="js/data.js?v=20260926"></script>
+  <script src="js/icons.js?v=20260926"></script>
+  <script src="js/kuder-data.js?v=20260926"></script>
+  <script src="js/kuder-icons.js?v=20260926"></script>
+  <script src="js/logo.js?v=20260926"></script>
+  <script src="js/store.js?v=20260926"></script>
 
-  <!-- módulo aparte: Test Vocacional de Kuder (Enseñanza Media) -->
-  <script src="js/kuder-data.js"></script>
-  <script src="js/kuder-icons.js"></script>
-  <script src="js/kuder-report.js"></script>
-  <script src="js/kuder.js"></script>
+  <!-- informes: 8° básico (individual) y Kuder (grupal para orientadores e individual) -->
+  <script src="js/report.js?v=20260926"></script>
+  <script src="js/excel.js?v=20260926"></script>
+  <script src="js/kuder.js?v=20260926"></script>
+  <script src="js/kuder-report.js?v=20260926"></script>
+  <script src="js/kuder-individual-report.js?v=20260926"></script>
 
-  <!-- módulo aparte: Informe Interno de Kuder (Admisión y Marketing) — reutiliza el
-       lector de planillas de js/kuder.js y varias utilidades genéricas de
-       js/kuder-report.js, pero no modifica ninguno de los dos -->
-  <script src="js/kuder-internal-data.js"></script>
-  <script src="js/kuder-internal-report.js"></script>
-  <script src="js/kuder-internal.js"></script>
+  <!-- interfaz común (selector de test, pestañas, formularios) -->
+  <script src="js/app.js?v=20260926"></script>
+
+  <!-- informe interno de Kuder (Admisión y Marketing) — reutiliza el lector de
+       planillas de js/kuder.js y varias utilidades genéricas de js/kuder-report.js -->
+  <script src="js/kuder-internal-data.js?v=20260926"></script>
+  <script src="js/kuder-internal-report.js?v=20260926"></script>
+  <script src="js/kuder-internal.js?v=20260926"></script>
 </body>
 </html>

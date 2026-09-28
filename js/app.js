@@ -1,21 +1,92 @@
-// Lógica de la interfaz: pestañas, formularios, tablas, deshacer/rehacer, descargas.
+// Lógica de la interfaz: selector de test (8° básico / Kuder), pestañas, formularios,
+// tablas, deshacer/rehacer, descargas.
+//
+// Las pestañas "Ingresar datos", "Estudiantes e informes", "Estadísticas" y
+// "Papelera" son las mismas para los dos tests, pero siempre trabajan sobre el test
+// elegido arriba: cada test trae su propio guardado, sus áreas, su lector de planillas
+// y su informe (ver TESTS), así los datos de uno nunca se mezclan con los del otro.
+// Las pestañas "Informes para orientadores" y "Uso interno" son solo de Kuder
+// (js/kuder.js y js/kuder-internal.js).
 
-const STORAGE_KEY_CURSO = "orientando_intereses_curso_actual";
+const STORAGE_KEY_TEST_ACTIVO = "orientando_intereses_test_activo";
+
+const TESTS = {
+  octavo: {
+    id: "octavo",
+    nombre: "Test 8vos",
+    store: store,
+    areas: AREAS,
+    calcularAreas: calcularAreasDeInteres,
+    puntajeMin: PUNTAJE_MIN,
+    puntajeMax: PUNTAJE_MAX,
+    storageKeyCurso: "orientando_intereses_curso_actual",
+    placeholderCurso: "Ej: 8vo",
+    leerPlanilla: leerPlanillaCorreccion,
+    errorLectura: "No se pudo leer este archivo. ¿Es un .xlsx válido?",
+    numeroEnGrupo: calcularNumeroEnGrupo,
+    formatearRut: (rut) => rut || "",
+    revisarTraspaso: null, // el cuestionario de 8° no tiene una suma fija que revisar
+    describirTraspaso: null,
+    descargarIndividual: descargarInformeIndividual,
+    descargarMasivo: descargarInformesMasivo,
+    configGrupal: CONFIG_GRUPAL_OCTAVO, // informe grupal para orientadores (js/kuder-report.js)
+    exportarExcel: exportarExcel,
+  },
+  kuder: {
+    id: "kuder",
+    nombre: "Test de Kuder",
+    store: storeKuder,
+    areas: AREAS_KUDER,
+    calcularAreas: calcularAreasDeInteresKuder,
+    puntajeMin: PUNTAJE_MIN_KUDER,
+    puntajeMax: PUNTAJE_MAX_KUDER,
+    storageKeyCurso: "orientando_intereses_kuder_curso_actual",
+    placeholderCurso: "Ej: 2do medio",
+    leerPlanilla: leerPlanillaKuderParaImportar,
+    errorLectura: "No se pudo leer este archivo. ¿Es un .csv/.xlsx de Kuder válido?",
+    numeroEnGrupo: calcularNumeroEnGrupoKuder,
+    formatearRut: (rut) => (rut ? formatearRutKuder(rut) : ""),
+    revisarTraspaso: analizarTraspasoKuder, // las 10 áreas deben sumar 45 (js/kuder-data.js)
+    describirTraspaso: describirTraspasoKuder,
+    descargarIndividual: descargarInformeIndividualKuder,
+    descargarMasivo: descargarInformesMasivoKuder,
+    descargarVariosCursos: descargarCarpetasDeCursosKuder,
+    configGrupal: CONFIG_GRUPAL_KUDER,
+    exportarExcel: exportarExcelKuder,
+  },
+};
+
+const TABS_SOLO_KUDER = ["kuder-interno"]; // "Informes para orientadores" (panel-kuder) es de los dos tests
 
 const estado = {
+  test: "octavo",
   tab: "ingresar",
   editandoId: null,
-  filtros: { colegio: "", curso: "", letra: "", nombre: "" },
+  filtros: { colegio: "", curso: "", letra: "", nombre: "", soloTraspaso: false },
   filtrosPapelera: { colegio: "", curso: "", nombre: "" },
 };
 
+// configuración del test elegido arriba
+function cfg() {
+  return TESTS[estado.test];
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  try {
+    const guardado = localStorage.getItem(STORAGE_KEY_TEST_ACTIVO);
+    if (guardado && TESTS[guardado]) estado.test = guardado;
+  } catch (e) {
+    console.error("No se pudo leer el test elegido la última vez.", e);
+  }
+  aplicarTestActivo();
+  cablearSelectorTest();
   cablearTabs();
   cablearTopbar();
   cablearCursoHeader();
   cablearFormulario();
   cablearImportacion();
   cablearModal();
+  cablearCorreccionPuntajes();
   render();
 });
 
@@ -57,8 +128,9 @@ function render() {
   document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("activo", b.dataset.tab === estado.tab));
   document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("activo", p.id === "panel-" + estado.tab));
 
-  document.getElementById("btn-deshacer").disabled = !store.puedeDeshacer();
-  document.getElementById("btn-rehacer").disabled = !store.puedeRehacer();
+  document.getElementById("btn-deshacer").disabled = !cfg().store.puedeDeshacer();
+  document.getElementById("btn-rehacer").disabled = !cfg().store.puedeRehacer();
+  renderConteosSelector();
 
   if (estado.tab === "ingresar") renderDatosRecientes();
   if (estado.tab === "estudiantes") renderEstudiantes();
@@ -75,49 +147,107 @@ function cablearTabs() {
   });
 }
 
+// ---------------- selector de test ----------------
+
+function renderConteosSelector() {
+  Object.values(TESTS).forEach((t) => {
+    const el = document.getElementById("conteo-test-" + t.id);
+    if (!el) return;
+    const n = t.store.listar().length;
+    el.textContent = n > 0 ? `${n} ${n === 1 ? "estudiante" : "estudiantes"}` : "";
+  });
+}
+
+// deja la página lista para el test elegido: clase en <body> (que muestra/oculta los
+// textos y pestañas propios de cada test, ver css), etiquetas con el nombre del test,
+// campos de puntaje del formulario y datos del curso guardados de ese test.
+function aplicarTestActivo() {
+  const c = cfg();
+  document.body.classList.toggle("test-octavo", c.id === "octavo");
+  document.body.classList.toggle("test-kuder", c.id === "kuder");
+  document.querySelectorAll(".test-btn").forEach((b) => b.classList.toggle("activo", b.dataset.test === c.id));
+  document.querySelectorAll("[data-badge-test]").forEach((el) => (el.textContent = c.nombre));
+  document.getElementById("curso-curso").placeholder = c.placeholderCurso;
+  document.getElementById("puntajes-titulo").textContent = `Puntajes por área (${c.puntajeMin} a ${c.puntajeMax})`;
+  renderCamposPuntaje();
+  cargarCursoHeaderDesdeLocal();
+}
+
+function cablearSelectorTest() {
+  document.querySelectorAll(".test-btn").forEach((b) => {
+    b.addEventListener("click", () => cambiarTest(b.dataset.test));
+  });
+}
+
+function cambiarTest(idTest) {
+  if (!TESTS[idTest] || idTest === estado.test) return;
+  if (estado.editandoId) cancelarEdicion();
+  guardarCursoHeaderEnLocal(); // lo escrito en "Datos del curso" queda con el test anterior
+  estado.test = idTest;
+  try {
+    localStorage.setItem(STORAGE_KEY_TEST_ACTIVO, idTest);
+  } catch (e) {
+    console.error(e);
+  }
+  // los filtros de un test (colegio, curso...) no tienen sentido en el otro
+  estado.filtros = { colegio: "", curso: "", letra: "", nombre: "", soloTraspaso: false };
+  estado.filtrosPapelera = { colegio: "", curso: "", nombre: "" };
+  if (idTest !== "kuder" && TABS_SOLO_KUDER.includes(estado.tab)) estado.tab = "ingresar";
+  if (typeof reiniciarPanelOrientadores === "function") reiniciarPanelOrientadores();
+  aplicarTestActivo();
+  render();
+  mostrarToast(`Ahora trabajas con: ${cfg().nombre}`);
+}
+
 function cablearTopbar() {
   document.getElementById("btn-deshacer").addEventListener("click", () => {
-    if (store.deshacer()) {
+    if (cfg().store.deshacer()) {
       mostrarToast("Se deshizo el último cambio");
       render();
       if (estado.tab === "ingresar") cancelarEdicion();
     }
   });
   document.getElementById("btn-rehacer").addEventListener("click", () => {
-    if (store.rehacer()) {
+    if (cfg().store.rehacer()) {
       mostrarToast("Se rehizo el cambio");
       render();
     }
   });
   document.getElementById("btn-excel").addEventListener("click", () => {
-    if (store.listar({ incluirPapelera: true }).length === 0) {
-      mostrarToast("Todavía no hay estudiantes para respaldar");
+    if (cfg().store.listar({ incluirPapelera: true }).length === 0) {
+      mostrarToast(`Todavía no hay estudiantes del ${cfg().nombre} para respaldar`);
       return;
     }
-    exportarExcel();
+    cfg().exportarExcel();
     mostrarToast("Respaldo en Excel descargado");
   });
 
   document.getElementById("btn-borrar-todo").addEventListener("click", () => {
-    const total = store.listar({ incluirPapelera: true }).length;
+    const c = cfg();
+    const total = c.store.listar({ incluirPapelera: true }).length;
     if (total === 0) {
-      mostrarToast("No hay datos guardados todavía");
+      mostrarToast(`No hay datos guardados del ${c.nombre} todavía`);
       return;
     }
     confirmarAccion({
-      titulo: "⚠ Borrar todos los datos",
-      texto: `Esto elimina para siempre los ${total} estudiantes guardados (incluida la papelera). Esta acción no se puede deshacer una vez que cierres o recargues la página. ¿Seguro que quieres continuar?`,
+      titulo: `⚠ Borrar todos los datos del ${c.nombre}`,
+      texto: `Esto elimina para siempre los ${total} estudiantes guardados del ${c.nombre} (incluida su papelera). Los datos del otro test no se tocan. Esta acción no se puede deshacer una vez que cierres o recargues la página. ¿Seguro que quieres continuar?`,
       textoBoton: "Sí, borrar todo",
       onConfirmar: () => {
-        store.borrarTodo();
-        mostrarToast("Todos los datos fueron eliminados");
+        c.store.borrarTodo();
+        mostrarToast("Todos los datos del test fueron eliminados");
         render();
       },
     });
   });
+
+  const btnPlanillaKuder = document.getElementById("btn-planilla-kuder");
+  if (btnPlanillaKuder) btnPlanillaKuder.addEventListener("click", descargarPlanillaEnBlancoKuder);
 }
 
 // ---------------- datos del curso (fijos mientras se ingresa un curso completo) ----------------
+// se guardan por separado para cada test, así al cambiar de test no se arrastra el
+// colegio/curso que se estaba usando en el otro.
 
 function leerCursoHeader() {
   return {
@@ -129,23 +259,24 @@ function leerCursoHeader() {
 }
 
 function guardarCursoHeaderEnLocal() {
-  localStorage.setItem(STORAGE_KEY_CURSO, JSON.stringify(leerCursoHeader()));
+  localStorage.setItem(cfg().storageKeyCurso, JSON.stringify(leerCursoHeader()));
 }
 
-function cablearCursoHeader() {
+function cargarCursoHeaderDesdeLocal() {
+  let d = {};
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_CURSO);
-    if (raw) {
-      const d = JSON.parse(raw);
-      document.getElementById("curso-colegio").value = d.colegio || "";
-      document.getElementById("curso-curso").value = d.curso || "";
-      document.getElementById("curso-letra").value = d.letra || "";
-      document.getElementById("curso-fecha").value = d.fecha || "";
-    }
+    const raw = localStorage.getItem(cfg().storageKeyCurso);
+    if (raw) d = JSON.parse(raw) || {};
   } catch (e) {
     console.error("No se pudo cargar el curso guardado.", e);
   }
+  document.getElementById("curso-colegio").value = d.colegio || "";
+  document.getElementById("curso-curso").value = d.curso || "";
+  document.getElementById("curso-letra").value = d.letra || "";
+  document.getElementById("curso-fecha").value = d.fecha || "";
+}
 
+function cablearCursoHeader() {
   ["curso-colegio", "curso-curso", "curso-letra", "curso-fecha"].forEach((id) => {
     const el = document.getElementById(id);
     el.addEventListener("change", guardarCursoHeaderEnLocal);
@@ -166,86 +297,304 @@ function cablearCursoHeader() {
   document.getElementById("btn-actualizar-recientes").addEventListener("click", renderDatosRecientes);
 }
 
-// ---------------- importación masiva desde planilla de corrección ----------------
+// ---------------- importación masiva desde planilla(s) ----------------
 
 function escaparHtml(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+// ---------------- revisión de traspaso (solo Kuder: las 10 áreas deben sumar 45) ----------------
+
+// null si el test del estudiante está bien traspasado (o si el test no tiene esta revisión)
+function revisionTraspaso(puntajes) {
+  const c = cfg();
+  if (!c.revisarTraspaso) return null;
+  const analisis = c.revisarTraspaso(puntajes);
+  return analisis.estado === "ok" ? null : { analisis, texto: c.describirTraspaso(analisis) };
+}
+
+// aviso para las listas de estudiantes: amarillo si el error podría cambiar sus
+// resultados (hay que buscarlo), gris si no
+function avisoTraspasoHtml(estudiante, { compacto = false } = {}) {
+  const r = revisionTraspaso(estudiante.puntajes);
+  if (!r) return "";
+  const t = r.texto;
+  return `<div class="traspaso-aviso${t.afecta ? " afecta" : ""}">${t.afecta ? "⚠" : "ℹ️"} <b>Test mal traspasado:</b> ${escaparHtml(t.resumen)}. ${escaparHtml(t.accion)}.${compacto ? "" : " " + escaparHtml(t.detalle)}</div>`;
+}
+
+// ícono de advertencia junto al nombre de un estudiante con el test mal traspasado:
+// al hacer clic abre la corrección rápida de sus puntajes (ver abrirCorreccionPuntajes)
+function botonTraspasoHtml(estudiante) {
+  const r = revisionTraspaso(estudiante.puntajes);
+  if (!r) return "";
+  return `<button type="button" class="btn-traspaso${r.analisis.afecta ? " afecta" : ""}" title="Test mal traspasado: haz clic para corregir sus puntajes" onclick="abrirCorreccionPuntajes('${estudiante.id}')">⚠ ${r.analisis.total}/${SUMA_ESPERADA_KUDER}</button>`;
+}
+
+// ventana con varias opciones (además de "Cancelar"): [{ texto, clase, accion }]
+function elegirOpcion({ titulo, texto, opciones }) {
+  const modal = document.getElementById("modal-opciones");
+  document.getElementById("mo-titulo").textContent = titulo;
+  document.getElementById("mo-texto").innerHTML = texto;
+  const cont = document.getElementById("mo-botones");
+  cont.innerHTML = "";
+  const cerrar = () => (modal.style.display = "none");
+  const cancelar = document.createElement("button");
+  cancelar.type = "button";
+  cancelar.className = "secundario";
+  cancelar.textContent = "Cancelar";
+  cancelar.onclick = cerrar;
+  cont.appendChild(cancelar);
+  opciones.forEach((op) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    if (op.clase) b.className = op.clase;
+    b.textContent = op.texto;
+    b.onclick = () => {
+      cerrar();
+      op.accion();
+    };
+    cont.appendChild(b);
+  });
+  modal.style.display = "flex";
+}
+
+// antes de generar informes (solo Kuder): si hay estudiantes pendientes por revisar
+// (test mal traspasado), se pregunta si generar igual (quedan marcados con su suma en
+// el nombre del archivo) o revisarlos primero
+function antesDeGenerarInformes(lista, generar, { individual = false } = {}) {
+  const pendientes = lista.filter((e) => revisionTraspaso(e.puntajes));
+  if (pendientes.length === 0) return generar();
+  const nombres =
+    pendientes
+      .slice(0, 8)
+      .map((e) => `${escaparHtml(e.nombre)} (${revisionTraspaso(e.puntajes).analisis.total}/${SUMA_ESPERADA_KUDER})`)
+      .join(", ") + (pendientes.length > 8 ? ` y ${pendientes.length - 8} más` : "");
+  const uno = individual;
+  elegirOpcion({
+    titulo: "⚠ Hay estudiantes pendientes por revisar",
+    texto: uno
+      ? `El test de <b>${nombres}</b> está mal traspasado (no suma ${SUMA_ESPERADA_KUDER}). Puedes corregir sus puntajes ahora, o descargar su informe igual (el archivo lleva su puntaje en el nombre).`
+      : `${pendientes.length === 1 ? "Este estudiante tiene" : `Estos ${pendientes.length} estudiantes tienen`} el test mal traspasado (no suman ${SUMA_ESPERADA_KUDER}): ${nombres}.<br/><br/>Puedes generar la carpeta igual (sus informes van marcados con su puntaje en el nombre del archivo, y la carpeta trae una nota con la lista), o revisarlos primero con el ícono ⚠.`,
+    opciones: uno
+      ? [
+          { texto: "✏️ Corregir sus puntajes", clase: "secundario", accion: () => abrirCorreccionPuntajes(lista[0].id) },
+          { texto: "📄 Descargar igual", accion: generar },
+        ]
+      : [
+          {
+            texto: "🔎 Revisar primero los pendientes",
+            clase: "secundario",
+            accion: () => {
+              estado.filtros.soloTraspaso = true;
+              estado.tab = "estudiantes";
+              render();
+              document.getElementById("resumen-traspaso").scrollIntoView({ behavior: "smooth", block: "start" });
+            },
+          },
+          { texto: "📦 Generar y descargar igual", accion: generar },
+        ],
+  });
+}
+
+// cuántos estudiantes de una lista tienen el test mal traspasado (para los encabezados de colegio/curso)
+function chipTraspasoHtml(lista) {
+  const n = lista.filter((e) => revisionTraspaso(e.puntajes)).length;
+  return n ? `<span class="chip chip-traspaso">⚠ ${n} ${n === 1 ? "pendiente" : "pendientes"} por revisar</span>` : "";
+}
+
+// sección de la ventana de importación con los estudiantes de un archivo que no suman 45
+function htmlRevisionTraspasoArchivo(lectura) {
+  const lista = lectura.revisionTraspaso;
+  const c = cfg();
+  if (!lista || !c.describirTraspaso) return ""; // 8° básico: no aplica
+  if (lectura.estudiantes.length === 0) return "";
+  if (lista.length === 0) {
+    return `<div class="revision-traspaso ok">✓ Todos los estudiantes suman 45: tests bien traspasados.</div>`;
+  }
+  const conEfecto = lista.filter((r) => r.analisis.afecta);
+  const sinEfecto = lista.filter((r) => !r.analisis.afecta);
+  const item = (r) => {
+    const d = c.describirTraspaso(r.analisis);
+    return `<li><b>${escaparHtml(r.nombre)}</b> (fila ${r.fila}): ${escaparHtml(d.resumen)}. ${escaparHtml(d.detalle)}</li>`;
+  };
+  return `
+    <div class="revision-traspaso">
+      <div class="revision-traspaso-titulo">🔎 Revisión de traspaso: ${lista.length} ${lista.length === 1 ? "estudiante no suma" : "estudiantes no suman"} 45 puntos</div>
+      ${
+        conEfecto.length
+          ? `<div class="revision-traspaso-grupo afecta">
+              <div class="revision-traspaso-sub">⚠ Hay que buscar el error, porque podría cambiar sus resultados (${conEfecto.length}):</div>
+              <ul>${conEfecto.map(item).join("")}</ul>
+            </div>`
+          : ""
+      }
+      ${
+        sinEfecto.length
+          ? `<div class="revision-traspaso-grupo">
+              <div class="revision-traspaso-sub">ℹ️ No es necesario buscar el error: sus resultados quedan iguales (${sinEfecto.length}):</div>
+              <ul>${sinEfecto.map(item).join("")}</ul>
+            </div>`
+          : ""
+      }
+      <div class="revision-traspaso-nota">Se importan igual y quedan registrados. Cuando tengas su hoja de respuestas, corrige sus puntajes en "Estudiantes e informes" haciendo clic en el ícono ⚠ junto a su nombre, y el aviso desaparece al llegar a 45.</div>
+    </div>`;
+}
+
 // muestra el modal con un renglón por archivo (nombre + cuántos estudiantes trae) para
 // que el usuario confirme o complete el colegio/curso/letra de cada uno antes de
 // importar. Cada campo viene precargado con lo que traiga la propia planilla y, si no,
-// con los "Datos del curso" que ya están escritos arriba en la app. Devuelve una
-// promesa que resuelve con un arreglo [{archivo, lectura, datosCurso}, ...] si el
-// usuario confirma, o con null si cancela.
+// con los "Datos del curso" que ya están escritos en la app. Si ese curso ya tiene
+// estudiantes cargados, se avisa (para no importar dos veces el mismo archivo).
+// Devuelve una promesa que resuelve con { archivos: [{archivo, lectura, datosCurso}, ...],
+// descargar } si el usuario confirma (descargar = true si eligió "Cargar y descargar"),
+// o con null si cancela.
 function pedirDatosPorArchivo(lecturas, cursoHeader) {
   return new Promise((resolve) => {
     const modal = document.getElementById("modal-importar");
     const cont = document.getElementById("lista-importar-archivos");
     const btnContinuar = document.getElementById("modal-imp-btn-continuar");
+    const btnDescargar = document.getElementById("modal-imp-btn-descargar");
     const btnCancelar = document.getElementById("modal-imp-btn-cancelar");
+    const c = cfg();
 
     cont.innerHTML = lecturas
       .map(({ archivo, lectura }, i) => {
+        const n = lectura.estudiantes.length;
+        const nombreArchivo = `<span>📄 ${escaparHtml(archivo.name)}</span>`;
+
+        // archivo sin estudiantes válidos: no se pide colegio/curso (no bloquea la
+        // importación de los demás) y se explica por qué, avisando si parece ser una
+        // planilla del otro test
+        if (n === 0) {
+          const motivo = lectura.otroTest
+            ? `Parece ser una planilla del <b>${escaparHtml(lectura.otroTest)}</b>. Elige ese test arriba y vuelve a subirlo.`
+            : escaparHtml(lectura.errores[0] || "No se encontraron estudiantes válidos.");
+          return `
+          <div class="fila-importar-archivo fila-importar-archivo--vacia">
+            <div class="fila-importar-archivo-nombre">${nombreArchivo}<span class="fila-importar-archivo-info">no se va a importar</span></div>
+            <div class="imp-archivo-error">⚠ ${motivo}</div>
+          </div>`;
+        }
+
         const colegioPre = lectura.colegio || cursoHeader.colegio || "";
         const cursoPre = lectura.curso || cursoHeader.curso || "";
         const letraPre = lectura.letra || cursoHeader.letra || "";
-        const n = lectura.estudiantes.length;
         const nErrores = lectura.errores.length;
+        const nAdvertencias = (lectura.advertencias || []).length;
+        const nTraspaso = (lectura.revisionTraspaso || []).length;
         const info =
           `${n} ${n === 1 ? "estudiante detectado" : "estudiantes detectados"}` +
-          (nErrores ? `, ${nErrores} ${nErrores === 1 ? "fila con problemas" : "filas con problemas"}` : "");
+          (nErrores ? `, ${nErrores} ${nErrores === 1 ? "fila con problemas" : "filas con problemas"}` : "") +
+          (nAdvertencias ? `, ${nAdvertencias} ${nAdvertencias === 1 ? "fila para revisar" : "filas para revisar"}` : "") +
+          (nTraspaso ? `, ${nTraspaso} ${nTraspaso === 1 ? "test mal traspasado" : "tests mal traspasados"}` : "");
         return `
-        <div class="fila-importar-archivo">
+        <div class="fila-importar-archivo" data-idx="${i}">
           <div class="fila-importar-archivo-nombre">
-            <span>📄 ${escaparHtml(archivo.name)}</span>
+            ${nombreArchivo}
             <span class="fila-importar-archivo-info">${info}</span>
           </div>
           <div class="grid-form">
             <div>
               <label>Colegio *</label>
-              <input type="text" class="imp-colegio" data-idx="${i}" value="${escaparHtml(colegioPre)}" />
+              <input type="text" class="imp-colegio" value="${escaparHtml(colegioPre)}" />
             </div>
             <div>
               <label>Curso *</label>
-              <input type="text" class="imp-curso" data-idx="${i}" value="${escaparHtml(cursoPre)}" placeholder="Ej: 8vo" />
+              <input type="text" class="imp-curso" value="${escaparHtml(cursoPre)}" placeholder="${escaparHtml(c.placeholderCurso)}" />
             </div>
             <div>
               <label>Letra</label>
-              <input type="text" class="imp-letra" data-idx="${i}" maxlength="2" value="${escaparHtml(letraPre)}" placeholder="Ej: A" />
+              <input type="text" class="imp-letra" maxlength="2" value="${escaparHtml(letraPre)}" placeholder="Ej: A" />
             </div>
           </div>
+          <div class="imp-aviso-existente"></div>
+          ${htmlRevisionTraspasoArchivo(lectura)}
         </div>`;
       })
       .join("");
 
+    const filasConEstudiantes = [...cont.querySelectorAll(".fila-importar-archivo[data-idx]")];
+    const leerFila = (fila) => ({
+      colegio: fila.querySelector(".imp-colegio").value.trim(),
+      curso: fila.querySelector(".imp-curso").value.trim(),
+      letra: fila.querySelector(".imp-letra").value.trim().toUpperCase(),
+    });
+
+    // aviso en vivo si el colegio/curso/letra escritos ya tienen estudiantes cargados
+    const actualizarAvisosExistentes = () => {
+      const activos = c.store.listar();
+      filasConEstudiantes.forEach((fila) => {
+        const d = leerFila(fila);
+        const yaCargados =
+          d.colegio && d.curso
+            ? activos.filter(
+                (e) =>
+                  (e.colegio || "").trim().toLowerCase() === d.colegio.toLowerCase() &&
+                  (e.curso || "").trim().toLowerCase() === d.curso.toLowerCase() &&
+                  (e.letra || "").trim().toLowerCase() === d.letra.toLowerCase()
+              ).length
+            : 0;
+        fila.querySelector(".imp-aviso-existente").textContent = yaCargados
+          ? `⚠ Este curso ya tiene ${yaCargados} ${yaCargados === 1 ? "estudiante cargado" : "estudiantes cargados"}. Si importas este archivo de nuevo, quedarán repetidos.`
+          : "";
+      });
+    };
+    cont.querySelectorAll("input").forEach((inp) => inp.addEventListener("input", actualizarAvisosExistentes));
+    actualizarAvisosExistentes();
+
+    // Kuder: dos maneras de terminar la carga. (a) cargar y descargar altiro la carpeta
+    // del curso (los que no suman 45 van marcados con su suma en el nombre del
+    // archivo), o (b) solo cargar el curso y dejar a esos estudiantes pendientes por
+    // revisar, para corregirlos después con el ícono ⚠ y descargar cuando estén listos.
+    const nPendientes = lecturas.reduce((acc, { lectura }) => acc + (lectura.estudiantes.length ? (lectura.revisionTraspaso || []).length : 0), 0);
+    const nCursos = filasConEstudiantes.length;
+    const eleccion = document.getElementById("modal-imp-eleccion");
+    if (c.revisarTraspaso) {
+      btnContinuar.textContent = nPendientes ? "📥 Solo cargar (dejar pendientes por revisar)" : "📥 Solo cargar en la plataforma";
+      btnDescargar.textContent = `📦 Cargar y descargar ${nCursos > 1 ? "las carpetas de los cursos" : "la carpeta del curso"}`;
+      eleccion.innerHTML = nPendientes
+        ? `<b>⚠ ${nPendientes} ${nPendientes === 1 ? "estudiante tiene" : "estudiantes tienen"} el test mal traspasado (no suman 45).</b> Elige cómo seguir:
+           <ul>
+             <li><b>Cargar y descargar:</b> se genera ya ${nCursos > 1 ? "la carpeta de cada curso" : "la carpeta del curso"} con todos los informes; los que no suman 45 van marcados con su puntaje en el nombre del archivo, por ejemplo "(44 de 45)", y la carpeta trae una nota con la lista a revisar.</li>
+             <li><b>Solo cargar:</b> el curso queda en la plataforma y esos estudiantes quedan pendientes por revisar. Los corriges después con el ícono ⚠ en "Estudiantes e informes" y descargas los informes cuando estén listos.</li>
+           </ul>`
+        : "";
+    } else {
+      btnContinuar.textContent = "Importar";
+      eleccion.innerHTML = "";
+    }
+    btnContinuar.disabled = filasConEstudiantes.length === 0;
+    btnDescargar.disabled = filasConEstudiantes.length === 0;
     modal.style.display = "flex";
     const primerCampo = cont.querySelector(".imp-colegio");
     if (primerCampo) primerCampo.focus();
 
     function limpiar() {
       modal.style.display = "none";
-      btnContinuar.removeEventListener("click", onContinuar);
+      btnContinuar.disabled = false;
+      btnDescargar.disabled = false;
+      btnContinuar.removeEventListener("click", onSoloCargar);
+      btnDescargar.removeEventListener("click", onCargarYDescargar);
       btnCancelar.removeEventListener("click", onCancelar);
     }
-    function onContinuar() {
-      const inpsColegio = cont.querySelectorAll(".imp-colegio");
-      const inpsCurso = cont.querySelectorAll(".imp-curso");
-      const inpsLetra = cont.querySelectorAll(".imp-letra");
-
+    function onSoloCargar() {
+      onContinuar(false);
+    }
+    function onCargarYDescargar() {
+      onContinuar(true);
+    }
+    function onContinuar(descargar) {
       let ok = true;
-      const resultado = lecturas.map((item, i) => {
-        const colegio = inpsColegio[i].value.trim();
-        const curso = inpsCurso[i].value.trim();
-        const letra = inpsLetra[i].value.trim().toUpperCase();
-        const falta = !colegio || !curso;
-        inpsColegio[i].classList.toggle("invalido", !colegio);
-        inpsCurso[i].classList.toggle("invalido", !curso);
-        if (falta) ok = false;
+      const resultado = filasConEstudiantes.map((fila) => {
+        const item = lecturas[Number(fila.dataset.idx)];
+        const d = leerFila(fila);
+        fila.querySelector(".imp-colegio").classList.toggle("invalido", !d.colegio);
+        fila.querySelector(".imp-curso").classList.toggle("invalido", !d.curso);
+        if (!d.colegio || !d.curso) ok = false;
         return {
           archivo: item.archivo,
           lectura: item.lectura,
-          datosCurso: { colegio, curso, letra, fecha: cursoHeader.fecha || "" },
+          datosCurso: { ...d, fecha: cursoHeader.fecha || "" },
         };
       });
 
@@ -255,13 +604,14 @@ function pedirDatosPorArchivo(lecturas, cursoHeader) {
       }
 
       limpiar();
-      resolve(resultado);
+      resolve({ archivos: resultado, descargar });
     }
     function onCancelar() {
       limpiar();
       resolve(null);
     }
-    btnContinuar.addEventListener("click", onContinuar);
+    btnContinuar.addEventListener("click", onSoloCargar);
+    btnDescargar.addEventListener("click", onCargarYDescargar);
     btnCancelar.addEventListener("click", onCancelar);
   });
 }
@@ -276,6 +626,7 @@ function cablearImportacion() {
   input.addEventListener("change", async () => {
     const archivos = Array.from(input.files || []);
     if (archivos.length === 0) return;
+    const c = cfg();
 
     etiquetaArchivo.textContent =
       archivos.length === 1 ? archivos[0].name : `${archivos.length} archivos seleccionados`;
@@ -290,36 +641,68 @@ function cablearImportacion() {
         let lectura;
         try {
           const arrayBuffer = await archivo.arrayBuffer();
-          lectura = leerPlanillaCorreccion(arrayBuffer);
+          lectura = c.leerPlanilla(arrayBuffer);
         } catch (err) {
           console.error(err);
-          lectura = { estudiantes: [], errores: ["No se pudo leer este archivo. ¿Es un .xlsx válido?"], colegio: "", curso: "", letra: "" };
+          lectura = { estudiantes: [], errores: [c.errorLectura], advertencias: [], colegio: "", curso: "", letra: "" };
+        }
+        // sin estudiantes: ¿será una planilla del otro test? (error fácil de cometer
+        // ahora que la app tiene dos tests)
+        if (lectura.estudiantes.length === 0) {
+          const otro = Object.values(TESTS).find((t) => t.id !== c.id);
+          try {
+            const buffer = await archivo.arrayBuffer();
+            if (otro.leerPlanilla(buffer).estudiantes.length > 0) lectura.otroTest = otro.nombre;
+          } catch (err) {
+            // no es del otro test tampoco: queda el error original
+          }
         }
         lecturas.push({ archivo, lectura });
       }
 
       btn.disabled = false;
       btn.textContent = textoOriginal;
-      const resultado = await pedirDatosPorArchivo(lecturas, cursoHeader);
-      if (!resultado) {
+      const eleccion = await pedirDatosPorArchivo(lecturas, cursoHeader);
+      if (!eleccion) {
         input.value = "";
         return; // el usuario canceló
       }
+      const resultado = eleccion.archivos;
       btn.disabled = true;
       btn.textContent = "Importando…";
 
-      let totalImportados = 0;
+      const nuevos = [];
       const erroresTotales = [];
+      const advertenciasTotales = [];
       let ultimoDatosCurso = null;
 
+      const rangosPorArchivo = []; // qué estudiantes nuevos salen de cada archivo (un curso cada uno)
       for (const { archivo, lectura, datosCurso } of resultado) {
-        const { importados } = crearEstudiantesDesdeImportacion(lectura.estudiantes, datosCurso);
-        totalImportados += importados;
+        const desde = nuevos.length;
+        lectura.estudiantes.forEach((e) =>
+          nuevos.push({
+            nombre: e.nombre,
+            rut: e.rut,
+            colegio: datosCurso.colegio,
+            curso: datosCurso.curso,
+            letra: datosCurso.letra,
+            fecha: datosCurso.fecha,
+            puntajes: e.puntajes,
+          })
+        );
         if (lectura.errores.length > 0) {
           erroresTotales.push(`Archivo "${archivo.name}":`, ...lectura.errores.map((e) => "  " + e));
         }
+        if ((lectura.advertencias || []).length > 0) {
+          advertenciasTotales.push(`Archivo "${archivo.name}":`, ...lectura.advertencias.map((e) => "  " + e));
+        }
+        rangosPorArchivo.push([desde, nuevos.length]);
         ultimoDatosCurso = datosCurso;
       }
+
+      // un solo paso de "Deshacer" para toda la importación
+      const creados = c.store.crearVarios(nuevos);
+      const totalImportados = nuevos.length;
 
       if (totalImportados > 0) {
         mostrarToast(
@@ -338,10 +721,25 @@ function cablearImportacion() {
       } else {
         mostrarToast("No se importó ningún estudiante desde estos archivos.");
       }
-      if (erroresTotales.length > 0) {
-        alert("Algunas filas no se pudieron importar:\n\n" + erroresTotales.join("\n"));
-      }
+      const mensajes = [];
+      if (erroresTotales.length > 0) mensajes.push("Algunas filas no se pudieron importar:\n\n" + erroresTotales.join("\n"));
+      if (advertenciasTotales.length > 0) mensajes.push("Estas filas sí se importaron, pero conviene revisarlas:\n\n" + advertenciasTotales.join("\n"));
+      if (mensajes.length > 0) alert(mensajes.join("\n\n"));
       render();
+
+      // opción "Cargar y descargar": la carpeta de cada curso recién cargado
+      if (eleccion.descargar && creados.length > 0 && c.descargarVariosCursos) {
+        const cursos = rangosPorArchivo.map(([desde, hasta]) => creados.slice(desde, hasta)).filter((g) => g.length > 0);
+        btn.disabled = true;
+        await c.descargarVariosCursos(cursos, (hecho, total) => {
+          btn.textContent = `Generando informes ${hecho}/${total}…`;
+        });
+        const nPendientes = creados.filter((e) => revisionTraspaso(e.puntajes)).length;
+        mostrarToast(
+          `Carpeta${cursos.length > 1 ? "s" : ""} descargada${cursos.length > 1 ? "s" : ""} (${creados.length} informes)` +
+            (nPendientes ? `. ${nPendientes} con el test mal traspasado: marcados con su puntaje y pendientes por revisar.` : "")
+        );
+      }
     } catch (err) {
       console.error(err);
       mostrarToast("No se pudo leer alguno de los archivos.");
@@ -355,25 +753,76 @@ function cablearImportacion() {
 
 // ---------------- pestaña: ingresar / editar ----------------
 
-const CAMPOS_PUNTAJE = ["ciencias", "humanidades", "artistico", "tecnico", "salud", "administracion"];
+function renderCamposPuntaje() {
+  const c = cfg();
+  const cont = document.getElementById("campos-puntajes");
+  cont.innerHTML = c.areas
+    .map(
+      (a) => `
+    <div>
+      <label>${a.icono} ${a.nombre} (${c.puntajeMin}–${c.puntajeMax})</label>
+      <input type="number" min="${c.puntajeMin}" max="${c.puntajeMax}" step="1" name="p_${a.id}" required />
+    </div>`
+    )
+    .join("");
+  renderSumaPuntajes();
+}
+
+// suma en vivo de los puntajes (solo Kuder), en el formulario y en la corrección
+// rápida: avisa al tiro si el test quedó mal traspasado y si ese error podría
+// cambiar los resultados. "leerCampo(id)" devuelve lo escrito en el campo de esa área.
+function pintarSumaPuntajes(cont, leerCampo) {
+  if (!cont) return;
+  const c = cfg();
+  cont.className = "suma-puntajes";
+  if (!c.revisarTraspaso) {
+    cont.innerHTML = "";
+    return;
+  }
+  const puntajes = {};
+  let completos = 0;
+  let suma = 0;
+  c.areas.forEach((a) => {
+    const raw = leerCampo(a.id);
+    if (raw !== "" && Number.isFinite(Number(raw))) {
+      puntajes[a.id] = Number(raw);
+      suma += Number(raw);
+      completos++;
+    }
+  });
+  if (completos === 0) {
+    cont.innerHTML = `Suma de las 10 áreas: debe dar ${SUMA_ESPERADA_KUDER}.`;
+    return;
+  }
+  if (completos < c.areas.length) {
+    cont.innerHTML = `Suma hasta ahora: <b>${suma}</b> de ${SUMA_ESPERADA_KUDER} (faltan áreas por completar).`;
+    return;
+  }
+  const r = revisionTraspaso(puntajes);
+  if (!r) {
+    cont.classList.add("ok");
+    cont.innerHTML = `✓ Suma <b>${suma}</b> de ${SUMA_ESPERADA_KUDER}: test bien traspasado.`;
+    return;
+  }
+  cont.classList.add(r.texto.afecta ? "afecta" : "sin-efecto");
+  cont.innerHTML = `${r.texto.afecta ? "⚠" : "ℹ️"} <b>${escaparHtml(r.texto.resumen)}</b>: test mal traspasado. ${escaparHtml(r.texto.accion)}. ${escaparHtml(r.texto.detalle)}`;
+}
+
+function renderSumaPuntajes() {
+  const form = document.getElementById("form-estudiante");
+  pintarSumaPuntajes(document.getElementById("suma-puntajes"), (id) => form.querySelector(`[name="p_${id}"]`).value);
+}
 
 function cablearFormulario() {
   const form = document.getElementById("form-estudiante");
-
-  const cont = document.getElementById("campos-puntajes");
-  cont.innerHTML = AREAS.map(
-    (a) => `
-    <div>
-      <label>${a.icono} ${a.nombre} (0–8)</label>
-      <input type="number" min="0" max="8" step="1" name="p_${a.id}" required />
-    </div>`
-  ).join("");
-
   form.addEventListener("submit", (ev) => {
     ev.preventDefault();
     guardarDesdeFormulario();
   });
-
+  form.addEventListener("input", (ev) => {
+    if (ev.target.name && ev.target.name.startsWith("p_")) renderSumaPuntajes();
+  });
+  form.addEventListener("reset", () => setTimeout(renderSumaPuntajes, 0));
   document.getElementById("btn-cancelar-edicion").addEventListener("click", cancelarEdicion);
 }
 
@@ -383,6 +832,7 @@ function limpiarValidacion() {
 
 function guardarDesdeFormulario() {
   const form = document.getElementById("form-estudiante");
+  const c = cfg();
   limpiarValidacion();
 
   let ok = true;
@@ -400,14 +850,14 @@ function guardarDesdeFormulario() {
   if (!nombre) marcar(form.querySelector('[name="nombre"]'));
 
   const puntajes = {};
-  for (const id of CAMPOS_PUNTAJE) {
-    const campo = form.querySelector(`[name="p_${id}"]`);
-    const raw = fd.get("p_" + id);
+  for (const a of c.areas) {
+    const campo = form.querySelector(`[name="p_${a.id}"]`);
+    const raw = fd.get("p_" + a.id);
     const n = Number(raw);
-    if (raw === "" || !Number.isFinite(n) || n < PUNTAJE_MIN || n > PUNTAJE_MAX || !Number.isInteger(n)) {
+    if (raw === "" || !Number.isFinite(n) || n < c.puntajeMin || n > c.puntajeMax || !Number.isInteger(n)) {
       marcar(campo);
     } else {
-      puntajes[id] = n;
+      puntajes[a.id] = n;
     }
   }
 
@@ -428,13 +878,15 @@ function guardarDesdeFormulario() {
     puntajes,
   };
 
+  const traspaso = revisionTraspaso(puntajes);
+  const avisoTraspaso = traspaso ? ` Ojo: ${traspaso.texto.resumen.toLowerCase()}, test mal traspasado.` : "";
   if (estado.editandoId) {
-    store.actualizar(estado.editandoId, datos);
-    mostrarToast("Estudiante actualizado");
+    c.store.actualizar(estado.editandoId, datos);
+    mostrarToast("Estudiante actualizado." + avisoTraspaso);
     cancelarEdicion();
   } else {
-    store.crear(datos);
-    mostrarToast("Estudiante guardado. Sigue con el próximo.");
+    c.store.crear(datos);
+    mostrarToast((traspaso ? "Estudiante guardado." : "Estudiante guardado. Sigue con el próximo.") + avisoTraspaso);
     limpiarFormularioEstudiante();
   }
 
@@ -446,6 +898,13 @@ function limpiarFormularioEstudiante() {
   form.reset();
   const nombreInput = form.querySelector('[name="nombre"]');
   nombreInput.focus();
+}
+
+function chipsAreas(estudiante) {
+  const areas = cfg().calcularAreas(estudiante.puntajes);
+  return areas.length > 0
+    ? areas.map((a) => `<span class="chip">${a.icono} ${a.nombre}</span>`).join("")
+    : `<span class="chip generico">Sin área destacada</span>`;
 }
 
 // lista en vivo de los estudiantes ya ingresados para el colegio/curso/letra
@@ -460,8 +919,8 @@ function renderDatosRecientes() {
     return;
   }
 
-  const delCurso = store
-    .listar()
+  const delCurso = cfg()
+    .store.listar()
     .filter(
       (e) =>
         (e.colegio || "").trim().toLowerCase() === cursoHeader.colegio.trim().toLowerCase() &&
@@ -471,7 +930,7 @@ function renderDatosRecientes() {
     .sort((a, b) => a.creadoEn.localeCompare(b.creadoEn));
 
   if (delCurso.length === 0) {
-    cont.innerHTML = `<div class="vacio">Todavía no has agregado estudiantes de ${cursoHeader.colegio} ${cursoHeader.curso}${cursoHeader.letra} en esta sesión.</div>`;
+    cont.innerHTML = `<div class="vacio">Todavía no has agregado estudiantes de ${escaparHtml(cursoHeader.colegio)} ${escaparHtml(cursoHeader.curso)}${escaparHtml(cursoHeader.letra)} en este test.</div>`;
     return;
   }
 
@@ -480,20 +939,15 @@ function renderDatosRecientes() {
       <thead><tr><th>N°</th><th>Estudiante</th><th>Área(s) de interés</th><th></th></tr></thead>
       <tbody>
         ${delCurso
-          .map((e, i) => {
-            const areas = calcularAreasDeInteres(e.puntajes);
-            const chips =
-              areas.length > 0
-                ? areas.map((a) => `<span class="chip">${a.icono} ${a.nombre}</span>`).join("")
-                : `<span class="chip generico">Sin área destacada</span>`;
-            return `
+          .map(
+            (e, i) => `
             <tr>
               <td>${i + 1}</td>
-              <td>${e.nombre}</td>
-              <td>${chips}</td>
+              <td>${escaparHtml(e.nombre)} ${botonTraspasoHtml(e)}</td>
+              <td>${chipsAreas(e)}${avisoTraspasoHtml(e, { compacto: true })}</td>
               <td><button type="button" class="chico secundario" onclick="accionEditar('${e.id}')">Editar</button></td>
-            </tr>`;
-          })
+            </tr>`
+          )
           .join("")}
       </tbody>
     </table>
@@ -510,9 +964,10 @@ function cargarEnFormulario(estudiante) {
   const form = document.getElementById("form-estudiante");
   form.nombre.value = estudiante.nombre || "";
   form.rut.value = estudiante.rut || "";
-  for (const id of CAMPOS_PUNTAJE) {
-    form.querySelector(`[name="p_${id}"]`).value = estudiante.puntajes[id];
+  for (const a of cfg().areas) {
+    form.querySelector(`[name="p_${a.id}"]`).value = estudiante.puntajes[a.id];
   }
+  renderSumaPuntajes();
   estado.editandoId = estudiante.id;
   document.getElementById("titulo-form").textContent = "Editando a " + (estudiante.nombre || "estudiante");
   document.getElementById("btn-cancelar-edicion").style.display = "inline-block";
@@ -540,21 +995,30 @@ function coincideTexto(valor, busqueda) {
   return (valor || "").toLowerCase().includes(busqueda.toLowerCase());
 }
 
+function etiquetaCurso(e) {
+  return [e.curso || "—", e.letra || ""].join(" ").trim();
+}
+
 function agrupar(lista) {
-  // colegio -> "curso+letra" -> [estudiantes]
+  // colegio -> "curso letra" -> [estudiantes]
   const porColegio = new Map();
   for (const e of lista) {
     if (!porColegio.has(e.colegio)) porColegio.set(e.colegio, new Map());
     const porCurso = porColegio.get(e.colegio);
-    const claveCurso = (e.curso || "—") + (e.letra || "");
+    const claveCurso = etiquetaCurso(e);
     if (!porCurso.has(claveCurso)) porCurso.set(claveCurso, []);
     porCurso.get(claveCurso).push(e);
   }
   return porColegio;
 }
 
+function idSeguro(prefijo, texto) {
+  return prefijo + "_" + btoa(unescape(encodeURIComponent(texto))).replace(/[^a-zA-Z0-9]/g, "");
+}
+
 function renderEstudiantes() {
-  const todos = store.listar();
+  const c = cfg();
+  const todos = c.store.listar();
 
   const selColegio = document.getElementById("f-colegio");
   const selCurso = document.getElementById("f-curso");
@@ -562,8 +1026,9 @@ function renderEstudiantes() {
   const inpNombre = document.getElementById("f-nombre");
 
   const rellenarSelect = (sel, valores, actual) => {
-    sel.innerHTML = `<option value="">Todos</option>` + valores.map((v) => `<option value="${v}">${v}</option>`).join("");
-    sel.value = actual;
+    sel.innerHTML =
+      `<option value="">Todos</option>` + valores.map((v) => `<option value="${escaparHtml(v)}">${escaparHtml(v)}</option>`).join("");
+    sel.value = valores.includes(actual) ? actual : "";
   };
   rellenarSelect(selColegio, opcionesUnicas(todos, "colegio"), estado.filtros.colegio);
   rellenarSelect(selCurso, opcionesUnicas(todos, "curso"), estado.filtros.curso);
@@ -575,74 +1040,79 @@ function renderEstudiantes() {
   selLetra.onchange = () => { estado.filtros.letra = selLetra.value; renderEstudiantes(); };
   inpNombre.oninput = () => { estado.filtros.nombre = inpNombre.value; renderEstudiantes(); };
 
+  renderResumenTraspaso(todos); // (va antes de filtrar: puede apagar el filtro "solo mal traspasados")
+
   const filtrados = todos.filter(
     (e) =>
       (!estado.filtros.colegio || e.colegio === estado.filtros.colegio) &&
       (!estado.filtros.curso || e.curso === estado.filtros.curso) &&
       (!estado.filtros.letra || e.letra === estado.filtros.letra) &&
-      (!estado.filtros.nombre || coincideTexto(e.nombre, estado.filtros.nombre))
+      (!estado.filtros.nombre || coincideTexto(e.nombre, estado.filtros.nombre)) &&
+      (!estado.filtros.soloTraspaso || revisionTraspaso(e.puntajes))
   );
 
-  document.getElementById("btn-descarga-masiva").disabled = filtrados.length === 0;
+  const btnMasiva = document.getElementById("btn-descarga-masiva");
+  btnMasiva.disabled = filtrados.length === 0;
   document.getElementById("conteo-filtrados").textContent =
     filtrados.length + (filtrados.length === 1 ? " estudiante" : " estudiantes");
-
-  document.getElementById("btn-descarga-masiva").onclick = () => descargarConProgreso(filtrados, document.getElementById("btn-descarga-masiva"));
+  btnMasiva.onclick = () => antesDeGenerarInformes(filtrados, () => descargarConProgreso(filtrados, btnMasiva));
 
   const cont = document.getElementById("grupos-estudiantes");
+  if (todos.length === 0) {
+    cont.innerHTML = `<div class="vacio">Todavía no hay estudiantes del ${c.nombre}. Cárgalos desde la pestaña "📝 Ingresar datos" (importando la planilla del curso o uno por uno).</div>`;
+    return;
+  }
   if (filtrados.length === 0) {
     cont.innerHTML = `<div class="vacio">No hay estudiantes que coincidan con el filtro.</div>`;
     return;
   }
 
   const porColegio = agrupar(filtrados);
-  const abrirSoloUno = porColegio.size === 1;
+  // con el filtro de tests mal traspasados se abre todo, para ver al tiro a quién revisar
+  const abrirSoloUno = porColegio.size === 1 || estado.filtros.soloTraspaso;
 
   let html = "";
   for (const [colegio, porCurso] of porColegio) {
     const totalColegio = [...porCurso.values()].reduce((n, arr) => n + arr.length, 0);
-    const soloUnCurso = porCurso.size === 1;
-    const idColegioDel = "delcol_" + btoa(unescape(encodeURIComponent(colegio))).replace(/[^a-zA-Z0-9]/g, "");
+    const soloUnCurso = porCurso.size === 1 || estado.filtros.soloTraspaso;
     html += `<details class="grupo-colegio" ${abrirSoloUno ? "open" : ""}>
-      <summary>🏫 ${colegio} <span class="chip">${totalColegio} ${totalColegio === 1 ? "estudiante" : "estudiantes"}</span></summary>
+      <summary>🏫 ${escaparHtml(colegio)} <span class="chip">${totalColegio} ${totalColegio === 1 ? "estudiante" : "estudiantes"}</span>${chipTraspasoHtml([...porCurso.values()].flat())}</summary>
       <div class="grupo-colegio-cont">
         <div style="margin-bottom:10px;">
-          <button class="chico peligro" id="${idColegioDel}">🗑 Eliminar colegio completo</button>
+          <button class="chico peligro" id="${idSeguro("delcol", colegio)}">🗑 Eliminar colegio completo</button>
         </div>`;
 
     for (const [claveCurso, estudiantesCurso] of porCurso) {
-      const idGrupo = "grp_" + btoa(unescape(encodeURIComponent(colegio + "|" + claveCurso))).replace(/[^a-zA-Z0-9]/g, "");
-      const idGrupoDel = "delcurso_" + btoa(unescape(encodeURIComponent(colegio + "|" + claveCurso))).replace(/[^a-zA-Z0-9]/g, "");
+      const clave = colegio + "|" + claveCurso;
+      // mismo orden alfabético y mismo número que lleva cada informe (y su PDF en la carpeta)
+      const ordenados = [...estudiantesCurso].sort((a, b) => compararNombres(a.nombre, b.nombre));
       html += `<details class="grupo-curso" ${soloUnCurso ? "open" : ""}>
-        <summary>📘 ${claveCurso} <span class="chip">${estudiantesCurso.length}</span></summary>
+        <summary>📘 ${escaparHtml(claveCurso)} <span class="chip">${estudiantesCurso.length}</span>${chipTraspasoHtml(estudiantesCurso)}</summary>
         <div class="grupo-curso-cont">
           <div style="margin-bottom:10px; display:flex; gap:8px; flex-wrap:wrap;">
-            <button class="chico" id="${idGrupo}">⬇ Descargar este curso (ZIP)</button>
-            <button class="chico peligro" id="${idGrupoDel}">🗑 Eliminar curso completo</button>
+            <button class="chico" id="${idSeguro("grp", clave)}">⬇ Descargar informes de este curso (ZIP)</button>
+            ${c.configGrupal ? `<button class="chico secundario" id="${idSeguro("grpori", clave)}">📊 Informe grupal para el orientador (PDF)</button>` : ""}
+            <button class="chico peligro" id="${idSeguro("delcurso", clave)}">🗑 Eliminar curso completo</button>
           </div>
           <table class="lista">
-            <thead><tr><th>Estudiante</th><th>Área(s) de interés</th><th>Acciones</th></tr></thead>
+            <thead><tr><th style="width:44px;">N°</th><th>Estudiante</th><th>Área(s) de interés</th><th>Acciones</th></tr></thead>
             <tbody>
-              ${estudiantesCurso
-                .map((e) => {
-                  const areas = calcularAreasDeInteres(e.puntajes);
-                  const chips =
-                    areas.length > 0
-                      ? areas.map((a) => `<span class="chip">${a.icono} ${a.nombre}</span>`).join("")
-                      : `<span class="chip generico">Sin área destacada</span>`;
-                  return `
+              ${ordenados
+                .map(
+                  (e) => `
                   <tr>
-                    <td><strong>${e.nombre}</strong><br/><span style="color:#6a6178;font-size:11px;">${e.rut || ""}</span></td>
-                    <td>${chips}</td>
+                    <td style="color:#6a6178;">${c.numeroEnGrupo(e) || ""}</td>
+                    <td><strong>${escaparHtml(e.nombre)}</strong> ${botonTraspasoHtml(e)}<br/><span style="color:#6a6178;font-size:11px;">${escaparHtml(c.formatearRut(e.rut))}</span></td>
+                    <td>${chipsAreas(e)}${avisoTraspasoHtml(e)}</td>
                     <td>
                       <div class="fila-acciones">
                         <button class="chico secundario" onclick="accionEditar('${e.id}')">Editar</button>
-                        <button class="chico" onclick="accionDescargar('${e.id}')">Descargar PDF</button>
+                        <button class="chico" onclick="accionDescargar('${e.id}', this)">Descargar PDF</button>
                         <button class="chico peligro" onclick="accionEliminar('${e.id}')">Eliminar</button>
                       </div>
                     </td>
-                  </tr>`;
-                })
+                  </tr>`
+                )
                 .join("")}
             </tbody>
           </table>
@@ -656,25 +1126,60 @@ function renderEstudiantes() {
   // botones de descarga y de eliminación grupal (se cablean después de insertar el HTML)
   for (const [colegio, porCurso] of porColegio) {
     const idsColegio = [...porCurso.values()].flat().map((e) => e.id);
-    const idColegioDel = "delcol_" + btoa(unescape(encodeURIComponent(colegio))).replace(/[^a-zA-Z0-9]/g, "");
-    const btnDelColegio = document.getElementById(idColegioDel);
+    const btnDelColegio = document.getElementById(idSeguro("delcol", colegio));
     if (btnDelColegio) {
       btnDelColegio.onclick = () => accionEliminarGrupo(`el colegio "${colegio}" completo`, idsColegio);
     }
 
     for (const [claveCurso, estudiantesCurso] of porCurso) {
-      const idGrupo = "grp_" + btoa(unescape(encodeURIComponent(colegio + "|" + claveCurso))).replace(/[^a-zA-Z0-9]/g, "");
-      const btn = document.getElementById(idGrupo);
-      if (btn) btn.onclick = () => descargarConProgreso(estudiantesCurso, btn);
+      const clave = colegio + "|" + claveCurso;
+      const btn = document.getElementById(idSeguro("grp", clave));
+      if (btn) btn.onclick = () => antesDeGenerarInformes(estudiantesCurso, () => descargarConProgreso(estudiantesCurso, btn));
 
-      const idGrupoDel = "delcurso_" + btoa(unescape(encodeURIComponent(colegio + "|" + claveCurso))).replace(/[^a-zA-Z0-9]/g, "");
-      const btnDel = document.getElementById(idGrupoDel);
+      // el informe grupal se arma con el curso completo, no solo con los filtrados
+      const cursoCompleto = todos.filter((e) => e.colegio === colegio && etiquetaCurso(e) === claveCurso);
+      const btnOri = document.getElementById(idSeguro("grpori", clave));
+      if (btnOri) btnOri.onclick = () => antesDeGenerarInformes(cursoCompleto, () => accionInformeGrupal(cursoCompleto, btnOri));
+
+      const btnDel = document.getElementById(idSeguro("delcurso", clave));
       if (btnDel) {
         btnDel.onclick = () =>
           accionEliminarGrupo(`el curso "${colegio} - ${claveCurso}"`, estudiantesCurso.map((e) => e.id));
       }
     }
   }
+}
+
+// recuadro arriba de la lista (solo Kuder) con cuántos estudiantes cargados tienen el
+// test mal traspasado, y un botón para ver solo a esos
+function renderResumenTraspaso(todos) {
+  const cont = document.getElementById("resumen-traspaso");
+  if (!cont) return;
+  if (!cfg().revisarTraspaso) {
+    cont.innerHTML = "";
+    return;
+  }
+  const conError = todos.map((e) => revisionTraspaso(e.puntajes)).filter(Boolean);
+  if (conError.length === 0) {
+    estado.filtros.soloTraspaso = false;
+    cont.innerHTML = todos.length ? `<div class="resumen-traspaso ok">✓ Revisión de traspaso: todos los estudiantes cargados suman 45 puntos.</div>` : "";
+    return;
+  }
+  const nAfecta = conError.filter((r) => r.analisis.afecta).length;
+  const nSinEfecto = conError.length - nAfecta;
+  cont.innerHTML = `
+    <div class="resumen-traspaso${nAfecta ? " afecta" : ""}">
+      <div>
+        <b>🔎 Pendientes por revisar:</b> ${conError.length} ${conError.length === 1 ? "estudiante tiene" : "estudiantes tienen"} el test mal traspasado (sus 10 áreas no suman 45).
+        ${nAfecta ? `<br/>⚠ <b>${nAfecta}</b> ${nAfecta === 1 ? "debe revisarse" : "deben revisarse"}: el error podría cambiar sus resultados.` : ""}
+        ${nSinEfecto ? `<br/>ℹ️ <b>${nSinEfecto}</b> no ${nSinEfecto === 1 ? "necesita" : "necesitan"} revisión: sus resultados quedan iguales.` : ""}
+      </div>
+      <button type="button" class="chico secundario" id="btn-solo-traspaso">${estado.filtros.soloTraspaso ? "Ver todos los estudiantes" : "Ver solo estos estudiantes"}</button>
+    </div>`;
+  document.getElementById("btn-solo-traspaso").onclick = () => {
+    estado.filtros.soloTraspaso = !estado.filtros.soloTraspaso;
+    renderEstudiantes();
+  };
 }
 
 function accionEliminarGrupo(descripcion, ids) {
@@ -684,7 +1189,7 @@ function accionEliminarGrupo(descripcion, ids) {
     texto: `Esto envía a la papelera a los ${ids.length} estudiantes de ${descripcion}. Podrás recuperarlos después desde la pestaña "Papelera", o deshacer esta acción ahora mismo con el botón "Deshacer" de arriba. ¿Continuar?`,
     textoBoton: "Sí, eliminar",
     onConfirmar: () => {
-      store.moverVariosAPapelera(ids);
+      cfg().store.moverVariosAPapelera(ids);
       mostrarToast(`${ids.length} estudiantes enviados a la papelera`);
       render();
     },
@@ -693,55 +1198,202 @@ function accionEliminarGrupo(descripcion, ids) {
 
 async function descargarConProgreso(lista, btn) {
   if (!lista || lista.length === 0) return;
+  const c = cfg();
   const original = btn.textContent;
   btn.disabled = true;
-  await descargarInformesMasivo(lista, (hecho, total) => {
-    btn.textContent = `Generando ${hecho}/${total}…`;
-  });
-  btn.textContent = original;
-  btn.disabled = false;
-  mostrarToast("Descarga lista (" + lista.length + (lista.length === 1 ? " informe)" : " informes)"));
+  try {
+    await c.descargarMasivo(lista, (hecho, total) => {
+      btn.textContent = `Generando ${hecho}/${total}…`;
+    });
+    const nError = lista.filter((e) => revisionTraspaso(e.puntajes)).length;
+    mostrarToast(
+      "Descarga lista (" + lista.length + (lista.length === 1 ? " informe)" : " informes)") +
+        (nError ? `. ${nError} con el test mal traspasado: van marcados con su puntaje en el nombre del archivo y listados en la nota dentro de la carpeta.` : "")
+    );
+  } catch (err) {
+    console.error(err);
+    mostrarToast("No se pudieron generar los informes. Revisa el mensaje en la consola.");
+  } finally {
+    btn.textContent = original;
+    btn.disabled = false;
+  }
+}
+
+async function accionInformeGrupal(estudiantes, btn) {
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Generando…";
+  try {
+    await descargarInformeGrupalDesdeCurso(estudiantes, cfg().configGrupal);
+    mostrarToast("Informe grupal descargado");
+  } catch (err) {
+    console.error(err);
+    mostrarToast("No se pudo generar el informe grupal. Revisa el mensaje en la consola.");
+  } finally {
+    btn.textContent = original;
+    btn.disabled = false;
+  }
 }
 
 function accionEditar(id) {
-  const e = store.obtener(id);
+  const e = cfg().store.obtener(id);
   if (e) cargarEnFormulario(e);
 }
 
-async function accionDescargar(id) {
-  const e = store.obtener(id);
+function accionDescargar(id, btn) {
+  const e = cfg().store.obtener(id);
   if (!e) return;
+  antesDeGenerarInformes([e], () => descargarUnInforme(e, btn), { individual: true });
+}
+
+async function descargarUnInforme(e, btn) {
+  const c = cfg();
+  const original = btn ? btn.textContent : "";
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Generando…";
+  }
   mostrarToast("Generando informe…");
   try {
-    await descargarInformeIndividual(e);
+    await c.descargarIndividual(e);
     mostrarToast("Informe descargado");
   } catch (err) {
     console.error(err);
     mostrarToast("No se pudo generar el informe. Revisa el mensaje en la consola.");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = original;
+    }
   }
 }
 
 function accionEliminar(id) {
-  const e = store.obtener(id);
+  const c = cfg();
+  const e = c.store.obtener(id);
   if (!e) return;
   if (!confirm(`¿Enviar a la papelera a ${e.nombre}? Podrás recuperarlo después.`)) return;
-  store.moverAPapelera(id);
+  c.store.moverAPapelera(id);
   mostrarToast("Estudiante enviado a la papelera");
   render();
+}
+
+// ---------------- corrección rápida de puntajes (ícono ⚠) ----------------
+// Para no tener que corregir el Excel y volver a subirlo: se corrigen los puntajes de
+// un estudiante ahí mismo. Al guardar se recalculan sus áreas de interés (los
+// informes siempre se generan con los puntajes guardados, así que su informe sale
+// ya corregido) y, si la suma llega a 45, desaparece la advertencia.
+
+let correccionPuntajesId = null;
+
+function leerCampoCorreccion(idArea) {
+  const inp = document.querySelector(`#mp-campos [name="mp_${idArea}"]`);
+  return inp ? inp.value : "";
+}
+
+function abrirCorreccionPuntajes(id) {
+  const c = cfg();
+  const e = c.store.obtener(id);
+  if (!e) return;
+  correccionPuntajesId = id;
+
+  // las áreas que podrían cambiar de lado del 7 van marcadas: son las columnas que
+  // conviene revisar primero en la hoja de respuestas
+  const r = revisionTraspaso(e.puntajes);
+  const candidatas = new Set(r && r.analisis.afecta ? r.analisis.areas.map((v) => v.area.id) : []);
+
+  document.getElementById("mp-titulo").textContent = `Corregir puntajes: ${e.nombre}`;
+  document.getElementById("mp-sub").innerHTML = r
+    ? `${escaparHtml(r.texto.resumen)}. ${escaparHtml(r.texto.accion)}. ${escaparHtml(r.texto.detalle)}` +
+      (candidatas.size ? " <b>Las áreas marcadas en amarillo son las primeras que conviene revisar en su hoja de respuestas.</b>" : "")
+    : `Sus ${c.areas.length} áreas suman ${SUMA_ESPERADA_KUDER}: el test está bien traspasado.`;
+
+  document.getElementById("mp-campos").innerHTML = c.areas
+    .map(
+      (a) => `
+      <div class="${candidatas.has(a.id) ? "mp-candidata" : ""}">
+        <label>${a.icono} ${a.nombre}${candidatas.has(a.id) ? " · revisar" : ""}</label>
+        <input type="number" min="${c.puntajeMin}" max="${c.puntajeMax}" step="1" name="mp_${a.id}" value="${escaparHtml(e.puntajes[a.id])}" />
+      </div>`
+    )
+    .join("");
+  document.querySelectorAll("#mp-campos input").forEach((inp) =>
+    inp.addEventListener("input", () => pintarSumaPuntajes(document.getElementById("mp-suma"), leerCampoCorreccion))
+  );
+  pintarSumaPuntajes(document.getElementById("mp-suma"), leerCampoCorreccion);
+
+  document.getElementById("modal-puntajes").style.display = "flex";
+  const primero = document.querySelector("#mp-campos .mp-candidata input") || document.querySelector("#mp-campos input");
+  if (primero) {
+    primero.focus();
+    primero.select();
+  }
+}
+
+function cerrarCorreccionPuntajes() {
+  document.getElementById("modal-puntajes").style.display = "none";
+  correccionPuntajesId = null;
+}
+
+// guarda la corrección; devuelve el estudiante actualizado, o null si algún campo no es válido
+function guardarCorreccionPuntajes() {
+  const c = cfg();
+  const e = c.store.obtener(correccionPuntajesId);
+  if (!e) return null;
+  const puntajes = {};
+  let ok = true;
+  c.areas.forEach((a) => {
+    const inp = document.querySelector(`#mp-campos [name="mp_${a.id}"]`);
+    const n = Number(inp.value);
+    const valido = inp.value !== "" && Number.isInteger(n) && n >= c.puntajeMin && n <= c.puntajeMax;
+    inp.classList.toggle("invalido", !valido);
+    if (valido) puntajes[a.id] = n;
+    else ok = false;
+  });
+  if (!ok) {
+    mostrarToast(`Cada puntaje debe ser un número entero de ${c.puntajeMin} a ${c.puntajeMax}`);
+    return null;
+  }
+  const actualizado = c.store.actualizar(e.id, { puntajes });
+  cerrarCorreccionPuntajes();
+
+  const r = revisionTraspaso(actualizado.puntajes);
+  const areas = c.calcularAreas(actualizado.puntajes).map((a) => a.nombre);
+  const resultado = areas.length ? `Áreas de interés: ${areas.join(", ")}.` : "Sin áreas sobre 7: su informe mostrará todas las áreas (intereses diversos).";
+  mostrarToast(r ? `Guardado. Aún ${r.texto.resumen.toLowerCase()}. ${resultado}` : `Corregido: ya suma ${SUMA_ESPERADA_KUDER}. ${resultado}`);
+  render();
+  return actualizado;
+}
+
+function cablearCorreccionPuntajes() {
+  document.getElementById("mp-cancelar").addEventListener("click", cerrarCorreccionPuntajes);
+  document.getElementById("mp-guardar").addEventListener("click", guardarCorreccionPuntajes);
+  document.getElementById("mp-guardar-descargar").addEventListener("click", () => {
+    const actualizado = guardarCorreccionPuntajes();
+    if (actualizado) descargarUnInforme(actualizado, null);
+  });
+  document.getElementById("mp-campos").addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter") {
+      ev.preventDefault();
+      guardarCorreccionPuntajes();
+    }
+  });
 }
 
 // ---------------- pestaña: papelera ----------------
 
 function renderPapelera() {
-  const enPapelera = store.listar({ incluirPapelera: true }).filter((e) => e.eliminado);
+  const c = cfg();
+  const enPapelera = c.store.listar({ incluirPapelera: true }).filter((e) => e.eliminado);
 
   const selColegio = document.getElementById("p-colegio");
   const selCurso = document.getElementById("p-curso");
   const inpNombre = document.getElementById("p-nombre");
 
   const rellenarSelect = (sel, valores, actual) => {
-    sel.innerHTML = `<option value="">Todos</option>` + valores.map((v) => `<option value="${v}">${v}</option>`).join("");
-    sel.value = actual;
+    sel.innerHTML =
+      `<option value="">Todos</option>` + valores.map((v) => `<option value="${escaparHtml(v)}">${escaparHtml(v)}</option>`).join("");
+    sel.value = valores.includes(actual) ? actual : "";
   };
   rellenarSelect(selColegio, opcionesUnicas(enPapelera, "colegio"), estado.filtrosPapelera.colegio);
   rellenarSelect(selCurso, opcionesUnicas(enPapelera, "curso"), estado.filtrosPapelera.curso);
@@ -772,9 +1424,9 @@ function renderPapelera() {
             .map(
               (e) => `
             <tr>
-              <td>${e.nombre}</td>
-              <td>${e.colegio}</td>
-              <td>${(e.curso || "") + (e.letra || "")}</td>
+              <td>${escaparHtml(e.nombre)}</td>
+              <td>${escaparHtml(e.colegio)}</td>
+              <td>${escaparHtml(etiquetaCurso(e))}</td>
               <td class="fila-acciones">
                 <button class="chico" onclick="accionRestaurar('${e.id}')">Restaurar</button>
                 <button class="chico peligro" onclick="accionEliminarDefinitivo('${e.id}')">Eliminar para siempre</button>
@@ -787,22 +1439,22 @@ function renderPapelera() {
   }
 
   document.getElementById("btn-vaciar-papelera").onclick = () => {
-    if (!confirm("Esto elimina para siempre a todos los estudiantes en la papelera (aunque estén filtrados). ¿Continuar?")) return;
-    store.vaciarPapelera();
+    if (!confirm("Esto elimina para siempre a todos los estudiantes en la papelera de este test (aunque estén filtrados). ¿Continuar?")) return;
+    c.store.vaciarPapelera();
     mostrarToast("Papelera vaciada");
     render();
   };
 }
 
 function accionRestaurar(id) {
-  store.restaurar(id);
+  cfg().store.restaurar(id);
   mostrarToast("Estudiante restaurado");
   render();
 }
 
 function accionEliminarDefinitivo(id) {
   if (!confirm("Esto elimina al estudiante para siempre, sin poder recuperarlo. ¿Continuar?")) return;
-  store.eliminarDefinitivo(id);
+  cfg().store.eliminarDefinitivo(id);
   mostrarToast("Estudiante eliminado definitivamente");
   render();
 }
@@ -810,11 +1462,12 @@ function accionEliminarDefinitivo(id) {
 // ---------------- pestaña: estadísticas ----------------
 
 function renderEstadisticas() {
-  const todos = store.listar();
+  const c = cfg();
+  const todos = c.store.listar();
   document.getElementById("stat-total").textContent = todos.length;
-  document.getElementById("stat-informes").textContent = store.contadorInformes;
+  document.getElementById("stat-informes").textContent = c.store.contadorInformes;
 
-  const conArea = todos.filter((e) => calcularAreasDeInteres(e.puntajes).length > 0).length;
+  const conArea = todos.filter((e) => c.calcularAreas(e.puntajes).length > 0).length;
   const sinArea = todos.length - conArea;
   document.getElementById("stat-con-area").textContent = conArea;
   document.getElementById("stat-sin-area").textContent = sinArea;
@@ -822,25 +1475,42 @@ function renderEstadisticas() {
   const colegios = opcionesUnicas(todos, "colegio").length;
   document.getElementById("stat-colegios").textContent = colegios;
 
+  if (c.revisarTraspaso) {
+    const conError = todos.map((e) => revisionTraspaso(e.puntajes)).filter(Boolean);
+    const nAfecta = conError.filter((r) => r.analisis.afecta).length;
+    document.getElementById("stat-traspaso").textContent = conError.length;
+    document.getElementById("stat-traspaso-lbl").textContent =
+      `Tests mal traspasados (no suman 45)${conError.length ? `: ${nAfecta} por revisar` : ""}`;
+  }
+
   const conteoPorArea = {};
-  AREAS.forEach((a) => (conteoPorArea[a.id] = 0));
+  c.areas.forEach((a) => (conteoPorArea[a.id] = 0));
   todos.forEach((e) => {
-    calcularAreasDeInteres(e.puntajes).forEach((a) => conteoPorArea[a.id]++);
+    c.calcularAreas(e.puntajes).forEach((a) => conteoPorArea[a.id]++);
   });
   const maxConteo = Math.max(1, ...Object.values(conteoPorArea));
 
-  document.getElementById("barras-areas").innerHTML = AREAS.map((a) => {
-    const c = conteoPorArea[a.id];
-    const pct = Math.round((c / maxConteo) * 100);
-    return `
+  document.getElementById("barras-areas").innerHTML = c.areas
+    .map((a) => {
+      const n = conteoPorArea[a.id];
+      const pct = Math.round((n / maxConteo) * 100);
+      return `
       <div class="barra-area">
-        <div class="etiqueta-area"><span>${a.icono} ${a.nombre}</span><span>${c}</span></div>
+        <div class="etiqueta-area"><span>${a.icono} ${a.nombre}</span><span>${n}</span></div>
         <div class="barra-fondo"><div class="barra-rellena" style="width:${pct}%"></div></div>
       </div>`;
-  }).join("");
+    })
+    .join("");
 
   renderDesglose("desglose-colegio", contarPorCampo(todos, "colegio"), "colegio");
-  renderDesglose("desglose-fecha", contarPorCampo(todos, "fecha", fmtFecha), "fecha de aplicación");
+  renderDesglose("desglose-fecha", contarPorCampo(todos, "fecha", fmtFechaSimple), "fecha de aplicación");
+}
+
+// "2026-09-01" → "01/09/2026", leyendo los componentes a mano: con new Date(iso), la
+// zona horaria de Chile corre la fecha un día hacia atrás.
+function fmtFechaSimple(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
 }
 
 // cuenta estudiantes agrupados por un campo (ej: colegio, fecha), ordenado de mayor a menor
@@ -851,7 +1521,7 @@ function contarPorCampo(lista, campo, formatear) {
     conteo.set(clave, (conteo.get(clave) || 0) + 1);
   });
   return [...conteo.entries()]
-    .map(([clave, cantidad]) => ({ etiqueta: formatear ? formatear(clave) : clave, cantidad }))
+    .map(([clave, cantidad]) => ({ etiqueta: formatear && clave !== "Sin dato" ? formatear(clave) : clave, cantidad }))
     .sort((a, b) => b.cantidad - a.cantidad);
 }
 
@@ -864,7 +1534,7 @@ function renderDesglose(idContenedor, filas, nombreCampo) {
   cont.innerHTML = `
     <table class="desglose-tabla">
       <tbody>
-        ${filas.map((f) => `<tr><td>${f.etiqueta}</td><td class="cant">${f.cantidad}</td></tr>`).join("")}
+        ${filas.map((f) => `<tr><td>${escaparHtml(f.etiqueta)}</td><td class="cant">${f.cantidad}</td></tr>`).join("")}
       </tbody>
     </table>`;
 }

@@ -202,21 +202,3 @@ function buscarValorEtiqueta(filas, etiqueta) {
   }
   return "";
 }
-
-// crea en el store un estudiante por cada fila ya leída, con el colegio/curso/letra/fecha
-// ya resueltos (de la planilla, de los campos de la app, o de lo que se haya preguntado
-// en el modal al momento de importar — a esta altura ya está decidido, sin ambigüedad).
-function crearEstudiantesDesdeImportacion(estudiantes, datosCurso) {
-  estudiantes.forEach((e) => {
-    store.crear({
-      nombre: e.nombre,
-      rut: e.rut,
-      colegio: datosCurso.colegio,
-      curso: datosCurso.curso,
-      letra: datosCurso.letra,
-      fecha: datosCurso.fecha,
-      puntajes: e.puntajes,
-    });
-  });
-  return { importados: estudiantes.length };
-}

@@ -174,11 +174,13 @@ function renderKuderInternoListaArchivos(lecturas) {
 
   const avisos = lecturas.flatMap((l) => [
     ...l.errores.map((texto) => ({ texto: `${l.archivoNombre}: ${texto}`, tipo: "error" })),
-    ...l.advertencias.map((texto) => ({ texto: `${l.archivoNombre}: ${texto}`, tipo: "advertencia" })),
+    // un test mal traspasado cuyo error no cambia los resultados ("ℹ️") va en gris; el
+    // que sí podría cambiarlos ("⚠"), en amarillo
+    ...l.advertencias.map((texto) => ({ texto: `${l.archivoNombre}: ${texto}`, tipo: texto.startsWith("ℹ") ? "info" : "advertencia" })),
   ]);
   const contAvisos = document.getElementById("kuder-interno-rev-avisos");
   contAvisos.innerHTML = avisos.length
-    ? `<ul class="kuder-avisos-lista">${avisos.map((a) => `<li class="${a.tipo}">${a.texto}</li>`).join("")}</ul>`
+    ? `<ul class="kuder-avisos-lista">${avisos.map((a) => `<li class="${a.tipo}">${escaparHtmlKuder(a.texto)}</li>`).join("")}</ul>`
     : "";
 
   const nValidos = lecturas.filter((l) => l.estudiantes.length > 0).length;

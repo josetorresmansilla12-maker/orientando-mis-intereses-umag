@@ -3,10 +3,15 @@ CÓMO USAR ESTA APLICACIÓN
 
 Qué es
 ------
-Es un programa para generar los informes de "Orientando mis Intereses" (8° básico).
+Es un programa para generar los informes vocacionales de la Unidad de Admisión y
+Marketing (UMAG). Sirve para dos tests, que funcionan por separado:
+
+- Test 8vos: "Orientando mis Intereses" (8° básico, 6 áreas).
+- Test de Kuder: enseñanza media (10 áreas).
+
 Funciona dentro de esta misma carpeta, en tu navegador (Chrome, Safari, etc.), sin
 necesitar internet una vez que la abres. Todo lo que ingreses queda guardado en este
-computador — no se sube a ningún lado ni se comparte con nadie.
+computador; no se sube a ningún lado ni se comparte con nadie.
 
 Cómo abrirla
 ------------
@@ -17,71 +22,109 @@ Cómo abrirla
 Puedes crear un acceso directo a "index.html" en tu Escritorio si quieres abrirla
 más rápido la próxima vez.
 
-Cómo se usa (pensado para ingresar un curso completo de una vez)
-------------------------------------------------------------------
-1. Pestaña "Ingresar datos":
-   - Arriba, en "Datos del curso", escribes una vez el colegio, el curso, la letra
-     y la fecha. Estos datos quedan fijos mientras sigues ingresando estudiantes del
-     mismo curso, para no tener que repetirlos cada vez.
-   - Abajo, en "Agregar estudiante", escribes el nombre y los 6 puntajes (de 0 a 8
-     cada uno) y aprietas "Guardar y agregar siguiente". El formulario se limpia
-     solo para que sigas de inmediato con el próximo estudiante — los datos del
-     curso arriba no se borran.
-   - Cuando termines con ese curso y quieras partir con otro colegio o curso,
-     aprieta "Vaciar datos del curso" antes de seguir.
+Paso 1: elige el test
+---------------------
+Arriba hay dos botones grandes: "Test 8vos" y "Test de Kuder". Elige primero con
+cuál vas a trabajar. Todas las pestañas de abajo muestran solo los estudiantes e
+informes de ese test: los datos de un test nunca se mezclan con los del otro. Al lado
+de cada botón aparece cuántos estudiantes tiene cargados ese test, y la app recuerda
+cuál usaste la última vez.
 
-2. Pestaña "Estudiantes e informes": los estudiantes aparecen agrupados por colegio,
-   y dentro de cada colegio, por curso. Haz clic sobre el nombre del colegio o del
-   curso para desplegar el detalle. Ahí puedes:
-   - Descargar el informe de un estudiante en PDF (botón "Descargar PDF").
-   - Descargar todos los informes de un curso de una vez, en una carpeta comprimida
-     (botón "Descargar este curso (ZIP)", dentro de cada curso desplegado).
-   - Descargar todos los informes que coincidan con el filtro que hayas puesto
-     arriba (botón "Descargar todos (ZIP)").
-   - Filtrar por colegio, curso, letra o buscar por nombre.
-   - Editar los datos de un estudiante si te equivocaste (botón "Editar").
-   - Eliminar a un estudiante (botón "Eliminar") — no se borra para siempre, queda
-     guardado en la Papelera por si lo necesitas recuperar.
+Paso 2: las pestañas
+--------------------
+1. "Ingresar datos":
+   - Lo más rápido es "Importar planilla(s) de un curso": subes uno o varios
+     archivos (en 8vos, la planilla de corrección .xlsx; en Kuder, los CSV/Excel
+     exportados del sistema de Kuder, uno por curso). Antes de importar, la app te
+     muestra cada archivo por su nombre para confirmar o corregir su colegio, curso
+     y letra (en Kuder se leen solos del archivo; por ejemplo "2do A" queda como
+     curso "2do" y letra "A"). Si ese curso ya tenía estudiantes cargados, te avisa,
+     para que no lo importes dos veces.
+   - También puedes ingresar estudiantes a mano: escribes una vez el colegio, curso,
+     letra y fecha en "Datos del curso", y luego el nombre y los puntajes de cada
+     estudiante (8vos: 0 a 8 por área; Kuder: 0 a 9 por área). Un área queda "de
+     interés" con 7 puntos o más.
 
-3. Pestaña "Estadísticas": un resumen rápido de cuántos estudiantes hay cargados y
-   cuántos salieron con interés alto en cada área.
+2. "Estudiantes e informes": los estudiantes aparecen agrupados por colegio y curso,
+   en orden alfabético y con su número de lista. Ahí puedes:
+   - Descargar el informe de un estudiante en PDF ("Descargar PDF").
+   - Descargar todos los informes de un curso en un ZIP. Cada informe lleva, de forma
+     discreta, el número del estudiante (N° 1, N° 2...) en el mismo orden en que
+     aparecen los archivos en la carpeta, para detectar si falta alguno al imprimir.
+   - "Informe grupal para el orientador": el informe del curso completo para el
+     colegio (en los dos tests), sin tener que volver a subir el archivo.
+   - Editar o eliminar estudiantes (lo eliminado queda en la Papelera).
 
-Cómo se ve el informe
-----------------------
-Cada informe en PDF trae: el nombre del área con un dibujo de color propio (uno para
-cada una de las 6 áreas), una explicación de qué significa esa área escrita para un
-estudiante de 8° básico, una lista de carreras genéricas asociadas, y al final un
-cuadro con "Tus carreras en la UMAG" y "Otras carreras e instituciones" — juntando
-las carreras de todas las áreas en las que el estudiante salió con interés.
-Si un estudiante no obtiene 7 u 8 en ninguna área, el informe igual se genera: le
-explica que tiene intereses variados (no es un problema), y de todas formas le
-muestra las 6 áreas con sus carreras, a modo informativo.
+3. "Estadísticas": resumen de cuántos estudiantes hay cargados en el test elegido y
+   cuántos salieron con interés en cada área.
 
-Un detalle importante: la lista de qué carreras corresponden a cada área es una
-primera propuesta mía, armada a partir de las carreras que ya usaban en el informe
-del test de Kuder. Hay casos que podrían ir en más de un área (por ejemplo Psicología
-o Medicina), así que si quieres mover, agregar o sacar alguna carrera de una lista,
-dímelo y lo ajusto — es un archivo fácil de corregir.
+4. "Informes para orientadores" (en los dos tests): informe grupal por curso o global
+   de varios cursos, subiendo los archivos. Solo en Kuder: "Uso interno" (informe
+   consolidado para la unidad de Admisión y Marketing).
 
-4. Pestaña "Papelera": ahí puedes restaurar a un estudiante eliminado, o borrarlo
-   para siempre. También se puede filtrar por colegio, curso o nombre.
+5. "Papelera": ahí puedes restaurar a un estudiante eliminado, o borrarlo para
+   siempre.
+
+Revisión de traspaso (solo Kuder)
+---------------------------------
+En el Test de Kuder las 10 áreas de cada estudiante deben sumar 45 puntos. Si no
+suman 45, el test quedó mal traspasado (se saltó o repitió una alternativa al pasar
+la hoja de respuestas al cuadro). La app lo revisa sola:
+- Al importar la planilla, la ventana de importación muestra qué estudiantes no
+  suman 45 y, para cada uno, si hay que buscar el error o no:
+  * Hay que buscarlo si el error podría cambiar sus resultados: con los puntos que
+    faltan, un área podría llegar a 7 (o con los que sobran, un área podría bajar
+    de 7). La app dice qué área(s).
+  * No hace falta buscarlo si, aunque se corrija, ninguna área cambia de lado del 7.
+- Los estudiantes se importan igual y quedan registrados. En "Estudiantes e informes"
+  aparece un resumen, un aviso en el colegio y el curso ("⚠ 5 por revisar") y un
+  ícono ⚠ con su suma junto al nombre de cada uno (por ejemplo "⚠ 44/45"); con
+  "Ver solo estos estudiantes" ves solo a los que revisar.
+- Para corregir, haz clic en el ícono ⚠: se abren sus 10 puntajes (las áreas que
+  conviene revisar primero van marcadas en amarillo) con la suma en vivo. Al guardar
+  se recalculan sus áreas de interés y, si ya suma 45, el aviso desaparece. No hace
+  falta tocar el Excel ni volver a subir el archivo.
+- Al cargar los archivos, la ventana de importación da dos opciones:
+  a) "Cargar y descargar la carpeta del curso": se genera altiro la carpeta (ZIP) con
+     todos los informes. Los de quienes no suman 45 llevan la suma en el nombre del
+     archivo, por ejemplo "Informe_Kuder_Juan_Perez_2doA (44 de 45)" (no se puede usar
+     "44/45" porque la barra no está permitida en nombres de archivo), y la carpeta
+     trae una nota, "_Revisar_tests_mal_traspasados.txt", con la lista de quiénes
+     revisar y qué área mirar primero. Si cargas varios cursos juntos, se descarga
+     una sola carpeta con una subcarpeta por curso.
+  b) "Solo cargar": el curso queda en la plataforma y esos estudiantes quedan
+     pendientes por revisar. Así puedes cargar primero todos tus cursos, después
+     corregir a los pendientes con el ícono ⚠ y al final descargar los informes.
+- Si después descargas un curso (o un informe) que todavía tiene pendientes, la app
+  pregunta si quieres generarlo igual (quedan marcados como arriba) o revisarlos
+  primero.
+
+Cómo se ve el informe de Kuder (individual)
+---------------------------------------------
+- Hoja 1: qué es el test y por qué existen los test vocacionales, los supuestos y
+  principios del Test de Kuder, y las 10 áreas con todas sus carreras UMAG (así el
+  estudiante puede revisar también las áreas que le interesen aunque no le hayan
+  salido destacadas).
+- Hojas siguientes: los datos del estudiante y un recuadro por cada área de interés
+  (7 puntos o más), con su descripción, "Tus Carreras UMAG" y "Otras carreras".
+- Aparecen todas sus áreas de interés, sin límite. Si ningún área llega a 7, el
+  informe le dice que tiene intereses diversos y le muestra las 10 áreas (igual que
+  en 8° básico, donde se muestran las 6).
 
 Deshacer, rehacer y respaldo en Excel
 ---------------------------------------
-Arriba a la derecha hay tres botones:
-- "Deshacer" / "Rehacer": si cometes un error (editaste mal, borraste a alguien sin
-  querer), aprieta "Deshacer" para volver atrás, paso a paso.
-- "Excel de respaldo": descarga una copia de todo lo que tienes cargado (incluyendo
-  la papelera) en un archivo Excel, como respaldo. No es necesario para que la
-  aplicación funcione — es solo una foto de seguridad, útil por si acaso.
+Arriba a la derecha (siempre sobre el test elegido):
+- "Deshacer" / "Rehacer": vuelve atrás un cambio, paso a paso. Una importación
+  completa se deshace de una sola vez.
+- "Excel de respaldo": descarga una copia de todo lo cargado en ese test (incluida
+  la papelera). Es solo una foto de seguridad.
+- "Borrar todo": elimina todos los datos de ese test (el otro test no se toca).
 
 Importante
 ----------
 - Los datos quedan guardados en este computador específico, dentro del navegador.
   Si necesitas trabajar desde otro computador, por ahora tendrías que volver a
-  ingresar los datos ahí (esto se puede mejorar más adelante si hace falta).
-- No borres ni muevas las carpetas "css", "js" ni "vendor" — la aplicación las
-  necesita para funcionar. Si algún día necesitas mover la aplicación de lugar,
-  mueve la carpeta completa "Aplicacion de Informes", no solo el archivo index.html.
-
-Cualquier ajuste, cambio o problema, me lo puedes pedir y lo corrijo.
+  importar ahí las planillas de cada curso.
+- No borres ni muevas las carpetas "css", "js", "assets" ni "vendor": la aplicación
+  las necesita para funcionar. Si algún día necesitas mover la aplicación de lugar,
+  mueve la carpeta completa, no solo el archivo index.html.

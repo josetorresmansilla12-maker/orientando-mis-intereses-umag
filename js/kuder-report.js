@@ -1,6 +1,6 @@
 // Informe GRUPAL (por curso) del Test Vocacional de Kuder, dirigido a los orientadores
-// del colegio — no a los estudiantes (los informes individuales quedan para una etapa
-// futura). Reutiliza el motor de paginación/PDF y varias clases CSS ya usadas por el
+// del colegio — no a los estudiantes (el informe individual de cada estudiante está en
+// js/kuder-individual-report.js). Reutiliza el motor de paginación/PDF y varias clases CSS ya usadas por el
 // informe de 8° básico (js/report.js, css/styles.css) porque son genéricas y así se
 // mantiene el mismo formato visual, pero es un módulo aparte: no modifica ni depende
 // de datos propios de ese cuestionario (áreas, ids, colores distintos).
@@ -39,8 +39,86 @@ function fmtFechaKuder(isoDate) {
   return `${d}-${mo}-${y}`;
 }
 
+// ==================== configuración por test ====================
+// El informe grupal para orientadores nació para Kuder, pero ahora sirve también para
+// el cuestionario de 8° básico: todo lo que cambia entre un test y otro (áreas,
+// íconos, cómo se calculan las áreas de interés y los textos) sale de esta
+// configuración. Kuder es la de siempre; las funciones de abajo la leen con G().
+// Para armar un informe de 8° se usa conConfigGrupal(CONFIG_GRUPAL_OCTAVO, ...), que
+// la cambia solo mientras se arman las páginas (eso es sincrónico) y luego la
+// devuelve a Kuder — así el informe interno y el individual de Kuder, que reutilizan
+// algunas de estas funciones, siempre ven la de Kuder.
+
+const CONFIG_GRUPAL_KUDER = {
+  id: "kuder",
+  areas: AREAS_KUDER,
+  calcularAreas: calcularAreasDeInteresKuder,
+  iconos: ICONOS_SVG_KUDER,
+  tituloGrupal: "Informe Grupal · Test Vocacional de Kuder",
+  tituloGlobal: "Informe Global · Test Vocacional de Kuder",
+  subtitulo: "Enseñanza Media · Unidad de Admisión y Marketing",
+  nombreTest: "del Test Vocacional de Kuder",
+  reglaInteres: "puntaje 7 o más",
+  paraQueSirve: "como apoyo para el proceso de orientación vocacional y para la elección del electivo o diferenciado de 3° medio",
+  prefijoArchivo: "Kuder",
+  claseGrafico: "",
+  descripcionArea: (area) => area.descripcion,
+};
+
+const CONFIG_GRUPAL_OCTAVO = {
+  id: "octavo",
+  areas: AREAS,
+  calcularAreas: calcularAreasDeInteres,
+  iconos: ICONOS_SVG,
+  tituloGrupal: "Informe Grupal · Orientando mis Intereses",
+  tituloGlobal: "Informe Global · Orientando mis Intereses",
+  subtitulo: "8° Básico · Unidad de Admisión y Marketing",
+  nombreTest: "del cuestionario de intereses vocacionales Orientando mis Intereses",
+  reglaInteres: "7 u 8 puntos",
+  paraQueSirve: "como apoyo para el proceso de orientación vocacional y para la elección del establecimiento o la modalidad de enseñanza media (científico-humanista o técnico-profesional)",
+  prefijoArchivo: "8vo",
+  // con 6 áreas (en vez de 10) las barras del gráfico van más altas, para que la
+  // página de resultados quede igual de llena que la de Kuder
+  claseGrafico: "kuder-chart-pocas-areas",
+  descripcionArea: (area) => DESCRIPCION_ORIENTADOR_OCTAVO[area.id] || area.descripcionCorta,
+};
+
+// descripción de cada área de 8° para el orientador (tercera persona; las de
+// js/data.js le hablan directamente al estudiante)
+const DESCRIPCION_ORIENTADOR_OCTAVO = {
+  ciencias:
+    "Estudiantes con curiosidad por entender cómo funciona el mundo: disfrutan observar, experimentar, investigar y buscar el porqué de las cosas. Suelen interesarse por las ciencias naturales, la tecnología y el descubrimiento.",
+  humanidades:
+    "Estudiantes interesados en las personas y la sociedad: disfrutan leer, escribir, conversar, debatir y comprender por qué las personas actúan como actúan. Se relaciona con la educación, la comunicación, el derecho y las ciencias sociales.",
+  artistico:
+    "Estudiantes que se expresan creando, ya sea con el dibujo, la música, el baile, la actuación o el diseño. Valoran la creatividad y la autoexpresión, y se sienten cómodos inventando y comunicando ideas a través del arte.",
+  tecnico:
+    "Estudiantes de perfil práctico: disfrutan construir, reparar y trabajar con las manos, con herramientas y equipos, resolviendo problemas concretos. Se relaciona con la ingeniería, la construcción, la tecnología y las carreras técnicas.",
+  salud:
+    "Estudiantes empáticos y orientados a ayudar: disfrutan cuidar y acompañar a otras personas o animales, y se interesan por el bienestar y la salud. Se relaciona con las carreras del área de la salud y del cuidado.",
+  administracion:
+    "Estudiantes que disfrutan organizar, planificar, liderar y tomar decisiones, desde un proyecto escolar hasta un emprendimiento. Se relaciona con la administración, los negocios, la gestión y la informática.",
+};
+
+let configGrupalActual = CONFIG_GRUPAL_KUDER;
+
+function G() {
+  return configGrupalActual;
+}
+
+// arma páginas con la configuración de otro test y después vuelve a la de Kuder
+function conConfigGrupal(config, armar) {
+  const anterior = configGrupalActual;
+  configGrupalActual = config || CONFIG_GRUPAL_KUDER;
+  try {
+    return armar();
+  } finally {
+    configGrupalActual = anterior;
+  }
+}
+
 function iconoCirculoKuder(area, tamano) {
-  return `<div class="icon-circle" style="background:${area.color}; width:${tamano}px; height:${tamano}px;">${ICONOS_SVG_KUDER[area.id] || ""}</div>`;
+  return `<div class="icon-circle" style="background:${area.color}; width:${tamano}px; height:${tamano}px;">${G().iconos[area.id] || ""}</div>`;
 }
 
 // credencial del curso (equivalente grupal a la credencial de un estudiante del
@@ -74,7 +152,7 @@ function construirLineaCursoKuder(datosCurso) {
 function construirIntroKuder() {
   return `
     <div class="informe-intro-texto kuder-intro-texto">
-      Este informe resume los resultados del Test Vocacional de Kuder aplicado a este curso. Por cada una de las 10 áreas se indica cuántos estudiantes la tienen como área de interés (puntaje 7 o más) y las carreras UMAG y de otras instituciones asociadas a ese perfil — como apoyo para el proceso de orientación vocacional y para la elección del electivo o diferenciado de 3° medio.
+      Este informe resume los resultados ${G().nombreTest} aplicado a este curso. Por cada una de las ${G().areas.length} áreas se indica cuántos estudiantes la tienen como área de interés (${G().reglaInteres}) y las carreras UMAG y de otras instituciones asociadas a ese perfil — ${G().paraQueSirve}.
     </div>`;
 }
 
@@ -87,7 +165,8 @@ function construirIntroKuder() {
 // filas completas de la grilla de 4 columnas, para que la página de estadísticas
 // (que ahora va sola, sin el gráfico de barras al lado) quede bien ocupada.
 function construirStatsKuder(estudiantes, conteos, total) {
-  const areasPorEstudiante = estudiantes.map((e) => calcularAreasDeInteresKuder(e.puntajes).length);
+  const AREAS_T = G().areas;
+  const areasPorEstudiante = estudiantes.map((e) => G().calcularAreas(e.puntajes).length);
   const sinArea = areasPorEstudiante.filter((n) => n === 0).length;
   const conArea = total - sinArea;
   const pctConArea = total > 0 ? Math.round((conArea / total) * 100) : 0;
@@ -100,10 +179,10 @@ function construirStatsKuder(estudiantes, conteos, total) {
   const con4oMas = areasPorEstudiante.filter((n) => n >= 4).length;
   const pct4oMas = total > 0 ? Math.round((con4oMas / total) * 100) : 0;
   const promedio = total > 0 ? (areasPorEstudiante.reduce((acc, n) => acc + n, 0) / total).toFixed(1) : "0.0";
-  const areasDistintas = AREAS_KUDER.filter((a) => (conteos[a.id] || 0) > 0).length;
+  const areasDistintas = AREAS_T.filter((a) => (conteos[a.id] || 0) > 0).length;
   const maximoAreas = areasPorEstudiante.length ? Math.max(...areasPorEstudiante) : 0;
 
-  const areasOrdenadas = [...AREAS_KUDER].sort((a, b) => (conteos[b.id] || 0) - (conteos[a.id] || 0));
+  const areasOrdenadas = [...AREAS_T].sort((a, b) => (conteos[b.id] || 0) - (conteos[a.id] || 0));
   const fmtArea = (area) => {
     const c = area ? conteos[area.id] || 0 : 0;
     const pct = total > 0 ? Math.round((c / total) * 100) : 0;
@@ -117,15 +196,15 @@ function construirStatsKuder(estudiantes, conteos, total) {
   // segunda mirada a la inclinación general del curso, complementaria a "cuántos
   // estudiantes la eligieron como área de interés".
   const sumaPuntajes = {};
-  AREAS_KUDER.forEach((a) => (sumaPuntajes[a.id] = 0));
+  AREAS_T.forEach((a) => (sumaPuntajes[a.id] = 0));
   estudiantes.forEach((e) => {
-    AREAS_KUDER.forEach((a) => {
+    AREAS_T.forEach((a) => {
       const p = Number(e.puntajes[a.id]);
       if (Number.isFinite(p)) sumaPuntajes[a.id] += p;
     });
   });
   const promedioArea = (area) => (total > 0 ? sumaPuntajes[area.id] / total : 0);
-  const areasPorPromedio = [...AREAS_KUDER].sort((a, b) => promedioArea(b) - promedioArea(a));
+  const areasPorPromedio = [...AREAS_T].sort((a, b) => promedioArea(b) - promedioArea(a));
   const mayorPromedio = areasPorPromedio[0];
   const menorPromedio = areasPorPromedio[areasPorPromedio.length - 1];
 
@@ -134,12 +213,12 @@ function construirStatsKuder(estudiantes, conteos, total) {
       <div class="stat-card"><div class="num">${total}</div><div class="lbl">Estudiantes evaluados</div></div>
       <div class="stat-card"><div class="num">${conArea}</div><div class="lbl">Con al menos un área de interés (${pctConArea}%)</div></div>
       <div class="stat-card"><div class="num">${sinArea}</div><div class="lbl">Sin área de interés clara</div></div>
-      <div class="stat-card"><div class="num">${promedio}</div><div class="lbl">Áreas de interés promedio por estudiante (de ${AREAS_KUDER.length} en total)</div></div>
+      <div class="stat-card"><div class="num">${promedio}</div><div class="lbl">Áreas de interés promedio por estudiante (de ${AREAS_T.length} en total)</div></div>
       <div class="stat-card"><div class="num">${con1}</div><div class="lbl">Estudiantes con exactamente 1 área de interés (${pct1}%)</div></div>
       <div class="stat-card"><div class="num">${con2}</div><div class="lbl">Estudiantes con exactamente 2 áreas de interés (${pct2}%)</div></div>
       <div class="stat-card"><div class="num">${con3oMas}</div><div class="lbl">Estudiantes con 3 o más áreas de interés (${pct3oMas}%)</div></div>
       <div class="stat-card"><div class="num">${con4oMas}</div><div class="lbl">Estudiantes con perfil amplio: 4 o más áreas de interés (${pct4oMas}%)</div></div>
-      <div class="stat-card"><div class="num">${areasDistintas}</div><div class="lbl">Áreas de interés distintas representadas (de ${AREAS_KUDER.length})</div></div>
+      <div class="stat-card"><div class="num">${areasDistintas}</div><div class="lbl">Áreas de interés distintas representadas (de ${AREAS_T.length})</div></div>
       <div class="stat-card"><div class="num">${maximoAreas}</div><div class="lbl">Máximo de áreas de interés en un mismo estudiante</div></div>
       <div class="stat-card kuder-stat-ancho"><div class="num kuder-stat-num-area">${top1.nombre}</div><div class="lbl">Área más elegida: ${top1.c} de ${total} (${top1.pct}%)</div></div>
       <div class="stat-card kuder-stat-ancho"><div class="num kuder-stat-num-area">${top2.nombre}</div><div class="lbl">Segunda área más elegida: ${top2.c} de ${total} (${top2.pct}%)</div></div>
@@ -178,7 +257,7 @@ function construirPaginaStatsKuder(datosCurso, estudiantes, conteos, total) {
   const contenedor = document.createElement("div");
   contenedor.className = "informe-page";
   contenedor.innerHTML = `
-    ${construirBanner("Informe Grupal · Test Vocacional de Kuder", "Enseñanza Media · Unidad de Admisión y Marketing")}
+    ${construirBanner(G().tituloGrupal, G().subtitulo)}
     ${construirCajaCursoKuder(datosCurso, total)}
     ${construirIntroKuder()}
     ${construirStatsKuder(estudiantes, conteos, total)}
@@ -200,12 +279,12 @@ function construirPaginaStatsKuder(datosCurso, estudiantes, conteos, total) {
 function construirIntroResultadosKuder() {
   return `
     <div class="informe-intro-texto kuder-intro-texto">
-      A continuación se muestra, de mayor a menor, el porcentaje de estudiantes del curso que tiene cada área como área de interés (puntaje 7 o más). Esto permite identificar de un vistazo las tendencias vocacionales predominantes del curso.
+      A continuación se muestra, de mayor a menor, el porcentaje de estudiantes del curso que tiene cada área como área de interés (${G().reglaInteres}). Esto permite identificar de un vistazo las tendencias vocacionales predominantes del curso.
     </div>`;
 }
 
 function construirBloqueResultadosKuder(conteos, total) {
-  const areasOrdenadas = [...AREAS_KUDER].sort((a, b) => (conteos[b.id] || 0) - (conteos[a.id] || 0));
+  const areasOrdenadas = [...G().areas].sort((a, b) => (conteos[b.id] || 0) - (conteos[a.id] || 0));
   const filas = areasOrdenadas.map((a) => {
     const c = conteos[a.id] || 0;
     const pct = total > 0 ? Math.round((c / total) * 100) : 0;
@@ -217,7 +296,7 @@ function construirBloqueResultadosKuder(conteos, total) {
   for (let m = 0; m <= dominioMax; m += 10) marcas.push(m);
 
   return `
-    <div class="kuder-chart-bloque kuder-chart-bloque-grande">
+    <div class="kuder-chart-bloque kuder-chart-bloque-grande ${G().claseGrafico}">
       <div class="kuder-resumen-titulo">Resultados: áreas de interés del curso, de mayor a menor</div>
       <div class="kuder-chart-plot">
         <div class="kuder-chart-gridlines">
@@ -277,12 +356,12 @@ function capitalizarNombreKuder(s) {
 // definición el más cercano a convertirse en un área de interés.
 function obtenerAreaMasCercanaKuder(puntajes) {
   let maximo = -Infinity;
-  AREAS_KUDER.forEach((a) => {
+  G().areas.forEach((a) => {
     const p = Number(puntajes[a.id]);
     if (Number.isFinite(p) && p > maximo) maximo = p;
   });
   if (maximo === -Infinity) return null;
-  const nombres = AREAS_KUDER.filter((a) => Number(puntajes[a.id]) === maximo).map((a) => a.nombre);
+  const nombres = G().areas.filter((a) => Number(puntajes[a.id]) === maximo).map((a) => a.nombre);
   return { nombres, puntaje: maximo };
 }
 
@@ -291,7 +370,7 @@ function obtenerAreaMasCercanaKuder(puntajes) {
 // una lista larga de estudiantes — son textos fijos de la app (no vienen de la
 // planilla), así que no necesitan escaparse.
 function celdaAreasEstudianteKuder(estudiante) {
-  const areas = calcularAreasDeInteresKuder(estudiante.puntajes);
+  const areas = G().calcularAreas(estudiante.puntajes);
   if (areas.length > 0) {
     return areas.map((a) => `${a.icono} ${escaparHtmlKuder(a.nombre)}`).join(", ");
   }
@@ -451,7 +530,7 @@ function construirCursosIncluidosKuder(resumenPorCurso) {
 function construirIntroGlobalKuder(nCursos) {
   return `
     <div class="informe-intro-texto">
-      Este informe global reúne los resultados del Test Vocacional de Kuder de ${nCursos} cursos en un solo resumen. Por cada una de las 10 áreas se indica cuántos estudiantes del total combinado la tienen como área de interés (puntaje 7 o más) y las carreras UMAG y de otras instituciones asociadas a ese perfil — para comparar tendencias entre varios cursos sin tener que calcularlo a mano.
+      Este informe global reúne los resultados ${G().nombreTest} de ${nCursos} cursos en un solo resumen. Por cada una de las ${G().areas.length} áreas se indica cuántos estudiantes del total combinado la tienen como área de interés (${G().reglaInteres}) y las carreras UMAG y de otras instituciones asociadas a ese perfil — para comparar tendencias entre varios cursos sin tener que calcularlo a mano.
     </div>`;
 }
 
@@ -483,7 +562,7 @@ function construirPaginaStatsGlobalKuder(resumenPorCurso, estudiantes, conteos, 
   const contenedor = document.createElement("div");
   contenedor.className = "informe-page";
   contenedor.innerHTML = `
-    ${construirBanner("Informe Global · Test Vocacional de Kuder", "Enseñanza Media · Unidad de Admisión y Marketing")}
+    ${construirBanner(G().tituloGlobal, G().subtitulo)}
     ${construirCajaGlobalKuder(resumenPorCurso, total, fecha)}
     ${construirIntroGlobalKuder(resumenPorCurso.length)}
     ${construirStatsKuder(estudiantes, conteos, total)}
@@ -496,7 +575,7 @@ function construirPaginaStatsGlobalKuder(resumenPorCurso, estudiantes, conteos, 
 function construirIntroResultadosGlobalKuder(nCursos) {
   return `
     <div class="informe-intro-texto kuder-intro-texto">
-      A continuación se muestra, de mayor a menor, el porcentaje del total combinado de estudiantes (de los ${nCursos} cursos incluidos) que tiene cada área como área de interés (puntaje 7 o más).
+      A continuación se muestra, de mayor a menor, el porcentaje del total combinado de estudiantes (de los ${nCursos} cursos incluidos) que tiene cada área como área de interés (${G().reglaInteres}).
     </div>`;
 }
 
@@ -523,32 +602,33 @@ function nombreArchivoGlobalKuder(resumenPorCurso) {
   const colegios = [...new Set(resumenPorCurso.map((r) => r.colegio).filter(Boolean))];
   const colegio = colegios.length === 1 ? limpiar(colegios[0]) : "VariosColegios";
   const fecha = new Date().toISOString().slice(0, 10);
-  return `Informe_Global_Kuder_${colegio}_${resumenPorCurso.length}cursos_${fecha}.pdf`;
+  return `Informe_Global_${G().prefijoArchivo}_${colegio}_${resumenPorCurso.length}cursos_${fecha}.pdf`;
 }
 
 // el "datosCurso" que necesitan las páginas de área (js/kuder-report.js:
 // construirPaginasAreasKuder) es solo para la línea de encabezado liviana de las
 // páginas de continuación — en el informe global se identifica por cuántos cursos
 // se sumaron, no por un colegio/curso puntual.
-async function construirBlobInformeGlobalKuder(resumenPorCurso, estudiantes, fecha) {
-  const total = estudiantes.length;
-  const conteos = calcularConteosPorAreaKuder(estudiantes);
-  const datosCursoContinuacion = { colegio: `${resumenPorCurso.length} cursos (informe global)`, curso: "" };
-
-  const paginas = [
-    construirPaginaStatsGlobalKuder(resumenPorCurso, estudiantes, conteos, total, fecha),
-    construirPaginaResultadosGlobalKuder(datosCursoContinuacion, resumenPorCurso, conteos, total),
-    ...construirPaginasAreasKuder(datosCursoContinuacion, conteos, total),
-  ];
+async function construirBlobInformeGlobalKuder(resumenPorCurso, estudiantes, fecha, config) {
+  const paginas = conConfigGrupal(config, () => {
+    const total = estudiantes.length;
+    const conteos = calcularConteosPorAreaKuder(estudiantes);
+    const datosCursoContinuacion = { colegio: `${resumenPorCurso.length} cursos (informe global)`, curso: "" };
+    return [
+      construirPaginaStatsGlobalKuder(resumenPorCurso, estudiantes, conteos, total, fecha),
+      construirPaginaResultadosGlobalKuder(datosCursoContinuacion, resumenPorCurso, conteos, total),
+      ...construirPaginasAreasKuder(datosCursoContinuacion, conteos, total),
+    ];
+  });
   return paginasAPdfBlob(paginas);
 }
 
-async function generarInformeGlobalKuderPdf(resumenPorCurso, estudiantes, fecha) {
-  const blob = await construirBlobInformeGlobalKuder(resumenPorCurso, estudiantes, fecha);
+async function generarInformeGlobalKuderPdf(resumenPorCurso, estudiantes, fecha, config) {
+  const blob = await construirBlobInformeGlobalKuder(resumenPorCurso, estudiantes, fecha, config);
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = nombreArchivoGlobalKuder(resumenPorCurso);
+  a.download = conConfigGrupal(config, () => nombreArchivoGlobalKuder(resumenPorCurso));
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -583,7 +663,7 @@ function construirTarjetaAreaKuder(area, conteo, total, espaciosa) {
         <h3 style="color:${area.color};">${area.nombre}</h3>
         <span class="area-card-conteo" style="background:${area.color};">${conteo} de ${total} (${pct}%)</span>
       </div>
-      <p class="area-card-desc">${area.descripcion}</p>
+      <p class="area-card-desc">${G().descripcionArea(area)}</p>
       <div class="area-card-carreras-split">
         ${construirListaCarrerasKuder("Carreras UMAG", area.carrerasUMAG, "umag")}
         ${construirListaCarrerasKuder("Otras carreras", area.carrerasOtras)}
@@ -627,7 +707,7 @@ function empaquetarTarjetasEnOrdenKuder(alturas, disponible) {
 // última — se reserva su altura completa (más el aviso de continuación) al calcular
 // cuántas tarjetas caben, así ninguna tarjeta termina empujando al pie fuera de la hoja.
 function construirPaginasAreasKuder(datosCurso, conteos, total) {
-  const areasOrdenadas = [...AREAS_KUDER].sort((a, b) => (conteos[b.id] || 0) - (conteos[a.id] || 0));
+  const areasOrdenadas = [...G().areas].sort((a, b) => (conteos[b.id] || 0) - (conteos[a.id] || 0));
   const htmlTarjetas = areasOrdenadas.map((area) => construirTarjetaAreaKuder(area, conteos[area.id] || 0, total, false));
   const htmlTarjetasEspaciosas = areasOrdenadas.map((area) => construirTarjetaAreaKuder(area, conteos[area.id] || 0, total, true));
   const htmlEncabezadoCont = construirLineaCursoKuder(datosCurso);
@@ -705,15 +785,15 @@ function nombreArchivoInformeKuder(datosCurso) {
   const colegio = limpiar(datosCurso.colegio) || "Colegio";
   const curso = limpiar((datosCurso.curso || "") + (datosCurso.letra || "")) || "Curso";
   const fecha = new Date().toISOString().slice(0, 10);
-  return `Informe_Grupal_Kuder_${colegio}_${curso}_${fecha}.pdf`;
+  return `Informe_Grupal_${G().prefijoArchivo}_${colegio}_${curso}_${fecha}.pdf`;
 }
 
 // calcula cuántos estudiantes del curso tienen cada área como interés.
 function calcularConteosPorAreaKuder(estudiantes) {
   const conteos = {};
-  AREAS_KUDER.forEach((a) => (conteos[a.id] = 0));
+  G().areas.forEach((a) => (conteos[a.id] = 0));
   estudiantes.forEach((e) => {
-    calcularAreasDeInteresKuder(e.puntajes).forEach((a) => conteos[a.id]++);
+    G().calcularAreas(e.puntajes).forEach((a) => conteos[a.id]++);
   });
   return conteos;
 }
@@ -721,25 +801,26 @@ function calcularConteosPorAreaKuder(estudiantes) {
 // orden del PDF: 1) estadísticas del curso, 2) resultados (gráfico de áreas),
 // 3) lista de estudiantes (1 o 2 páginas, sin pie de página), 4) en adelante, una
 // tarjeta por área con sus carreras (igual que antes).
-async function construirBlobInformeGrupalKuder(datosCurso, estudiantes) {
-  const total = estudiantes.length;
-  const conteos = calcularConteosPorAreaKuder(estudiantes);
-
-  const paginas = [
-    construirPaginaStatsKuder(datosCurso, estudiantes, conteos, total),
-    construirPaginaResultadosKuder(datosCurso, conteos, total),
-    ...construirPaginasListaEstudiantesKuder(datosCurso, estudiantes),
-    ...construirPaginasAreasKuder(datosCurso, conteos, total),
-  ];
+async function construirBlobInformeGrupalKuder(datosCurso, estudiantes, config) {
+  const paginas = conConfigGrupal(config, () => {
+    const total = estudiantes.length;
+    const conteos = calcularConteosPorAreaKuder(estudiantes);
+    return [
+      construirPaginaStatsKuder(datosCurso, estudiantes, conteos, total),
+      construirPaginaResultadosKuder(datosCurso, conteos, total),
+      ...construirPaginasListaEstudiantesKuder(datosCurso, estudiantes),
+      ...construirPaginasAreasKuder(datosCurso, conteos, total),
+    ];
+  });
   return paginasAPdfBlob(paginas);
 }
 
-async function generarInformeGrupalKuderPdf(datosCurso, estudiantes) {
-  const blob = await construirBlobInformeGrupalKuder(datosCurso, estudiantes);
+async function generarInformeGrupalKuderPdf(datosCurso, estudiantes, config) {
+  const blob = await construirBlobInformeGrupalKuder(datosCurso, estudiantes, config);
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = nombreArchivoInformeKuder(datosCurso);
+  a.download = conConfigGrupal(config, () => nombreArchivoInformeKuder(datosCurso));
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -761,16 +842,16 @@ function nombreZipPorCursoKuder(porArchivo) {
   const colegios = [...new Set(porArchivo.map((r) => r.colegio).filter(Boolean))];
   const colegio = colegios.length === 1 ? limpiar(colegios[0]) : "VariosColegios";
   const fecha = new Date().toISOString().slice(0, 10);
-  return `Informes_Kuder_por_curso_${colegio}_${porArchivo.length}cursos_${fecha}.zip`;
+  return `Informes_${G().prefijoArchivo}_por_curso_${colegio}_${porArchivo.length}cursos_${fecha}.zip`;
 }
 
-async function generarInformesPorCursoKuderZip(porArchivo, fecha) {
+async function generarInformesPorCursoKuderZip(porArchivo, fecha, config) {
   const zip = new JSZip();
   const usados = new Map();
 
   for (const { colegio, curso, estudiantes } of porArchivo) {
-    const blob = await construirBlobInformeGrupalKuder({ colegio, curso, fecha }, estudiantes);
-    let nombre = nombreArchivoInformeKuder({ colegio, curso });
+    const blob = await construirBlobInformeGrupalKuder({ colegio, curso, fecha }, estudiantes, config);
+    let nombre = conConfigGrupal(config, () => nombreArchivoInformeKuder({ colegio, curso }));
     const veces = usados.get(nombre) || 0;
     usados.set(nombre, veces + 1);
     if (veces > 0) nombre = nombre.replace(/\.pdf$/, `_${veces + 1}.pdf`);
@@ -781,7 +862,7 @@ async function generarInformesPorCursoKuderZip(porArchivo, fecha) {
   const url = URL.createObjectURL(contenidoZip);
   const a = document.createElement("a");
   a.href = url;
-  a.download = nombreZipPorCursoKuder(porArchivo);
+  a.download = conConfigGrupal(config, () => nombreZipPorCursoKuder(porArchivo));
   document.body.appendChild(a);
   a.click();
   a.remove();

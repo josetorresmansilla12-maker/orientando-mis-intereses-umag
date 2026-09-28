@@ -10,20 +10,22 @@
 // de alta demanda conocida o con relevancia regional (Magallanes: minería, energía,
 // pesca/acuicultura, turismo). Como regla general se procura que esta lista NO supere
 // en número a AREAS_KUDER.carrerasUMAG de la misma área (js/kuder-data.js) — salvo en
-// las áreas donde la UMAG ofrece muy pocas carreras propias (Artística: 3, Musical: 2),
+// las áreas donde la UMAG ofrece muy pocas carreras propias (Artística: 4, Musical: 2),
 // donde sí se agregaron más opciones para que el cuadro tenga contenido suficiente.
+// No incluye carreras que la UMAG ya imparte con otro nombre (por ejemplo, "Contador
+// Auditor" = Auditoría, "Ingeniería Agronómica" = Agronomía).
 const CARRERAS_POTENCIALES_KUDER = {
-  exterior: ["Veterinaria", "Ingeniería Forestal", "Geología", "Ciencias Ambientales", "Ingeniería Agronómica"],
+  exterior: ["Veterinaria", "Ingeniería Forestal", "Geología", "Ciencias Ambientales", "Oceanografía"],
   mecanica: ["Ingeniería en Minas", "Ingeniería Mecatrónica", "Mecánica Automotriz", "Ingeniería Aeroespacial", "Ingeniería en Robótica"],
   calculo: ["Estadística", "Ingeniería Civil Industrial", "Licenciatura en Matemáticas", "Ingeniería en Telecomunicaciones"],
   cientifica: ["Odontología", "Química y Farmacia", "Bioquímica", "Ingeniería Biomédica", "Medicina Veterinaria"],
   persuasiva: ["Marketing", "Publicidad", "Relaciones Internacionales", "Ciencias Políticas"],
-  // Artística: la UMAG solo ofrece 3 carreras en esta área — se amplía la lista más
+  // Artística: la UMAG solo ofrece 4 carreras en esta área — se amplía la lista más
   // que en las demás para reflejar cuánta oferta relevante falta.
   artistica: ["Diseño Gráfico", "Diseño Industrial", "Cine y Producción Audiovisual", "Licenciatura en Artes Visuales", "Actuación y Teatro", "Diseño de Moda"],
   literaria: ["Periodismo", "Traducción e Interpretación", "Licenciatura en Letras", "Comunicación Social"],
   // Musical: la UMAG solo ofrece 2 carreras en esta área — mismo criterio que Artística.
   musical: ["Interpretación Musical", "Licenciatura en Música", "Composición Musical", "Ingeniería en Sonido", "Producción Musical"],
   social: ["Sociología", "Criminología", "Antropología", "Psicopedagogía"],
-  oficina: ["Contador Auditor", "Ingeniería en Recursos Humanos", "Logística", "Comercio Internacional"],
+  oficina: ["Administración Pública", "Ingeniería en Recursos Humanos", "Logística", "Comercio Internacional"],
 };

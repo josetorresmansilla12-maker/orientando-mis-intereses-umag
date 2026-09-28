@@ -1,7 +1,12 @@
 // Capa de datos: guardado local (persistente) + deshacer/rehacer (por sesión).
 // Todo vive en el navegador de este computador. Nada se envía a internet.
+//
+// Hay un guardado separado por test (8° básico y Kuder), cada uno con su propia clave
+// de localStorage, su propia lista de áreas y su propio historial de deshacer — así
+// los estudiantes de un test nunca se mezclan con los del otro.
 
 const STORAGE_KEY = "orientando_intereses_v1";
+const STORAGE_KEY_KUDER = "orientando_intereses_kuder_v1";
 const MAX_HISTORIAL = 50;
 
 function uid() {
@@ -9,7 +14,11 @@ function uid() {
 }
 
 class Store {
-  constructor() {
+  // claveStorage: dónde se guarda en localStorage; idsPuntaje: los ids de las áreas
+  // del test (cada estudiante guarda un puntaje por cada uno).
+  constructor(claveStorage, idsPuntaje) {
+    this.claveStorage = claveStorage;
+    this.idsPuntaje = idsPuntaje;
     this.estudiantes = [];
     this.contadorInformes = 0;
     this.deshacerPila = [];
@@ -19,7 +28,7 @@ class Store {
 
   _cargar() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(this.claveStorage);
       const datos = raw ? JSON.parse(raw) : {};
       this.estudiantes = datos.estudiantes || [];
       this.contadorInformes = Number(datos.contadorInformes) || 0;
@@ -32,7 +41,7 @@ class Store {
 
   _guardar() {
     localStorage.setItem(
-      STORAGE_KEY,
+      this.claveStorage,
       JSON.stringify({
         estudiantes: this.estudiantes,
         contadorInformes: this.contadorInformes,
@@ -89,10 +98,10 @@ class Store {
     return this.estudiantes.find((e) => e.id === id) || null;
   }
 
-  crear(datos) {
-    this._antesDeCambiar();
-    const ahora = new Date().toISOString();
-    const nuevo = {
+  _armarEstudiante(datos, ahora) {
+    const puntajes = {};
+    this.idsPuntaje.forEach((id) => (puntajes[id] = num(datos.puntajes?.[id])));
+    return {
       id: uid(),
       colegio: datos.colegio || "",
       curso: datos.curso || "",
@@ -100,21 +109,31 @@ class Store {
       nombre: datos.nombre || "",
       rut: datos.rut || "",
       fecha: datos.fecha || "",
-      puntajes: {
-        ciencias: num(datos.puntajes?.ciencias),
-        humanidades: num(datos.puntajes?.humanidades),
-        artistico: num(datos.puntajes?.artistico),
-        tecnico: num(datos.puntajes?.tecnico),
-        salud: num(datos.puntajes?.salud),
-        administracion: num(datos.puntajes?.administracion),
-      },
+      puntajes,
       eliminado: false,
       creadoEn: ahora,
       actualizadoEn: ahora,
     };
+  }
+
+  crear(datos) {
+    this._antesDeCambiar();
+    const nuevo = this._armarEstudiante(datos, new Date().toISOString());
     this.estudiantes.push(nuevo);
     this._guardar();
     return nuevo;
+  }
+
+  // agrega varios estudiantes de una vez (importación de planillas): un solo paso de
+  // deshacer para toda la importación, en vez de uno por estudiante.
+  crearVarios(lista) {
+    if (!lista || lista.length === 0) return [];
+    this._antesDeCambiar();
+    const ahora = new Date().toISOString();
+    const nuevos = lista.map((datos) => this._armarEstudiante(datos, ahora));
+    this.estudiantes.push(...nuevos);
+    this._guardar();
+    return nuevos;
   }
 
   actualizar(id, datos) {
@@ -199,4 +218,7 @@ function num(v) {
   return Number.isFinite(n) ? n : 0;
 }
 
-const store = new Store();
+// "store" = 8° básico (el nombre se mantiene porque js/report.js y js/excel.js lo usan
+// así); "storeKuder" = Test de Kuder. js/kuder-data.js se carga antes que este archivo.
+const store = new Store(STORAGE_KEY, ["ciencias", "humanidades", "artistico", "tecnico", "salud", "administracion"]);
+const storeKuder = new Store(STORAGE_KEY_KUDER, AREAS_KUDER.map((a) => a.id));

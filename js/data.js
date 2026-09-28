@@ -1,12 +1,17 @@
 // Definición fija de las áreas del instrumento "Orientando mis Intereses" (8° básico).
 // Puntaje máximo por área: 8 (4 preguntas x 2 puntos). Área de interés = 7 u 8 puntos.
 //
-// Las listas de "carreras UMAG" y "otras carreras" son una propuesta de alineación,
-// armada a partir de las carreras que ya se usan para las 10 áreas del test de
-// Kuder, agrupadas hacia estas 6 áreas nuevas. Es un punto de partida razonable,
-// pero como el propio profesional lo señaló, hay zonas grises (por ejemplo,
-// Psicología o Medicina podrían calzar en más de un área) — se puede ajustar
-// cualquier carrera específica sin problema.
+// Las listas de "carreras UMAG" y "otras carreras" siguen los mismos criterios que las
+// del Test de Kuder (js/kuder-data.js), adaptados a estas 6 áreas (distintas de las 10
+// de Kuder, así que las combinaciones no son las mismas):
+// - Carreras UMAG revisadas contra la oferta vigente publicada en admision.umag.cl
+//   (32 profesionales y 13 técnicas de nivel superior, oferta Admisión 2027); cada
+//   carrera de la oferta aparece en al menos un área, y puede estar en más de una.
+// - "Otras carreras": solo carreras conocidas que la UMAG no imparte, sin repetir una
+//   que ya ofrece con otro nombre (por ejemplo, Contabilidad = Auditoría), y sin las
+//   que se sacaron de Kuder (Administración de Empresas, Licenciatura en Música,
+//   Psicopedagogía, Mecánica Automotriz, Topografía, etc.). En cada área no superan en
+//   número a las carreras UMAG.
 
 const AREAS = [
   {
@@ -24,7 +29,7 @@ const AREAS = [
       "Ingeniería Civil Química",
       "Técnico de Nivel Superior en Acuicultura",
     ],
-    carrerasOtras: ["Física", "Biología", "Química", "Astrofísica", "Geología"],
+    carrerasOtras: ["Biología", "Química", "Física", "Astronomía", "Geología"],
   },
   {
     id: "humanidades",
@@ -42,10 +47,12 @@ const AREAS = [
       "Pedagogía en Matemática",
       "Pedagogía en Educación Física",
       "Pedagogía en Educación Diferencial",
-      "Técnico de Nivel Superior en Educación Especial",
+      "Pedagogía en Educación Parvularia",
       "Derecho",
       "Psicología",
       "Trabajo Social",
+      "Técnico de Nivel Superior en Educación Especial",
+      "Técnico de Nivel Superior en Educación Parvularia",
     ],
     carrerasOtras: ["Filosofía", "Periodismo", "Sociología", "Antropología", "Ciencias Políticas", "Criminología"],
   },
@@ -64,7 +71,7 @@ const AREAS = [
       "Pedagogía en Educación Básica",
       "Pedagogía en Música",
     ],
-    carrerasOtras: ["Diseño Gráfico", "Cine", "Bellas Artes", "Danza", "Licenciatura en Música"],
+    carrerasOtras: ["Diseño Gráfico", "Bellas Artes", "Cine", "Teatro y Artes Escénicas", "Danza"],
   },
   {
     id: "tecnico",
@@ -82,6 +89,7 @@ const AREAS = [
       "Ingeniería Civil Mecánica",
       "Ingeniería en Computación e Informática",
       "Ingeniería Civil en Computación e Informática",
+      "Arquitectura",
       "Técnico de Nivel Superior en Construcción",
       "Técnico de Nivel Superior en Mantenimiento Industrial",
       "Técnico de Nivel Superior en Procesos Industriales",
@@ -90,14 +98,7 @@ const AREAS = [
       "Técnico de Nivel Superior en Eficiencia Energética y Energías No Convencionales",
       "Técnico de Nivel Superior en Prevención de Riesgos",
     ],
-    carrerasOtras: [
-      "Mecánica Automotriz",
-      "Ingeniería Aeroespacial",
-      "Ingeniería Mecatrónica",
-      "Ingeniería en Minas",
-      "Ingeniería Civil Industrial",
-      "Topografía",
-    ],
+    carrerasOtras: ["Ingeniería Aeroespacial", "Ingeniería Mecatrónica", "Ingeniería en Minas", "Ingeniería Civil Industrial"],
   },
   {
     id: "salud",
@@ -114,9 +115,10 @@ const AREAS = [
       "Nutrición y Dietética",
       "Terapia Ocupacional",
       "Fonoaudiología",
+      "Psicología",
       "Técnico de Nivel Superior en Enfermería",
     ],
-    carrerasOtras: ["Odontología", "Química y Farmacéutica", "Veterinaria", "Técnico en Servicio Social", "Psicopedagogía"],
+    carrerasOtras: ["Odontología", "Química y Farmacia", "Obstetricia", "Tecnología Médica", "Veterinaria"],
   },
   {
     id: "administracion",
@@ -136,7 +138,7 @@ const AREAS = [
       "Ingeniería Civil en Computación e Informática",
       "Derecho",
     ],
-    carrerasOtras: ["Economía", "Administración de Empresas", "Contabilidad", "Marketing", "Logística", "Relaciones Internacionales"],
+    carrerasOtras: ["Economía", "Administración Pública", "Marketing", "Logística", "Ingeniería en Recursos Humanos"],
   },
 ];
 

@@ -1,9 +1,10 @@
-// UI del módulo "Test Vocacional de Kuder" (Enseñanza Media): lectura de la planilla
-// de puntajes ya corregidos (Excel/CSV, un archivo por curso) y generación del informe
-// grupal en PDF para los orientadores. Módulo aparte del cuestionario de 8° básico —
-// no llama ni depende de sus funciones (js/app.js, js/excel.js, js/report.js), solo
-// reutiliza utilidades genéricas de js/report.js (el motor de PDF/paginación) tal como
-// están, sin modificarlas.
+// Test Vocacional de Kuder (Enseñanza Media): lector de la planilla de puntajes ya
+// corregidos (Excel/CSV, un archivo por curso) — lo usan tanto la pestaña "Ingresar
+// datos" (para guardar estudiantes y generar sus informes individuales, ver
+// leerPlanillaKuderParaImportar) como las pestañas de informes grupales — y la UI de
+// la pestaña "Informes para orientadores" (informe grupal por curso / global en PDF).
+// No depende de funciones del cuestionario de 8° básico; solo reutiliza utilidades
+// genéricas de js/report.js (el motor de PDF/paginación) tal como están.
 
 let kuderEstadoActual = []; // [{ archivoNombre, estudiantes, errores, advertencias, colegio, curso }, ...] — 1 a 6 archivos
 const KUDER_MAX_ARCHIVOS = 6;
@@ -34,6 +35,7 @@ function ubicarEncabezadosKuder(filas) {
     const idxRut = fila.findIndex((c) => normalizarTextoKuder(c) === "rut");
     const idxColegio = fila.findIndex((c) => normalizarTextoKuder(c) === "colegio");
     const idxCurso = fila.findIndex((c) => normalizarTextoKuder(c) === "curso");
+    const idxLetra = fila.findIndex((c) => normalizarTextoKuder(c) === "letra");
 
     const idxPorArea = {};
     AREAS_KUDER.forEach((a) => {
@@ -44,7 +46,7 @@ function ubicarEncabezadosKuder(filas) {
     const tieneTodasLasAreas = AREAS_KUDER.every((a) => idxPorArea[a.id] !== undefined);
     if (!tieneTodasLasAreas) continue;
 
-    return { filaEncabezado: f, idxNombre, idxRut, idxColegio, idxCurso, idxPorArea };
+    return { filaEncabezado: f, idxNombre, idxRut, idxColegio, idxCurso, idxLetra, idxPorArea };
   }
   return null;
 }
@@ -71,12 +73,14 @@ function leerPlanillaKuder(arrayBuffer) {
     };
   }
 
-  const { filaEncabezado, idxNombre, idxRut, idxColegio, idxCurso, idxPorArea } = ubicacion;
+  const { filaEncabezado, idxNombre, idxRut, idxColegio, idxCurso, idxLetra, idxPorArea } = ubicacion;
   const estudiantes = [];
   const errores = [];
   const advertencias = [];
+  const revisionTraspaso = []; // [{ fila, nombre, analisis }] de los que no suman 45
   let colegio = "";
   let curso = "";
+  let letra = "";
 
   for (let f = filaEncabezado + 1; f < filas.length; f++) {
     const fila = filas[f];
@@ -105,14 +109,19 @@ function leerPlanillaKuder(arrayBuffer) {
       continue;
     }
     // el test de Kuder es de elección forzada: la suma de las 10 áreas de un
-    // estudiante debería dar siempre 45 puntos. No se descarta la fila por esto
-    // (puede haber variantes de corrección), pero se avisa para que se revise.
-    if (suma !== 45) {
-      advertencias.push(`Fila ${numeroFilaExcel} (${nombre}): la suma de las 10 áreas es ${suma} (se esperan 45) — revisa esta fila.`);
+    // estudiante debería dar siempre 45 puntos. Si no, el test quedó mal traspasado;
+    // la fila no se descarta, pero se revisa si el error podría cambiar sus áreas de
+    // interés (ver analizarTraspasoKuder en js/kuder-data.js) y se avisa.
+    const analisis = analizarTraspasoKuder(puntajes);
+    if (analisis.estado !== "ok") {
+      const d = describirTraspasoKuder(analisis);
+      revisionTraspaso.push({ fila: numeroFilaExcel, nombre, analisis });
+      advertencias.push(`${d.afecta ? "⚠" : "ℹ️"} Fila ${numeroFilaExcel} (${nombre}), test mal traspasado: ${d.resumen}. ${d.accion}. ${d.detalle}`);
     }
 
     if (!colegio && idxColegio !== -1) colegio = (fila[idxColegio] || "").toString().trim();
     if (!curso && idxCurso !== -1) curso = (fila[idxCurso] || "").toString().trim();
+    if (!letra && idxLetra !== -1) letra = (fila[idxLetra] || "").toString().trim();
 
     estudiantes.push({
       nombre,
@@ -121,7 +130,61 @@ function leerPlanillaKuder(arrayBuffer) {
     });
   }
 
-  return { estudiantes, errores, advertencias, colegio, curso };
+  return { estudiantes, errores, advertencias, revisionTraspaso, colegio, curso, letra };
+}
+
+// "2do A" → { curso: "2do", letra: "A" }; "4to medio B" → { "4to medio", "B" };
+// "2doA" → { "2do", "A" }. Si no se reconoce una letra final suelta, se deja todo
+// como curso y la letra vacía (el usuario la puede completar al importar).
+function separarCursoLetraKuder(texto) {
+  const t = (texto || "").toString().trim().replace(/\s+/g, " ");
+  let m = /^(.*\S)\s+([A-Za-zÑñ])$/.exec(t);
+  if (m) return { curso: m[1], letra: m[2].toUpperCase() };
+  m = /^(\d+\s*(?:°|º|ro|do|er|to|vo|mo|no)?(?:\s*medio)?)([A-Za-z])$/i.exec(t);
+  if (m) return { curso: m[1].trim(), letra: m[2].toUpperCase() };
+  return { curso: t, letra: "" };
+}
+
+// versión del lector para la pestaña "Ingresar datos" del Test de Kuder (guardar a los
+// estudiantes para generar sus informes individuales): mismo lector que usan los
+// informes grupales, pero con el curso separado de su letra (la app guarda curso y
+// letra por separado, igual que en 8° básico).
+function leerPlanillaKuderParaImportar(arrayBuffer) {
+  const lectura = leerPlanillaKuder(arrayBuffer);
+  let { curso, letra } = lectura;
+  if (curso && !letra) ({ curso, letra } = separarCursoLetraKuder(curso));
+  // los tests mal traspasados se muestran ordenados en la ventana de importación
+  // (revisionTraspaso), así que no se repiten como advertencias sueltas
+  return { ...lectura, advertencias: [], curso, letra: (letra || "").toUpperCase() };
+}
+
+// la pestaña "Informes para orientadores" sirve para los dos tests: lee la planilla
+// del test elegido arriba (js/app.js: cfg()) y arma el informe con su configuración
+// (js/kuder-report.js: CONFIG_GRUPAL_KUDER / CONFIG_GRUPAL_OCTAVO).
+function testActivoEsOctavo() {
+  return typeof cfg === "function" && cfg().id === "octavo";
+}
+
+function configGrupalDelTestActivo() {
+  return testActivoEsOctavo() ? CONFIG_GRUPAL_OCTAVO : CONFIG_GRUPAL_KUDER;
+}
+
+// en 8° básico se usa el lector de la planilla de corrección (js/excel.js), que trae
+// el curso y la letra por separado: acá van juntos ("8vo A"), como en Kuder
+function leerPlanillaParaOrientadores(arrayBuffer) {
+  if (!testActivoEsOctavo()) return leerPlanillaKuder(arrayBuffer);
+  const lectura = leerPlanillaCorreccion(arrayBuffer);
+  const curso = [lectura.curso, lectura.letra].map((x) => (x || "").trim()).filter(Boolean).join(" ");
+  return { ...lectura, curso, advertencias: [] };
+}
+
+// al cambiar de test se descartan los archivos que se estaban revisando (eran del otro test)
+function reiniciarPanelOrientadores() {
+  kuderEstadoActual = [];
+  const panel = document.getElementById("kuder-revision");
+  if (panel) panel.style.display = "none";
+  const etiqueta = document.getElementById("kuder-nombre-archivo");
+  if (etiqueta) etiqueta.textContent = "";
 }
 
 function cablearKuder() {
@@ -157,10 +220,10 @@ function cablearKuder() {
         let lectura;
         try {
           const arrayBuffer = await archivo.arrayBuffer();
-          lectura = leerPlanillaKuder(arrayBuffer);
+          lectura = leerPlanillaParaOrientadores(arrayBuffer);
         } catch (err) {
           console.error(err);
-          lectura = { estudiantes: [], errores: ["No se pudo leer este archivo. ¿Es un .xlsx/.csv de Kuder válido?"], advertencias: [], colegio: "", curso: "" };
+          lectura = { estudiantes: [], errores: ["No se pudo leer este archivo. ¿Es un .xlsx/.csv válido?"], advertencias: [], colegio: "", curso: "" };
         }
         lecturas.push({ ...lectura, archivoNombre: archivo.name });
       }
@@ -211,11 +274,11 @@ function cablearKuder() {
     try {
       if (porArchivo.length === 1) {
         const { colegio, curso, estudiantes } = porArchivo[0];
-        await generarInformeGrupalKuderPdf({ colegio, curso, fecha }, estudiantes);
+        await generarInformeGrupalKuderPdf({ colegio, curso, fecha }, estudiantes, configGrupalDelTestActivo());
       } else {
         const estudiantesGlobal = porArchivo.flatMap((c) => c.estudiantes);
         const resumenPorCurso = porArchivo.map((c) => ({ colegio: c.colegio, curso: c.curso, total: c.total }));
-        await generarInformeGlobalKuderPdf(resumenPorCurso, estudiantesGlobal, fecha);
+        await generarInformeGlobalKuderPdf(resumenPorCurso, estudiantesGlobal, fecha, configGrupalDelTestActivo());
       }
     } catch (err) {
       console.error(err);
@@ -241,7 +304,7 @@ function cablearKuder() {
       btnGenerarPorCurso.disabled = true;
       btnGenerarPorCurso.textContent = "Generando…";
       try {
-        await generarInformesPorCursoKuderZip(porArchivo, fecha);
+        await generarInformesPorCursoKuderZip(porArchivo, fecha, configGrupalDelTestActivo());
       } catch (err) {
         console.error(err);
         alert("No se pudieron generar los informes. Revisa el mensaje en la consola.");
@@ -320,7 +383,7 @@ function renderKuderListaArchivos(lecturas) {
           n > 0
             ? `<div class="grid-form" style="grid-template-columns:repeat(2,1fr);">
                 <div><label>Colegio *</label><input type="text" class="kuder-fila-colegio" data-idx="${i}" value="${escaparHtmlKuder(lectura.colegio)}" /></div>
-                <div><label>Curso *</label><input type="text" class="kuder-fila-curso" data-idx="${i}" value="${escaparHtmlKuder(lectura.curso)}" placeholder="Ej: 2do A" /></div>
+                <div><label>Curso *</label><input type="text" class="kuder-fila-curso" data-idx="${i}" value="${escaparHtmlKuder(lectura.curso)}" placeholder="${testActivoEsOctavo() ? "Ej: 8vo A" : "Ej: 2do A"}" /></div>
               </div>`
             : ""
         }
@@ -330,11 +393,13 @@ function renderKuderListaArchivos(lecturas) {
 
   const avisos = lecturas.flatMap((l) => [
     ...l.errores.map((texto) => ({ texto: `${l.archivoNombre}: ${texto}`, tipo: "error" })),
-    ...l.advertencias.map((texto) => ({ texto: `${l.archivoNombre}: ${texto}`, tipo: "advertencia" })),
+    // un test mal traspasado cuyo error no cambia los resultados ("ℹ️") va en gris; el
+    // que sí podría cambiarlos ("⚠"), en amarillo
+    ...l.advertencias.map((texto) => ({ texto: `${l.archivoNombre}: ${texto}`, tipo: texto.startsWith("ℹ") ? "info" : "advertencia" })),
   ]);
   const contAvisos = document.getElementById("kuder-rev-avisos");
   contAvisos.innerHTML = avisos.length
-    ? `<ul class="kuder-avisos-lista">${avisos.map((a) => `<li class="${a.tipo}">${a.texto}</li>`).join("")}</ul>`
+    ? `<ul class="kuder-avisos-lista">${avisos.map((a) => `<li class="${a.tipo}">${escaparHtmlKuder(a.texto)}</li>`).join("")}</ul>`
     : "";
 
   cont.querySelectorAll(".kuder-fila-incluir").forEach((chk) => {
