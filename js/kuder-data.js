@@ -98,6 +98,12 @@ const AREAS_KUDER = [
       "Auditoría",
       "Pedagogía en Matemática",
       "Arquitectura",
+      // técnicas que trabajan con números y lógica (cálculo de materiales, contabilidad
+      // básica, programación). Musical y Literaria no tienen técnicas: ninguna de las 13
+      // que ofrece la UMAG se relaciona con la música o con la lectura y la escritura.
+      "Técnico de Nivel Superior en Construcción",
+      "Técnico de Nivel Superior en Administración",
+      "Técnico de Nivel Superior en Análisis de Sistemas Computacionales",
     ],
     carrerasOtras: ["Economía", "Estadística", "Física", "Ingeniería Civil Industrial"],
   },
