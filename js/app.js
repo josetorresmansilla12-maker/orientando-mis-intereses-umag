@@ -29,6 +29,8 @@ const TESTS = {
     describirTraspaso: null,
     descargarIndividual: descargarInformeIndividual,
     descargarMasivo: descargarInformesMasivo,
+    agregarInformesACarpeta: agregarInformesACarpeta,
+    prefijoArchivos: "8vo",
     configGrupal: CONFIG_GRUPAL_OCTAVO, // informe grupal para orientadores (js/kuder-report.js)
     exportarExcel: exportarExcel,
   },
@@ -51,6 +53,8 @@ const TESTS = {
     descargarIndividual: descargarInformeIndividualKuder,
     descargarMasivo: descargarInformesMasivoKuder,
     descargarVariosCursos: descargarCarpetasDeCursosKuder,
+    agregarInformesACarpeta: agregarInformesACarpetaKuder,
+    prefijoArchivos: "Kuder",
     configGrupal: CONFIG_GRUPAL_KUDER,
     exportarExcel: exportarExcelKuder,
   },
@@ -1058,10 +1062,14 @@ function renderEstudiantes() {
   );
 
   const btnMasiva = document.getElementById("btn-descarga-masiva");
-  btnMasiva.disabled = filtrados.length === 0;
+  btnMasiva.disabled = !!btnMasiva.dataset.generando || filtrados.length === 0; // (no se reactiva a mitad de una descarga)
   document.getElementById("conteo-filtrados").textContent =
     filtrados.length + (filtrados.length === 1 ? " estudiante" : " estudiantes");
-  btnMasiva.onclick = () => antesDeGenerarInformes(filtrados, () => descargarConProgreso(filtrados, btnMasiva));
+  const hayFiltro = !!(estado.filtros.colegio || estado.filtros.curso || estado.filtros.letra || estado.filtros.nombre || estado.filtros.soloTraspaso);
+  if (!btnMasiva.dataset.generando) {
+    btnMasiva.textContent = hayFiltro ? "⬇ Descargar los cursos filtrados" : "⬇ Descargar todos los cursos";
+  }
+  btnMasiva.onclick = () => accionDescargarTodosLosCursos(filtrados, btnMasiva);
 
   const cont = document.getElementById("grupos-estudiantes");
   if (todos.length === 0) {
@@ -1444,6 +1452,120 @@ function accionEliminarGrupo(descripcion, ids) {
       render();
     },
   });
+}
+
+// ---------------- "Descargar todos los cursos" ----------------
+// Un archivo ZIP por colegio y, dentro de cada uno, una carpeta por curso con los
+// informes de ese curso (en Kuder, cada carpeta trae además su nota de pendientes si
+// los hay). Los ZIP se arman y se descargan de a uno, colegio por colegio: así cada
+// colegio queda listo apenas termina, sin juntar todos los informes en memoria.
+// Antes se avisa cuánto puede demorar, con opción de cancelar.
+
+// medido: ~0,4-0,5 s por informe con la pestaña a la vista; en segundo plano el navegador
+// la frena y puede tardar 3 o 4 veces más
+const SEGUNDOS_POR_INFORME_APROX = 0.6;
+
+function limpiarNombreCarpeta(s) {
+  return (s || "")
+    .toString()
+    .replace(/[\\/:*?"<>|]+/g, "-")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function descargarArchivo(blob, nombre) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nombre;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+function accionDescargarTodosLosCursos(lista, btn) {
+  if (!lista || lista.length === 0) return;
+  const porColegio = agrupar(lista);
+  const nColegios = porColegio.size;
+  const nCursos = [...porColegio.values()].reduce((acc, porCurso) => acc + porCurso.size, 0);
+  const segundos = Math.round(lista.length * SEGUNDOS_POR_INFORME_APROX);
+  const tiempo = segundos < 60 ? "menos de un minuto" : `unos ${Math.ceil(segundos / 60)} minutos`;
+  const pendientes = lista.filter((e) => revisionTraspaso(e.puntajes)).length;
+  const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+
+  elegirOpcion({
+    titulo: "⏳ Descargar todos los cursos",
+    texto:
+      `Se van a generar <b>${plural(lista.length, "informe", "informes")}</b> de ${plural(nCursos, "curso", "cursos")} (${plural(nColegios, "colegio", "colegios")}). ` +
+      `Como se arma cada informe uno por uno, <b>puede demorar ${tiempo}</b>. Deja esta pestaña abierta y a la vista mientras tanto: si la dejas en segundo plano, el navegador la frena y demora bastante más.` +
+      `<br/><br/>Se descarga <b>un archivo ZIP por colegio</b>, con una carpeta por cada curso adentro.` +
+      (nColegios > 1 ? ` Si el navegador pregunta si permites que el sitio descargue varios archivos, elige "Permitir".` : "") +
+      (pendientes
+        ? `<br/><br/>⚠ ${plural(pendientes, "estudiante tiene", "estudiantes tienen")} el test mal traspasado (pendientes por revisar): sus informes van marcados con su puntaje en el nombre del archivo y su curso trae una nota con la lista.`
+        : ""),
+    opciones: [
+      ...(pendientes
+        ? [
+            {
+              texto: "🔎 Revisar primero los pendientes",
+              clase: "secundario",
+              accion: () => {
+                estado.filtros.soloTraspaso = true;
+                render();
+                document.getElementById("resumen-traspaso").scrollIntoView({ behavior: "smooth", block: "start" });
+              },
+            },
+          ]
+        : []),
+      { texto: "⬇ Sí, generar y descargar", accion: () => descargarTodosLosCursos(lista, btn) },
+    ],
+  });
+}
+
+async function descargarTodosLosCursos(lista, btn) {
+  const c = cfg();
+  const porColegio = agrupar(lista);
+  const total = lista.length;
+  const fecha = new Date().toISOString().slice(0, 10);
+  const original = btn.textContent;
+  let hechos = 0;
+  let zips = 0;
+  btn.disabled = true;
+  btn.dataset.generando = "1";
+  const t0 = Date.now();
+  try {
+    for (const [colegio, porCurso] of porColegio) {
+      const zip = new JSZip();
+      const carpetasUsadas = new Map();
+      for (const [claveCurso, estudiantes] of porCurso) {
+        let carpeta = limpiarNombreCarpeta(claveCurso) || "Sin curso";
+        const veces = carpetasUsadas.get(carpeta) || 0;
+        carpetasUsadas.set(carpeta, veces + 1);
+        if (veces > 0) carpeta += ` (${veces + 1})`;
+        const ordenados = [...estudiantes].sort((a, b) => compararNombres(a.nombre, b.nombre));
+        await c.agregarInformesACarpeta(zip.folder(carpeta), ordenados, () => {
+          hechos++;
+          btn.textContent = `Generando ${hechos}/${total}… (${colegio || "Sin colegio"})`;
+        });
+      }
+      const contenido = await zip.generateAsync({ type: "blob" });
+      descargarArchivo(contenido, `Informes_${c.prefijoArchivos}_${limpiarParaArchivoKuder(colegio) || "Sin_colegio"}_${fecha}.zip`);
+      zips++;
+      // una pausa corta entre descargas, para que el navegador no las junte ni bloquee
+      await new Promise((r) => setTimeout(r, 600));
+    }
+    const seg = Math.round((Date.now() - t0) / 1000);
+    const duracion = seg < 60 ? `${seg} segundos` : `${Math.floor(seg / 60)} min ${seg % 60} s`;
+    mostrarToast(`Listo: ${total} informes en ${zips} ${zips === 1 ? "archivo ZIP" : "archivos ZIP (uno por colegio)"}, en ${duracion}.`);
+  } catch (err) {
+    console.error(err);
+    mostrarToast(`Se interrumpió la descarga (${zips} de ${porColegio.size} colegios listos). Revisa el mensaje en la consola.`);
+  } finally {
+    delete btn.dataset.generando;
+    btn.disabled = false;
+    btn.textContent = original;
+  }
 }
 
 async function descargarConProgreso(lista, btn) {

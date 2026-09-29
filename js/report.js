@@ -500,22 +500,27 @@ function nombreArchivoZip(estudiantes) {
   return `Informes_${colegio}_${curso}_${fecha}.zip`;
 }
 
-async function descargarInformesMasivo(estudiantes, onProgreso) {
-  const zip = new JSZip();
+// agrega a "carpeta" (el ZIP completo o una subcarpeta de él) el informe de cada
+// estudiante; la usan la descarga de un curso y la de "todos los cursos" (js/app.js)
+async function agregarInformesACarpeta(carpeta, estudiantes, alTerminarUno) {
   const usados = new Map();
-
-  for (let i = 0; i < estudiantes.length; i++) {
-    const e = estudiantes[i];
+  for (const e of estudiantes) {
     const paginas = [construirPaginaPortada(e), ...construirPaginasResultados(e)];
     const blob = await paginasAPdfBlob(paginas);
     let nombre = nombreArchivoInforme(e);
     const veces = usados.get(nombre) || 0;
     usados.set(nombre, veces + 1);
     if (veces > 0) nombre = nombre.replace(/\.pdf$/, `_${veces + 1}.pdf`);
-    zip.file(nombre, blob);
+    carpeta.file(nombre, blob);
     if (typeof store !== "undefined" && store.registrarInformeGenerado) store.registrarInformeGenerado();
-    if (onProgreso) onProgreso(i + 1, estudiantes.length);
+    if (alTerminarUno) alTerminarUno();
   }
+}
+
+async function descargarInformesMasivo(estudiantes, onProgreso) {
+  const zip = new JSZip();
+  let hechos = 0;
+  await agregarInformesACarpeta(zip, estudiantes, () => onProgreso && onProgreso(++hechos, estudiantes.length));
 
   const contenidoZip = await zip.generateAsync({ type: "blob" });
   const url = URL.createObjectURL(contenidoZip);
