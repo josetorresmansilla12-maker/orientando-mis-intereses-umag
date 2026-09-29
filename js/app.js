@@ -63,6 +63,10 @@ const estado = {
   tab: "ingresar",
   editandoId: null,
   filtros: { colegio: "", curso: "", letra: "", nombre: "", soloTraspaso: false },
+  // pestaña "Estudiantes e informes": qué colegios/cursos están desplegados (para que
+  // no se cierren cada vez que se actualiza la lista) y a quién se está editando ahí mismo
+  gruposAbiertos: new Set(),
+  edicionEnLista: null,
   filtrosPapelera: { colegio: "", curso: "", nombre: "" },
 };
 
@@ -191,6 +195,8 @@ function cambiarTest(idTest) {
   }
   // los filtros de un test (colegio, curso...) no tienen sentido en el otro
   estado.filtros = { colegio: "", curso: "", letra: "", nombre: "", soloTraspaso: false };
+  estado.gruposAbiertos = new Set();
+  estado.edicionEnLista = null;
   estado.filtrosPapelera = { colegio: "", curso: "", nombre: "" };
   if (idTest !== "kuder" && TABS_SOLO_KUDER.includes(estado.tab)) estado.tab = "ingresar";
   if (typeof reiniciarPanelOrientadores === "function") reiniciarPanelOrientadores();
@@ -324,10 +330,10 @@ function avisoTraspasoHtml(estudiante, { compacto = false } = {}) {
 
 // ícono de advertencia junto al nombre de un estudiante con el test mal traspasado:
 // al hacer clic abre la corrección rápida de sus puntajes (ver abrirCorreccionPuntajes)
-function botonTraspasoHtml(estudiante) {
+function botonTraspasoHtml(estudiante, accion = "abrirCorreccionPuntajes") {
   const r = revisionTraspaso(estudiante.puntajes);
   if (!r) return "";
-  return `<button type="button" class="btn-traspaso${r.analisis.afecta ? " afecta" : ""}" title="Test mal traspasado: haz clic para corregir sus puntajes" onclick="abrirCorreccionPuntajes('${estudiante.id}')">⚠ ${r.analisis.total}/${SUMA_ESPERADA_KUDER}</button>`;
+  return `<button type="button" class="btn-traspaso${r.analisis.afecta ? " afecta" : ""}" title="Test mal traspasado: haz clic para corregir sus puntajes" onclick="${accion}('${estudiante.id}')">⚠ ${r.analisis.total}/${SUMA_ESPERADA_KUDER}</button>`;
 }
 
 // ventana con varias opciones (además de "Cancelar"): [{ texto, clase, accion }]
@@ -377,7 +383,7 @@ function antesDeGenerarInformes(lista, generar, { individual = false } = {}) {
       : `${pendientes.length === 1 ? "Este estudiante tiene" : `Estos ${pendientes.length} estudiantes tienen`} el test mal traspasado (no suman ${SUMA_ESPERADA_KUDER}): ${nombres}.<br/><br/>Puedes generar la carpeta igual (sus informes van marcados con su puntaje en el nombre del archivo, y la carpeta trae una nota con la lista), o revisarlos primero con el ícono ⚠.`,
     opciones: uno
       ? [
-          { texto: "✏️ Corregir sus puntajes", clase: "secundario", accion: () => abrirCorreccionPuntajes(lista[0].id) },
+          { texto: "✏️ Corregir sus puntajes", clase: "secundario", accion: () => abrirEdicionEnLista(lista[0].id) },
           { texto: "📄 Descargar igual", accion: generar },
         ]
       : [
@@ -774,7 +780,7 @@ function renderCamposPuntaje() {
 function pintarSumaPuntajes(cont, leerCampo) {
   if (!cont) return;
   const c = cfg();
-  cont.className = "suma-puntajes";
+  cont.classList.remove("ok", "afecta", "sin-efecto");
   if (!c.revisarTraspaso) {
     cont.innerHTML = "";
     return;
@@ -1071,11 +1077,23 @@ function renderEstudiantes() {
   // con el filtro de tests mal traspasados se abre todo, para ver al tiro a quién revisar
   const abrirSoloUno = porColegio.size === 1 || estado.filtros.soloTraspaso;
 
+  // si el estudiante que se estaba editando ya no está en la lista (se filtró, se borró),
+  // se cierra su editor; si está, su colegio y su curso quedan desplegados
+  const editando = estado.edicionEnLista ? filtrados.find((e) => e.id === estado.edicionEnLista) : null;
+  // pendientes por revisar que se ven en la lista (para "Guardar y seguir con el siguiente pendiente")
+  estado.pendientesVisibles = filtrados.filter((e) => revisionTraspaso(e.puntajes)).map((e) => e.id);
+  if (!editando) estado.edicionEnLista = null;
+  else {
+    estado.gruposAbiertos.add(claveGrupoColegio(editando.colegio));
+    estado.gruposAbiertos.add(claveGrupoCurso(editando.colegio, etiquetaCurso(editando)));
+  }
+
   let html = "";
   for (const [colegio, porCurso] of porColegio) {
     const totalColegio = [...porCurso.values()].reduce((n, arr) => n + arr.length, 0);
     const soloUnCurso = porCurso.size === 1 || estado.filtros.soloTraspaso;
-    html += `<details class="grupo-colegio" ${abrirSoloUno ? "open" : ""}>
+    const claveCol = claveGrupoColegio(colegio);
+    html += `<details class="grupo-colegio" data-grupo="${escaparHtml(claveCol)}" ${abrirSoloUno || estado.gruposAbiertos.has(claveCol) ? "open" : ""}>
       <summary>🏫 ${escaparHtml(colegio)} <span class="chip">${totalColegio} ${totalColegio === 1 ? "estudiante" : "estudiantes"}</span>${chipTraspasoHtml([...porCurso.values()].flat())}</summary>
       <div class="grupo-colegio-cont">
         <div style="margin-bottom:10px;">
@@ -1086,7 +1104,8 @@ function renderEstudiantes() {
       const clave = colegio + "|" + claveCurso;
       // mismo orden alfabético y mismo número que lleva cada informe (y su PDF en la carpeta)
       const ordenados = [...estudiantesCurso].sort((a, b) => compararNombres(a.nombre, b.nombre));
-      html += `<details class="grupo-curso" ${soloUnCurso ? "open" : ""}>
+      const claveCur = claveGrupoCurso(colegio, claveCurso);
+      html += `<details class="grupo-curso" data-grupo="${escaparHtml(claveCur)}" ${soloUnCurso || estado.gruposAbiertos.has(claveCur) ? "open" : ""}>
         <summary>📘 ${escaparHtml(claveCurso)} <span class="chip">${estudiantesCurso.length}</span>${chipTraspasoHtml(estudiantesCurso)}</summary>
         <div class="grupo-curso-cont">
           <div style="margin-bottom:10px; display:flex; gap:8px; flex-wrap:wrap;">
@@ -1100,18 +1119,19 @@ function renderEstudiantes() {
               ${ordenados
                 .map(
                   (e) => `
-                  <tr>
+                  <tr data-id="${e.id}" class="${estado.edicionEnLista === e.id ? "editando" : ""}">
                     <td style="color:#6a6178;">${c.numeroEnGrupo(e) || ""}</td>
-                    <td><strong>${escaparHtml(e.nombre)}</strong> ${botonTraspasoHtml(e)}<br/><span style="color:#6a6178;font-size:11px;">${escaparHtml(c.formatearRut(e.rut))}</span></td>
+                    <td><strong>${escaparHtml(e.nombre)}</strong> ${botonTraspasoHtml(e, "abrirEdicionEnLista")}<br/><span style="color:#6a6178;font-size:11px;">${escaparHtml(c.formatearRut(e.rut))}</span></td>
                     <td>${chipsAreas(e)}${avisoTraspasoHtml(e)}</td>
                     <td>
                       <div class="fila-acciones">
-                        <button class="chico secundario" onclick="accionEditar('${e.id}')">Editar</button>
+                        <button class="chico secundario" onclick="abrirEdicionEnLista('${e.id}')">${estado.edicionEnLista === e.id ? "Editando…" : "Editar"}</button>
                         <button class="chico" onclick="accionDescargar('${e.id}', this)">Descargar PDF</button>
                         <button class="chico peligro" onclick="accionEliminar('${e.id}')">Eliminar</button>
                       </div>
                     </td>
-                  </tr>`
+                  </tr>
+                  ${estado.edicionEnLista === e.id ? `<tr class="fila-edicion"><td colspan="4">${htmlEditorEnLista(e)}</td></tr>` : ""}`
                 )
                 .join("")}
             </tbody>
@@ -1122,6 +1142,15 @@ function renderEstudiantes() {
     html += `</div></details>`;
   }
   cont.innerHTML = html;
+
+  // recordar qué colegios/cursos se despliegan o pliegan a mano
+  cont.querySelectorAll("details[data-grupo]").forEach((d) =>
+    d.addEventListener("toggle", () => {
+      if (d.open) estado.gruposAbiertos.add(d.dataset.grupo);
+      else estado.gruposAbiertos.delete(d.dataset.grupo);
+    })
+  );
+  if (editando) cablearEditorEnLista(editando);
 
   // botones de descarga y de eliminación grupal (se cablean después de insertar el HTML)
   for (const [colegio, porCurso] of porColegio) {
@@ -1180,6 +1209,227 @@ function renderResumenTraspaso(todos) {
     estado.filtros.soloTraspaso = !estado.filtros.soloTraspaso;
     renderEstudiantes();
   };
+}
+
+// ---------------- edición en la misma lista ("Estudiantes e informes") ----------------
+// "Editar" (y el ícono ⚠) abren un panel justo debajo del estudiante, sin cambiar de
+// pestaña. Al guardar, la lista se actualiza en el lugar: los colegios/cursos abiertos
+// siguen abiertos y la pantalla queda en la misma posición, para seguir con el
+// siguiente. La edición desde "Ingresar datos" sigue igual que antes.
+
+function claveGrupoColegio(colegio) {
+  return "col|" + (colegio || "");
+}
+
+function claveGrupoCurso(colegio, claveCurso) {
+  return "cur|" + (colegio || "") + "|" + claveCurso;
+}
+
+function filaDeEstudiante(id) {
+  return document.querySelector(`#grupos-estudiantes tr[data-id="${id}"]`);
+}
+
+function idsDeFilasEnPantalla() {
+  return [...document.querySelectorAll("#grupos-estudiantes tr[data-id]")].map((tr) => tr.dataset.id);
+}
+
+// vuelve a dibujar la lista dejando la fila de "idAncla" en el mismo lugar de la
+// pantalla; si esa fila ya no está (por ejemplo, dejó de estar pendiente con el filtro
+// "Ver solo estos estudiantes"), se usa la siguiente que sí esté
+function actualizarListaConservandoPosicion(idAncla) {
+  const antes = filaDeEstudiante(idAncla);
+  const top = antes ? antes.getBoundingClientRect().top : null;
+  const ids = idsDeFilasEnPantalla();
+  const siguientes = ids.slice(ids.indexOf(idAncla) + 1);
+  render();
+  if (top === null) return;
+  let fila = filaDeEstudiante(idAncla);
+  for (let i = 0; !fila && i < siguientes.length; i++) fila = filaDeEstudiante(siguientes[i]);
+  if (fila) window.scrollBy(0, fila.getBoundingClientRect().top - top);
+}
+
+function abrirEdicionEnLista(id) {
+  if (estado.tab !== "estudiantes") {
+    abrirCorreccionPuntajes(id);
+    return;
+  }
+  estado.edicionEnLista = id;
+  actualizarListaConservandoPosicion(id);
+  const primero =
+    document.querySelector(".editor-en-lista .ed-candidata input") ||
+    document.querySelector(".editor-en-lista [name='ed_p_" + cfg().areas[0].id + "']");
+  if (primero) {
+    primero.focus({ preventScroll: true });
+    primero.select();
+  }
+  const editor = document.querySelector(".fila-edicion");
+  if (editor) {
+    const r = editor.getBoundingClientRect();
+    if (r.bottom > window.innerHeight) window.scrollBy(0, Math.min(r.bottom - window.innerHeight + 16, r.top - 90));
+  }
+}
+
+function cerrarEdicionEnLista() {
+  const id = estado.edicionEnLista;
+  estado.edicionEnLista = null;
+  actualizarListaConservandoPosicion(id);
+}
+
+// próximo estudiante pendiente por revisar (test mal traspasado) después de "id", en el
+// mismo orden de la lista (mismo curso primero); si no hay más abajo, se busca desde arriba
+function siguientePendienteEnLista(id) {
+  const c = cfg();
+  const ids = idsDeFilasEnPantalla();
+  const idx = ids.indexOf(id);
+  const orden = [...ids.slice(idx + 1), ...ids.slice(0, Math.max(0, idx))];
+  return orden.find((otro) => {
+    const e = c.store.obtener(otro);
+    return e && revisionTraspaso(e.puntajes);
+  }) || null;
+}
+
+function htmlEditorEnLista(e) {
+  const c = cfg();
+  const r = revisionTraspaso(e.puntajes);
+  const candidatas = new Set(r && r.analisis.afecta ? r.analisis.areas.map((v) => v.area.id) : []);
+  const hayOtroPendiente = c.revisarTraspaso && (estado.pendientesVisibles || []).some((otro) => otro !== e.id);
+  return `
+    <div class="editor-en-lista">
+      <div class="editor-en-lista-titulo">✏️ Editando a <b>${escaparHtml(e.nombre)}</b></div>
+      ${
+        r
+          ? `<div class="editor-en-lista-aviso${r.texto.afecta ? " afecta" : ""}">${r.texto.afecta ? "⚠" : "ℹ️"} ${escaparHtml(r.texto.resumen)}. ${escaparHtml(r.texto.accion)}. ${escaparHtml(r.texto.detalle)}${
+              candidatas.size ? " Las áreas marcadas en amarillo son las primeras que conviene revisar en su hoja de respuestas." : ""
+            }</div>`
+          : ""
+      }
+      <div class="editor-en-lista-datos">
+        <div class="ed-ancho"><label>Nombre *</label><input type="text" name="ed_nombre" value="${escaparHtml(e.nombre)}" /></div>
+        <div><label>RUT</label><input type="text" name="ed_rut" value="${escaparHtml(e.rut)}" /></div>
+        <div class="ed-ancho"><label>Colegio *</label><input type="text" name="ed_colegio" value="${escaparHtml(e.colegio)}" /></div>
+        <div><label>Curso *</label><input type="text" name="ed_curso" value="${escaparHtml(e.curso)}" /></div>
+        <div><label>Letra</label><input type="text" name="ed_letra" maxlength="2" value="${escaparHtml(e.letra)}" /></div>
+      </div>
+      <div class="editor-en-lista-puntajes">
+        ${c.areas
+          .map(
+            (a) => `
+          <div class="${candidatas.has(a.id) ? "ed-candidata" : ""}">
+            <label>${a.icono} ${a.nombre}${candidatas.has(a.id) ? " · revisar" : ""}</label>
+            <input type="number" min="${c.puntajeMin}" max="${c.puntajeMax}" step="1" name="ed_p_${a.id}" value="${escaparHtml(e.puntajes[a.id])}" />
+          </div>`
+          )
+          .join("")}
+      </div>
+      <div class="suma-puntajes editor-en-lista-suma"></div>
+      <div class="editor-en-lista-acciones">
+        <button type="button" class="chico" data-ed="guardar">💾 Guardar</button>
+        ${hayOtroPendiente ? `<button type="button" class="chico" data-ed="siguiente">💾 Guardar y seguir con el siguiente pendiente</button>` : ""}
+        <button type="button" class="chico secundario" data-ed="descargar">Guardar y descargar su informe</button>
+        <button type="button" class="chico secundario" data-ed="cancelar">Cancelar</button>
+        <span class="editor-en-lista-ayuda">Enter guarda · Esc cancela</span>
+      </div>
+    </div>`;
+}
+
+function cablearEditorEnLista(e) {
+  const editor = document.querySelector(".editor-en-lista");
+  if (!editor) return;
+  const suma = editor.querySelector(".editor-en-lista-suma");
+  const leer = (idArea) => editor.querySelector(`[name="ed_p_${idArea}"]`).value;
+  pintarSumaPuntajes(suma, leer);
+  editor.querySelectorAll("input[name^='ed_p_']").forEach((inp) => inp.addEventListener("input", () => pintarSumaPuntajes(suma, leer)));
+  editor.querySelector("[data-ed='guardar']").onclick = () => guardarEdicionEnLista(e.id);
+  const btnSiguiente = editor.querySelector("[data-ed='siguiente']");
+  if (btnSiguiente) btnSiguiente.onclick = () => guardarEdicionEnLista(e.id, { seguir: true });
+  editor.querySelector("[data-ed='descargar']").onclick = () => {
+    const actualizado = guardarEdicionEnLista(e.id);
+    if (actualizado) descargarUnInforme(actualizado, null);
+  };
+  editor.querySelector("[data-ed='cancelar']").onclick = cerrarEdicionEnLista;
+  editor.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter") {
+      ev.preventDefault();
+      guardarEdicionEnLista(e.id);
+    } else if (ev.key === "Escape") {
+      ev.preventDefault();
+      cerrarEdicionEnLista();
+    }
+  });
+}
+
+// guarda lo escrito en el editor de la lista; devuelve el estudiante actualizado, o null
+// si algún campo no es válido. "seguir": abre de inmediato al siguiente pendiente.
+function guardarEdicionEnLista(id, { seguir = false } = {}) {
+  const c = cfg();
+  const editor = document.querySelector(".editor-en-lista");
+  if (!editor || !c.store.obtener(id)) return null;
+  const campo = (nombre) => editor.querySelector(`[name="${nombre}"]`);
+  let ok = true;
+  const requerido = (nombre) => {
+    const inp = campo(nombre);
+    const valor = inp.value.trim();
+    inp.classList.toggle("invalido", !valor);
+    if (!valor) ok = false;
+    return valor;
+  };
+  const nombre = requerido("ed_nombre");
+  const colegio = requerido("ed_colegio");
+  const curso = requerido("ed_curso");
+  const puntajes = {};
+  c.areas.forEach((a) => {
+    const inp = campo(`ed_p_${a.id}`);
+    const n = Number(inp.value);
+    const valido = inp.value !== "" && Number.isInteger(n) && n >= c.puntajeMin && n <= c.puntajeMax;
+    inp.classList.toggle("invalido", !valido);
+    if (valido) puntajes[a.id] = n;
+    else ok = false;
+  });
+  if (!ok) {
+    mostrarToast(`Revisa los campos marcados en rojo (los puntajes van de ${c.puntajeMin} a ${c.puntajeMax})`);
+    return null;
+  }
+
+  const siguiente = seguir ? siguientePendienteEnLista(id) : null;
+  const actualizado = c.store.actualizar(id, {
+    nombre,
+    rut: campo("ed_rut").value.trim(),
+    colegio,
+    curso,
+    letra: campo("ed_letra").value.trim().toUpperCase(),
+    puntajes,
+  });
+  estado.edicionEnLista = siguiente;
+  actualizarListaConservandoPosicion(id);
+
+  const r = revisionTraspaso(actualizado.puntajes);
+  const areas = c.calcularAreas(actualizado.puntajes).map((a) => a.nombre);
+  const resultado = areas.length ? `Áreas de interés: ${areas.join(", ")}.` : "Sin áreas destacadas: su informe mostrará todas las áreas (intereses diversos).";
+  mostrarToast(
+    c.revisarTraspaso
+      ? r
+        ? `Guardado. Aún ${r.texto.resumen.toLowerCase()}. ${resultado}`
+        : `Guardado: ya suma ${SUMA_ESPERADA_KUDER}. ${resultado}`
+      : `Guardado. ${resultado}`
+  );
+
+  if (siguiente) {
+    const filaSig = filaDeEstudiante(siguiente);
+    const editorSig = document.querySelector(".fila-edicion");
+    if (filaSig && editorSig) {
+      const r1 = filaSig.getBoundingClientRect();
+      const r2 = editorSig.getBoundingClientRect();
+      if (r1.top < 80 || r2.bottom > window.innerHeight) window.scrollBy(0, r1.top - 120);
+    }
+    const primero =
+      document.querySelector(".editor-en-lista .ed-candidata input") ||
+      document.querySelector(".editor-en-lista input[name^='ed_p_']");
+    if (primero) {
+      primero.focus({ preventScroll: true });
+      primero.select();
+    }
+  }
+  return actualizado;
 }
 
 function accionEliminarGrupo(descripcion, ids) {

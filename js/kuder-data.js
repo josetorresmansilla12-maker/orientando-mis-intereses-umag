@@ -207,7 +207,7 @@ const AREAS_KUDER = [
       "Un alto puntaje en esta área indica una persona empática y orientada al servicio, con un profundo deseo de ayudar a los demás. Disfrutan de actividades que implican interacción social, enfocadas en ayudar, enseñar y apoyar las necesidades de otros, lo que favorece el desarrollo de habilidades blandas y la capacidad de analizar roles sociales.",
     descripcionEstudiante:
       "Un alto puntaje en esta área indica que eres una persona empática y orientada al servicio, con un profundo deseo de ayudar a los demás. Disfrutas de actividades que implican interacción social, enfocándote en ayudar, enseñar y apoyar a otras personas en sus necesidades. Esto favorece el desarrollo de habilidades blandas y la capacidad de analizar los roles sociales.",
-    descripcionCorta: "Ayudar, enseñar y acompañar a otras personas.",
+    descripcionCorta: "Ayudar, enseñar y acompañar a otros.",
     carrerasUMAG: [
       "Trabajo Social",
       "Psicología",
@@ -218,9 +218,17 @@ const AREAS_KUDER = [
       "Kinesiología",
       "Nutrición y Dietética",
       "Fonoaudiología",
+      // todas las pedagogías (enseñar es parte de esta área; así también en el documento
+      // "Kuder - Descripciones por área con carreras UMAG y otras carreras")
       "Pedagogía en Educación Diferencial",
       "Pedagogía en Educación Parvularia",
       "Pedagogía en Educación Básica",
+      "Pedagogía en Castellano y Comunicación",
+      "Pedagogía en Historia y Ciencias Sociales",
+      "Pedagogía en Inglés",
+      "Pedagogía en Matemática",
+      "Pedagogía en Música",
+      "Pedagogía en Educación Física",
       "Técnico de Nivel Superior en Enfermería",
       "Técnico de Nivel Superior en Educación Especial",
       "Técnico de Nivel Superior en Educación Parvularia",

@@ -74,48 +74,59 @@ function construirIntroInformativaKuder() {
   return `
     <div class="informe-intro-texto kuder-inf-intro">
       <p>Este informe presenta tus resultados en el Test de Intereses Vocacionales de Kuder, aplicado por la Universidad de Magallanes. No mide inteligencia ni tiene respuestas correctas o incorrectas: muestra qué actividades te atraen más. Si algo te sorprende, tómalo como una invitación a explorar.</p>
-      <p><b>¿Por qué existen los test vocacionales?</b> La orientación vocacional nació en 1908 en Boston (EE.UU.), cuando Frank Parsons creó una oficina para orientar a jóvenes e inmigrantes que llegaban sin un plan a trabajar en las nuevas industrias. Los test se masificaron con las guerras mundiales, cuando el ejército de EE.UU. evaluó a millones de reclutas para asignar a cada uno la tarea en que rendiría mejor. Tras la Segunda Guerra Mundial se usaron para orientar a quienes volvían a estudiar o trabajar, y después llegaron a los colegios.</p>
-      <p><b>¿Qué es el Test de Kuder?</b> Lo creó el psicólogo estadounidense G. Frederic Kuder a fines de la década de 1930 y es uno de los más usados del mundo. Según tus preferencias entre distintas actividades, arma un perfil de 10 áreas de interés (7 puntos o más indica un interés destacado).</p>
+      <p><b>¿Por qué existen los test vocacionales?</b> La orientación vocacional nació en 1908 en Boston (EE.UU.): Frank Parsons abrió una oficina para orientar a jóvenes e inmigrantes que llegaban sin un plan a las nuevas industrias. Los test se masificaron en las guerras mundiales, cuando el ejército de EE.UU. evaluó a millones de reclutas para asignarles la tarea en que rendirían mejor; luego se usaron para orientar a veteranos y llegaron a los colegios.</p>
+      <p><b>¿Qué es el Test de Kuder?</b> Lo creó el psicólogo estadounidense G. Frederic Kuder a fines de la década de 1930 y es uno de los inventarios de intereses más usados. Es un test de autoinforme: según tus preferencias entre distintas actividades, arma un perfil de 10 áreas que muestra el interés que tú percibes en cada una (en este informe, 7 puntos o más indica un interés destacado).</p>
     </div>`;
 }
 
 function construirSupuestosPrincipiosKuder() {
+  // Supuestos y principios de la teoría de la elección vocacional de John L. Holland
+  // (1959; "Making Vocational Choices", 1973), que las evaluaciones actuales de Kuder
+  // integran. El informe de muestra los presentaba como "del test de Kuder": se
+  // corrigió la atribución. El que habla del autoinforme sí es propio de Kuder y va en
+  // el párrafo "¿Qué es el Test de Kuder?".
   const supuestos = [
-    "Los intereses se agrupan en áreas ocupacionales que reflejan preferencias y motivaciones (influidas por la genética y el entorno).",
-    "Las personas buscan entornos donde usar sus destrezas, capacidades, actitudes y valores, en roles que les resulten satisfactorios.",
-    "La conducta resulta de la interacción entre intereses y ambiente.",
+    "Las personas se pueden agrupar según sus intereses, que reflejan preferencias y motivaciones (influidas por la herencia y el entorno).",
+    "Buscamos entornos donde usar nuestras capacidades, expresar nuestras actitudes y valores y asumir roles satisfactorios.",
+    "La conducta de una persona resulta de la interacción entre sus intereses y las características del ambiente.",
   ];
   const principios = [
-    "Elegir una carrera es una forma de expresar tus intereses personales.",
-    "Quienes ejercen una misma profesión suelen tener intereses parecidos.",
+    "Elegir una carrera es una forma de expresar tu personalidad e intereses.",
+    "Quienes ejercen una misma profesión suelen tener intereses y trayectorias parecidas.",
     "La satisfacción, la estabilidad y el logro en el trabajo dependen de qué tanto coinciden tus intereses con el ambiente laboral.",
-    "Los resultados muestran el interés que percibes en cada actividad.",
   ];
   const lista = (items) => `<ol>${items.map((t) => `<li>${t}</li>`).join("")}</ol>`;
   return `
+    <div class="kuder-inf-modelo-origen">El modelo detrás del test: la teoría de la elección vocacional de John L. Holland (1959), que hoy integran las evaluaciones de Kuder.</div>
     <div class="kuder-inf-modelo">
       <div class="kuder-inf-modelo-caja">
-        <div class="kuder-inf-modelo-titulo">Supuestos básicos del test</div>
+        <div class="kuder-inf-modelo-titulo">Supuestos básicos</div>
         ${lista(supuestos)}
       </div>
       <div class="kuder-inf-modelo-caja">
-        <div class="kuder-inf-modelo-titulo">Principios del test</div>
+        <div class="kuder-inf-modelo-titulo">Principios</div>
         ${lista(principios)}
       </div>
     </div>`;
 }
 
-// carreras UMAG de un área en formato compacto para la hoja 1: primero las
-// profesionales separadas por coma y, en una segunda línea, las técnicas con el
-// prefijo "Técnico de Nivel Superior en" escrito una sola vez (en vez de repetirlo en
-// cada una), para que las 10 áreas quepan en la misma hoja.
+// carreras UMAG de un área en formato compacto para la hoja 1, en dos grupos con su
+// rótulo: "Carreras profesionales:" y "Técnico de Nivel Superior en:" (este último
+// escrito una sola vez en vez de repetirlo en cada carrera). Las pedagogías se juntan
+// en una sola frase ("Pedagogías en A, B y C"), sin omitir ninguna, para que las 10
+// áreas quepan en la misma hoja.
 function textoCarrerasUmagCompactoKuder(area) {
   const { profesionales, tecnicas } = clasificarCarreras(area.carrerasUMAG);
-  const PREFIJO = /^T[eé]cnico de Nivel Superior en\s+/i;
+  const PREFIJO_TNS = /^T[eé]cnico de Nivel Superior en\s+/i;
+  const PREFIJO_PED = /^Pedagog[ií]a en\s+/i;
+  const pedagogias = profesionales.filter((c) => PREFIJO_PED.test(c)).map((c) => c.replace(PREFIJO_PED, ""));
+  const otras = profesionales.filter((c) => !PREFIJO_PED.test(c));
+  if (pedagogias.length === 1) otras.push(`Pedagogía en ${pedagogias[0]}`);
+  else if (pedagogias.length > 1) otras.push(`Pedagogías en ${unirListaKuder(pedagogias, "y")}`);
   const partes = [];
-  if (profesionales.length) partes.push(`<div>${profesionales.join(", ")}.</div>`);
+  if (otras.length) partes.push(`<div><b>Carreras profesionales:</b> ${otras.join(", ")}.</div>`);
   if (tecnicas.length) {
-    partes.push(`<div><b>Técnico de Nivel Superior en:</b> ${tecnicas.map((c) => c.replace(PREFIJO, "")).join(", ")}.</div>`);
+    partes.push(`<div><b>Técnico de Nivel Superior en:</b> ${tecnicas.map((c) => c.replace(PREFIJO_TNS, "")).join(", ")}.</div>`);
   }
   return partes.join("");
 }
@@ -189,14 +200,16 @@ function resolverHojaInformativaKuder() {
   const LIMITE_PAGINA_PX = ALTO_PAGINA_PX - PADDING_INFERIOR_PX;
   const lineaMuestra = `<div class="linea-estudiante"><span>N° 1</span><span><b>Nombre:</b> Nombre de Prueba</span><span><b>RUT:</b> 11.111.111-1</span></div>`;
   const banner = construirBanner("Informe de Intereses Vocacionales", "Test de Intereses Vocacionales de Kuder · Enseñanza Media · UMAG");
-  const pie = construirCalloutSiguienteKuder("Conoce tus resultados en la página siguiente") + construirFooter();
+  const pie = construirCalloutSiguienteKuder("Conoce tus resultados en la página siguiente") + `<div class="kuder-inf-pie">${construirFooter()}</div>`;
 
   // variantes de más holgada a más compacta; se usa la primera que quepa en una hoja
+  // la definición de cada área va siempre (no se sacrifica para que quepa): si no
+  // cabe, se achica la letra en pasos pequeños
   const variantes = [
     { conDescripcion: true, clase: "" },
-    { conDescripcion: false, clase: "" },
-    { conDescripcion: false, clase: "kuder-inf-ajustada" },
-    { conDescripcion: false, clase: "kuder-inf-compacta" },
+    { conDescripcion: true, clase: "kuder-inf-ajustada" },
+    { conDescripcion: true, clase: "kuder-inf-compacta" },
+    { conDescripcion: true, clase: "kuder-inf-compacta kuder-inf-mini" },
   ];
   for (const v of variantes) {
     const cuerpo = `

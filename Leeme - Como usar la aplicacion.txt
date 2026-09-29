@@ -53,7 +53,12 @@ Paso 2: las pestañas
      aparecen los archivos en la carpeta, para detectar si falta alguno al imprimir.
    - "Informe grupal para el orientador": el informe del curso completo para el
      colegio (en los dos tests), sin tener que volver a subir el archivo.
-   - Editar o eliminar estudiantes (lo eliminado queda en la Papelera).
+   - Editar a un estudiante ahí mismo: "Editar" (o el ícono ⚠ de un pendiente) abre
+     un panel justo debajo de él, sin cambiar de pestaña. Al guardar (botón o Enter),
+     la lista se actualiza en el mismo lugar, con los cursos abiertos y en la misma
+     posición. En Kuder, "Guardar y seguir con el siguiente pendiente" abre al tiro al
+     próximo estudiante por revisar.
+   - Eliminar estudiantes (lo eliminado queda en la Papelera).
 
 3. "Estadísticas": resumen de cuántos estudiantes hay cargados en el test elegido y
    cuántos salieron con interés en cada área.
@@ -80,10 +85,11 @@ la hoja de respuestas al cuadro). La app lo revisa sola:
   aparece un resumen, un aviso en el colegio y el curso ("⚠ 5 por revisar") y un
   ícono ⚠ con su suma junto al nombre de cada uno (por ejemplo "⚠ 44/45"); con
   "Ver solo estos estudiantes" ves solo a los que revisar.
-- Para corregir, haz clic en el ícono ⚠: se abren sus 10 puntajes (las áreas que
-  conviene revisar primero van marcadas en amarillo) con la suma en vivo. Al guardar
-  se recalculan sus áreas de interés y, si ya suma 45, el aviso desaparece. No hace
-  falta tocar el Excel ni volver a subir el archivo.
+- Para corregir, haz clic en el ícono ⚠ (o en "Editar"): se abre, debajo del
+  estudiante, el panel con sus 10 puntajes (las áreas que conviene revisar primero van
+  marcadas en amarillo) y la suma en vivo. Al guardar se recalculan sus áreas de
+  interés y, si ya suma 45, el aviso desaparece. No hace falta tocar el Excel ni volver
+  a subir el archivo.
 - Al cargar los archivos, la ventana de importación da dos opciones:
   a) "Cargar y descargar la carpeta del curso": se genera altiro la carpeta (ZIP) con
      todos los informes. Los de quienes no suman 45 llevan la suma en el nombre del
