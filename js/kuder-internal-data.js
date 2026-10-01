@@ -16,7 +16,8 @@
 // Auditor" = Auditoría, "Ingeniería Agronómica" = Agronomía).
 const CARRERAS_POTENCIALES_KUDER = {
   exterior: ["Medicina Veterinaria", "Ingeniería Forestal", "Geología", "Ciencias Ambientales", "Oceanografía"],
-  mecanica: ["Ingeniería en Minas", "Ingeniería Mecatrónica", "Mecánica Automotriz", "Ingeniería Aeroespacial", "Ingeniería en Robótica"],
+  // sin "Mecánica Automotriz": la UMAG ya imparte Ingeniería Mecánica, así que es redundante
+  mecanica: ["Ingeniería en Minas", "Ingeniería Mecatrónica", "Ingeniería Aeroespacial", "Ingeniería en Robótica"],
   calculo: ["Estadística", "Ingeniería Civil Industrial", "Licenciatura en Matemáticas", "Ingeniería en Telecomunicaciones"],
   cientifica: ["Odontología", "Química y Farmacia", "Bioquímica", "Ingeniería Biomédica", "Medicina Veterinaria"],
   persuasiva: ["Marketing", "Publicidad", "Relaciones Internacionales", "Ciencias Políticas"],
