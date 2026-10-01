@@ -1468,3 +1468,9 @@ tr.marcado-visual:hover > td.celda-marca { opacity: 1; }
 .mx-ejemplo { margin-top: 3px; font-size: 11px; color: var(--texto-suave); word-break: break-word; }
 .mx-editable { font-weight: 400; opacity: 0.8; }
 .mx-avisos { font-size: 12px; line-height: 1.5; color: var(--texto-suave); background: #f4f3f6; border-radius: 7px; padding: 8px 10px; }
+
+/* Uso interno: lista de cursos que van en la descarga de CSV */
+.csv-cursos-detalle { margin-top: 6px; }
+.csv-cursos-detalle summary { cursor: pointer; color: var(--morado); font-weight: 600; }
+.csv-cursos-detalle ul { margin: 6px 0 0; padding-left: 18px; }
+.csv-cursos-detalle li { margin-bottom: 3px; }

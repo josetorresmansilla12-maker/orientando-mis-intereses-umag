@@ -36,6 +36,8 @@ function ubicarEncabezadosKuder(filas) {
     const idxColegio = fila.findIndex((c) => normalizarTextoKuder(c) === "colegio");
     const idxCurso = fila.findIndex((c) => normalizarTextoKuder(c) === "curso");
     const idxLetra = fila.findIndex((c) => normalizarTextoKuder(c) === "letra");
+    const idxContacto = fila.findIndex((c) => normalizarTextoKuder(c) === "contacto");
+    const idxNacimiento = fila.findIndex((c) => normalizarTextoKuder(c) === "nacimiento");
 
     const idxPorArea = {};
     AREAS_KUDER.forEach((a) => {
@@ -46,9 +48,15 @@ function ubicarEncabezadosKuder(filas) {
     const tieneTodasLasAreas = AREAS_KUDER.every((a) => idxPorArea[a.id] !== undefined);
     if (!tieneTodasLasAreas) continue;
 
-    return { filaEncabezado: f, idxNombre, idxRut, idxColegio, idxCurso, idxLetra, idxPorArea };
+    return { filaEncabezado: f, idxNombre, idxRut, idxColegio, idxCurso, idxLetra, idxContacto, idxNacimiento, idxPorArea };
   }
   return null;
+}
+
+// fecha de nacimiento como texto "dd-mm-aaaa" (en un Excel puede venir como fecha real)
+function textoFechaKuder(valor) {
+  if (typeof valor === "number" && Number.isFinite(valor)) return XLSX.SSF.format("dd-mm-yyyy", valor);
+  return (valor ?? "").toString().trim();
 }
 
 // procesa un ArrayBuffer (.xlsx o .csv, SheetJS detecta el formato solo) y devuelve
@@ -56,7 +64,10 @@ function ubicarEncabezadosKuder(filas) {
 // que los traiga) y dos listas separadas: errores (la fila se descarta) y
 // advertencias (la fila igual se importa, pero conviene revisarla).
 function leerPlanillaKuder(arrayBuffer) {
-  const libro = XLSX.read(arrayBuffer, { type: "array" });
+  // raw: en los CSV, cada celda se lee como texto tal cual (si no, la librería convierte
+  // fechas como "06-10-2007" en números y las lee al estilo de EE.UU.); los puntajes se
+  // convierten a número más abajo
+  const libro = XLSX.read(arrayBuffer, { type: "array", raw: true });
   const hoja = libro.Sheets[libro.SheetNames[0]];
   const filas = XLSX.utils.sheet_to_json(hoja, { header: 1, defval: "", blankrows: false });
 
@@ -73,7 +84,7 @@ function leerPlanillaKuder(arrayBuffer) {
     };
   }
 
-  const { filaEncabezado, idxNombre, idxRut, idxColegio, idxCurso, idxLetra, idxPorArea } = ubicacion;
+  const { filaEncabezado, idxNombre, idxRut, idxColegio, idxCurso, idxLetra, idxContacto, idxNacimiento, idxPorArea } = ubicacion;
   const estudiantes = [];
   const errores = [];
   const advertencias = [];
@@ -126,6 +137,9 @@ function leerPlanillaKuder(arrayBuffer) {
     estudiantes.push({
       nombre,
       rut: idxRut !== -1 ? (fila[idxRut] || "").toString().trim() : "",
+      // no se usan en los informes, pero se guardan para devolverlos en el CSV (Uso interno)
+      contacto: idxContacto !== -1 ? (fila[idxContacto] || "").toString().trim() : "",
+      nacimiento: idxNacimiento !== -1 ? textoFechaKuder(fila[idxNacimiento]) : "",
       puntajes,
     });
   }

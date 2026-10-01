@@ -126,6 +126,10 @@ class Store {
       nombre: datos.nombre || "",
       rut: datos.rut || "",
       fecha: datos.fecha || "",
+      // Kuder: columnas de la planilla que no usan los informes, pero que se devuelven
+      // al descargar los CSV (solo se guardan si vienen)
+      ...(datos.contacto ? { contacto: datos.contacto } : {}),
+      ...(datos.nacimiento ? { nacimiento: datos.nacimiento } : {}),
       puntajes,
       eliminado: false,
       creadoEn: ahora,

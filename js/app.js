@@ -160,6 +160,7 @@ function render() {
   if (estado.tab === "correccion") renderCorreccion();
   if (estado.tab === "papelera") renderPapelera();
   if (estado.tab === "estadisticas") renderEstadisticas();
+  if (estado.tab === "kuder-interno" && typeof renderCsvInternoKuder === "function") renderCsvInternoKuder();
 }
 
 function cablearTabs() {
@@ -755,6 +756,8 @@ function cablearImportacion() {
           nuevos.push({
             nombre: e.nombre,
             rut: e.rut,
+            contacto: e.contacto,
+            nacimiento: e.nacimiento,
             colegio: datosCurso.colegio,
             curso: datosCurso.curso,
             letra: datosCurso.letra,

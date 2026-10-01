@@ -220,12 +220,24 @@ function construirTablaRankingKuder(titulo, filas, columnas) {
     </div>`;
 }
 
-function construirBloqueRankingColegiosInterno(stats) {
-  return construirTablaRankingKuder("Colegios que más han solicitado el test (por N° de aplicaciones)", stats.rankingColegios, [
+// con muchos colegios (hasta 50 archivos por informe) la tabla no cabe en una hoja: se
+// parte en tramos de hasta FILAS_POR_TRAMO_RANKING filas, cada uno su propio bloque
+// (los siguientes con "(continuación)"), y la paginación los reparte en hojas
+const FILAS_POR_TRAMO_RANKING = 30;
+
+function construirBloquesRankingColegiosInterno(stats) {
+  const titulo = "Colegios que más han solicitado el test (por N° de aplicaciones)";
+  const columnas = [
     { key: "colegio", label: "Colegio" },
     { key: "aplicaciones", label: "Aplicaciones", align: "right" },
     { key: "estudiantes", label: "Estudiantes", align: "right" },
-  ]);
+  ];
+  const filas = stats.rankingColegios;
+  const bloques = [];
+  for (let desde = 0; desde < filas.length || desde === 0; desde += FILAS_POR_TRAMO_RANKING) {
+    bloques.push(construirTablaRankingKuder(desde === 0 ? titulo : `${titulo} (continuación)`, filas.slice(desde, desde + FILAS_POR_TRAMO_RANKING), columnas));
+  }
+  return bloques;
 }
 
 function construirBloqueRankingNivelesInterno(stats) {
@@ -354,7 +366,7 @@ function construirTodasLasPaginasInternoKuder(stats, periodo) {
 
   const bloques = [
     construirStatsInternasKuder(stats),
-    construirBloqueRankingColegiosInterno(stats),
+    ...construirBloquesRankingColegiosInterno(stats),
     construirBloqueRankingNivelesInterno(stats),
     construirBloqueGraficoAreasInterno(stats),
     ...htmlTarjetasArea,
