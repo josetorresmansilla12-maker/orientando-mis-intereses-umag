@@ -60,12 +60,22 @@ Paso 2: las pestañas
    - Descargar el informe de un estudiante en PDF ("Descargar PDF").
    - "Descargar todos los cursos": genera los informes de todos los cursos cargados
      (o de los filtrados) y descarga un ZIP por colegio, con una carpeta por curso
-     adentro. Antes avisa cuánto puede demorar; conviene dejar la pestaña a la vista
-     mientras genera, y si el navegador pregunta por descargar varios archivos,
-     elegir "Permitir".
-   - Descargar todos los informes de un curso en un ZIP. Cada informe lleva, de forma
-     discreta, el número del estudiante (N° 1, N° 2...) en el mismo orden en que
-     aparecen los archivos en la carpeta, para detectar si falta alguno al imprimir.
+     adentro. Antes muestra lo que se va a exportar: cada colegio, sus cursos, el
+     nombre de la carpeta de cada curso (se puede corregir ahí mismo) y cuántos
+     archivos lleva. Solo exporta cuando confirmas. Conviene dejar la pestaña a la
+     vista mientras genera, y si el navegador pregunta por descargar varios
+     archivos, elegir "Permitir".
+   - Descargar todos los informes de un curso en un ZIP.
+   - Nombres de carpetas y archivos:
+     * Carpeta (o ZIP) de un curso: "KUDER_Colegio_Alfa_SegundoC_2026-10-02" (en
+       8° básico empieza con "8VO").
+     * Cada informe: "01 - Nombre Alumno - Segundo C - Colegio Alfa.pdf". El número
+       va del 1 al total de archivos de la carpeta, sin saltos, en orden alfabético,
+       y es el mismo N° que lleva impreso el informe: si al imprimir falta una hoja,
+       sabes qué número falta y de quién es.
+     * Cada informe muestra arriba, en letra chica y en una sola línea, el N°,
+       nombre, RUT, curso y colegio del estudiante (si el colegio tiene un nombre
+       muy largo, la letra se achica un poco para que quepa).
    - "Informe grupal para el orientador": el informe del curso completo para el
      colegio (en los dos tests), sin tener que volver a subir el archivo.
    - Editar a un estudiante ahí mismo: "Editar" (o el ícono ⚠ de un pendiente) abre
@@ -135,7 +145,7 @@ la hoja de respuestas al cuadro). La app lo revisa sola:
 - Al cargar los archivos, la ventana de importación da dos opciones:
   a) "Cargar y descargar la carpeta del curso": se genera altiro la carpeta (ZIP) con
      todos los informes. Los de quienes no suman 45 llevan la suma en el nombre del
-     archivo, por ejemplo "Informe_Kuder_Juan_Perez_2doA (44 de 45)" (no se puede usar
+     archivo, por ejemplo "07 - Juan Perez - Segundo C - Colegio Alfa (44 de 45)" (no se puede usar
      "44/45" porque la barra no está permitida en nombres de archivo), y la carpeta
      trae una nota, "_Revisar_tests_mal_traspasados.txt", con la lista de quiénes
      revisar y qué área mirar primero. Si cargas varios cursos juntos, se descarga

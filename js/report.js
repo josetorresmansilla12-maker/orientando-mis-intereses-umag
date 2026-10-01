@@ -30,13 +30,16 @@ function compararNombres(a, b) {
   return (a || "").localeCompare(b || "", "es", { sensitivity: "base" });
 }
 
-// número de lista del estudiante dentro de su propio colegio+curso+letra (1, 2, 3...),
-// en el mismo orden alfabético con el que va a aparecer su informe dentro de la carpeta
-// al descargar el curso completo. Se recalcula en cada informe (no se guarda en el
-// estudiante) para que siempre refleje el curso tal como está ahora mismo.
-function calcularNumeroEnGrupo(estudiante) {
-  if (typeof store === "undefined") return null;
-  const grupo = store
+// número de lista del estudiante (1, 2, 3...) y total de su grupo. Al armar una
+// carpeta, cada estudiante trae su número dentro de ESA carpeta (numeroEnCarpeta, ver
+// numerarParaCarpeta): así los archivos van del 1 al total sin saltos, y el N° impreso
+// en el informe es el mismo del nombre del archivo. Si no, es su número dentro de su
+// propio colegio+curso+letra, en orden alfabético (el mismo que tendría al descargar el
+// curso completo). Se recalcula siempre (no se guarda en el estudiante).
+function numeracionEnGrupo(storeDelTest, estudiante) {
+  if (estudiante.numeroEnCarpeta) return { numero: estudiante.numeroEnCarpeta, total: estudiante.totalEnCarpeta || 0 };
+  if (!storeDelTest) return { numero: null, total: 0 };
+  const grupo = storeDelTest
     .listar()
     .filter(
       (e) =>
@@ -46,7 +49,81 @@ function calcularNumeroEnGrupo(estudiante) {
     )
     .sort((a, b) => compararNombres(a.nombre, b.nombre));
   const idx = grupo.findIndex((e) => e.id === estudiante.id);
-  return idx === -1 ? null : idx + 1;
+  return { numero: idx === -1 ? null : idx + 1, total: grupo.length };
+}
+
+function calcularNumeroEnGrupo(estudiante) {
+  return numeracionEnGrupo(typeof store === "undefined" ? null : store, estudiante).numero;
+}
+
+// copias de los estudiantes de una carpeta, en orden alfabético y numeradas del 1 al
+// total (los informes y los nombres de archivo usan ese número)
+function numerarParaCarpeta(estudiantes) {
+  const ordenados = [...estudiantes].sort((a, b) => compararNombres(a.nombre, b.nombre));
+  return ordenados.map((e, i) => ({ ...e, numeroEnCarpeta: i + 1, totalEnCarpeta: ordenados.length }));
+}
+
+// ==================== nombres de carpetas y archivos (los dos tests) ====================
+// Carpeta (o ZIP) de un curso: "KUDER_Colegio_Alfa_SegundoC_2026-10-02" ("8VO_..." en 8°).
+// Archivo de cada informe: "01 - Nombre Alumno - Segundo C - Colegio Alfa.pdf", con el
+// número correlativo de la carpeta adelante (con cero a la izquierda, para que el
+// explorador de archivos los ordene bien): si al imprimir falta una hoja, se sabe qué
+// número falta y de quién es.
+
+function limpiarParaCarpeta(s) {
+  return (s || "")
+    .toString()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function limpiarParaNombreArchivo(s) {
+  return (s || "")
+    .toString()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9 .,()&'-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// fecha de hoy (del computador, no en hora UTC) para los nombres: 2026-10-02
+function fechaParaArchivo() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function nombreColegioParaCarpeta(estudiantes) {
+  const colegios = [...new Set(estudiantes.map((e) => e.colegio).filter(Boolean))];
+  return colegios.length === 1 ? limpiarParaCarpeta(colegios[0]) || "Colegio" : colegios.length ? "VariosColegios" : "SinColegio";
+}
+
+function nombreCarpetaCurso(prefijo, estudiantes) {
+  const cursos = [...new Set(estudiantes.map((e) => (e.curso || "") + (e.letra || "")).filter(Boolean))];
+  const curso = cursos.length === 1 ? limpiarParaCarpeta(cursos[0]) || "Curso" : cursos.length ? "VariosCursos" : "SinCurso";
+  return `${prefijo}_${nombreColegioParaCarpeta(estudiantes)}_${curso}_${fechaParaArchivo()}`;
+}
+
+// ZIP con varios cursos (una carpeta por curso adentro)
+function nombreZipVariosCursos(prefijo, estudiantes, nCursos) {
+  return `${prefijo}_${nombreColegioParaCarpeta(estudiantes)}_${nCursos}cursos_${fechaParaArchivo()}.zip`;
+}
+
+function numeroConCeros(numero, total) {
+  return String(numero).padStart(Math.max(2, String(total || 0).length), "0");
+}
+
+// "01 - Nombre Alumno - Segundo C - Colegio Alfa.pdf"; "extra" va al final, antes de ".pdf"
+function nombreArchivoNumerado(estudiante, { numero, total }, extra = "") {
+  const partes = [
+    numero ? numeroConCeros(numero, total) : "",
+    limpiarParaNombreArchivo(capitalizarNombre(estudiante.nombre)) || "Estudiante",
+    limpiarParaNombreArchivo([estudiante.curso, estudiante.letra].filter(Boolean).join(" ")),
+    limpiarParaNombreArchivo(estudiante.colegio),
+  ].filter(Boolean);
+  return `${partes.join(" - ")}${extra}.pdf`;
 }
 
 function iconoCirculo(area, tamano) {
@@ -101,13 +178,56 @@ function construirBanner(titulo, subtitulo) {
 // al borde de la hoja.
 function construirLineaEstudiante(estudiante, { inicioPagina = false } = {}) {
   const numero = calcularNumeroEnGrupo(estudiante);
+  const curso = [estudiante.curso, estudiante.letra].filter(Boolean).join(" ");
   return `
     ${inicioPagina ? '<div class="espaciador-inicio-pagina"></div>' : ""}
-    <div class="linea-estudiante">
+    ${envolverLineaEstudiante(`
       ${numero ? `<span>N° ${numero}</span>` : ""}
       <span><b>Nombre:</b> ${capitalizarNombre(estudiante.nombre) || "—"}</span>
       <span><b>RUT:</b> ${estudiante.rut || "—"}</span>
-    </div>`;
+      <span><b>Curso:</b> ${curso || "—"}</span>
+      <span class="linea-colegio"><b>Colegio:</b> ${estudiante.colegio || "—"}</span>`)}`;
+}
+
+// La línea "N° · Nombre · RUT · Curso · Colegio" de arriba de cada hoja va siempre en
+// una sola línea, en letra chica. Si con un colegio o nombre largo no cabe, se achica
+// un poco la letra (de 11 hasta 9 px); solo si ni así cabe, se corta el final del nombre
+// del colegio (que igual aparece completo en la credencial de la hoja de resultados).
+const TAMANOS_LINEA_ESTUDIANTE = [
+  { letra: 11, separacion: 16 },
+  { letra: 10.5, separacion: 14 },
+  { letra: 10, separacion: 12 },
+  { letra: 9.5, separacion: 10 },
+  { letra: 9, separacion: 9 },
+];
+const cacheEstiloLineaEstudiante = new Map();
+
+function envolverLineaEstudiante(interior) {
+  let estilo = cacheEstiloLineaEstudiante.get(interior);
+  if (estilo === undefined) {
+    estilo = "";
+    const host = document.getElementById("render-offscreen");
+    if (host) {
+      const pagina = document.createElement("div");
+      pagina.className = "informe-page";
+      const linea = document.createElement("div");
+      linea.className = "linea-estudiante";
+      linea.innerHTML = interior;
+      pagina.appendChild(linea);
+      host.appendChild(pagina);
+      const colegio = linea.querySelector(".linea-colegio");
+      for (const t of TAMANOS_LINEA_ESTUDIANTE) {
+        linea.style.fontSize = `${t.letra}px`;
+        linea.style.gap = `${t.separacion}px`;
+        const cabe = linea.scrollWidth <= linea.clientWidth && (!colegio || colegio.scrollWidth <= colegio.clientWidth);
+        estilo = t === TAMANOS_LINEA_ESTUDIANTE[0] ? "" : `font-size:${t.letra}px; gap:${t.separacion}px;`;
+        if (cabe) break;
+      }
+      pagina.remove();
+    }
+    cacheEstiloLineaEstudiante.set(interior, estilo);
+  }
+  return `<div class="linea-estudiante"${estilo ? ` style="${estilo}"` : ""}>${interior}</div>`;
 }
 
 function construirFooter() {
@@ -459,16 +579,9 @@ async function paginasAPdfBlob(paginas) {
   return pdf.output("blob");
 }
 
+// "01 - Nombre Alumno - 8vo A - Colegio.pdf" (ver nombreArchivoNumerado)
 function nombreArchivoInforme(estudiante) {
-  const limpiar = (s) =>
-    (s || "")
-      .normalize("NFD")
-      .replace(/[̀-ͯ]/g, "")
-      .replace(/[^a-zA-Z0-9]+/g, "_")
-      .replace(/^_+|_+$/g, "");
-  const nombre = limpiar(estudiante.nombre) || "estudiante";
-  const curso = limpiar((estudiante.curso || "") + (estudiante.letra || ""));
-  return `Informe_${nombre}${curso ? "_" + curso : ""}.pdf`;
+  return nombreArchivoNumerado(estudiante, numeracionEnGrupo(typeof store === "undefined" ? null : store, estudiante));
 }
 
 async function descargarInformeIndividual(estudiante) {
@@ -485,26 +598,17 @@ async function descargarInformeIndividual(estudiante) {
   if (typeof store !== "undefined" && store.registrarInformeGenerado) store.registrarInformeGenerado();
 }
 
+// el ZIP de un curso se llama igual que su carpeta: "8VO_Colegio_8voA_2026-10-02.zip"
 function nombreArchivoZip(estudiantes) {
-  const limpiar = (s) =>
-    (s || "")
-      .normalize("NFD")
-      .replace(/[̀-ͯ]/g, "")
-      .replace(/[^a-zA-Z0-9]+/g, "_")
-      .replace(/^_+|_+$/g, "");
-  const colegios = [...new Set(estudiantes.map((e) => e.colegio).filter(Boolean))];
-  const cursos = [...new Set(estudiantes.map((e) => (e.curso || "") + (e.letra || "")).filter(Boolean))];
-  const colegio = colegios.length === 1 ? limpiar(colegios[0]) : "VariosColegios";
-  const curso = cursos.length === 1 ? limpiar(cursos[0]) : "VariosCursos";
-  const fecha = new Date().toISOString().slice(0, 10);
-  return `Informes_${colegio}_${curso}_${fecha}.zip`;
+  return `${nombreCarpetaCurso("8VO", estudiantes)}.zip`;
 }
 
 // agrega a "carpeta" (el ZIP completo o una subcarpeta de él) el informe de cada
-// estudiante; la usan la descarga de un curso y la de "todos los cursos" (js/app.js)
+// estudiante, numerados del 1 al total; la usan la descarga de un curso y la de
+// "todos los cursos" (js/app.js)
 async function agregarInformesACarpeta(carpeta, estudiantes, alTerminarUno) {
   const usados = new Map();
-  for (const e of estudiantes) {
+  for (const e of numerarParaCarpeta(estudiantes)) {
     const paginas = [construirPaginaPortada(e), ...construirPaginasResultados(e)];
     const blob = await paginasAPdfBlob(paginas);
     let nombre = nombreArchivoInforme(e);

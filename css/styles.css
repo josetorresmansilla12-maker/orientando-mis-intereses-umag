@@ -650,10 +650,15 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
 .linea-estudiante {
   margin: 10px 30px 0;
   display: flex;
-  gap: 22px;
+  gap: 16px;
   font-size: 11px;
   color: var(--texto-suave);
+  white-space: nowrap;
 }
+/* siempre en una sola línea (la hoja 1 de Kuder se mide con esa altura): si no cabe,
+   se achica la letra (envolverLineaEstudiante, js/report.js) y, como último recurso,
+   se acorta el nombre del colegio */
+.linea-estudiante .linea-colegio { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .linea-estudiante b { color: var(--morado-oscuro); }
 /* espaciador real (no margin/padding) para el inicio de una página que no
    tiene banner encima (páginas de continuación): un margin-top ahí colapsa
@@ -1441,3 +1446,25 @@ tr.marcado-visual > td.celda-marca { opacity: 1; }
 tr.marcado-visual:hover > td { opacity: 0.6; }
 tr.marcado-visual:hover > td.celda-marca { opacity: 1; }
 .marcas-conteo { margin-left: auto; font-size: 12px; font-weight: 600; color: #1f6f63; }
+
+/* previsualización de "Descargar todos los cursos" */
+.modal-caja.modal-exportar { max-width: 900px; width: 96vw; }
+.mx-colegio { margin-bottom: 14px; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; }
+.mx-colegio-titulo {
+  padding: 9px 12px;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--morado-oscuro);
+  background: var(--lila-fondo);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+.mx-zip { font-weight: 400; font-size: 11.5px; color: var(--texto-suave); word-break: break-all; }
+.mx-tabla { border-radius: 0; box-shadow: none; }
+.mx-tabla td { vertical-align: top; }
+.mx-carpeta { width: 100%; font-family: inherit; font-size: 12.5px; }
+.mx-ejemplo { margin-top: 3px; font-size: 11px; color: var(--texto-suave); word-break: break-word; }
+.mx-editable { font-weight: 400; opacity: 0.8; }
+.mx-avisos { font-size: 12px; line-height: 1.5; color: var(--texto-suave); background: #f4f3f6; border-radius: 7px; padding: 8px 10px; }

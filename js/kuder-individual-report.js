@@ -27,22 +27,15 @@ function etiquetaCursoKuder(estudiante) {
     .join(" ");
 }
 
-// número de lista del estudiante dentro de su colegio+curso+letra, en el mismo orden
-// alfabético con el que aparecen los PDF dentro de la carpeta/ZIP (mismo criterio que
+// número de lista del estudiante: el de la carpeta que se está armando, o si no, su
+// número dentro de su colegio+curso+letra en orden alfabético (mismo criterio que
 // calcularNumeroEnGrupo de js/report.js, pero sobre los estudiantes de Kuder).
+function numeracionEnGrupoKuder(estudiante) {
+  return numeracionEnGrupo(typeof storeKuder === "undefined" ? null : storeKuder, estudiante);
+}
+
 function calcularNumeroEnGrupoKuder(estudiante) {
-  if (typeof storeKuder === "undefined") return null;
-  const grupo = storeKuder
-    .listar()
-    .filter(
-      (e) =>
-        (e.colegio || "") === (estudiante.colegio || "") &&
-        (e.curso || "") === (estudiante.curso || "") &&
-        (e.letra || "") === (estudiante.letra || "")
-    )
-    .sort((a, b) => compararNombres(a.nombre, b.nombre));
-  const idx = grupo.findIndex((e) => e.id === estudiante.id);
-  return idx === -1 ? null : idx + 1;
+  return numeracionEnGrupoKuder(estudiante).numero;
 }
 
 function rutParaInformeKuder(estudiante) {
@@ -61,11 +54,12 @@ function construirLineaEstudianteKuder(estudiante, { inicioPagina = false } = {}
   const numero = calcularNumeroEnGrupoKuder(estudiante);
   return `
     ${inicioPagina ? '<div class="espaciador-inicio-pagina"></div>' : ""}
-    <div class="linea-estudiante">
+    ${envolverLineaEstudiante(`
       ${numero ? `<span>N° ${numero}</span>` : ""}
       <span><b>Nombre:</b> ${nombreParaInformeKuder(estudiante)}</span>
       <span><b>RUT:</b> ${rutParaInformeKuder(estudiante)}</span>
-    </div>`;
+      <span><b>Curso:</b> ${escaparHtmlKuder(etiquetaCursoKuder(estudiante)) || "—"}</span>
+      <span class="linea-colegio"><b>Colegio:</b> ${escaparHtmlKuder(estudiante.colegio) || "—"}</span>`)}`;
 }
 
 // ==================== HOJA 1: informativa ====================
@@ -198,7 +192,7 @@ let cacheHojaInformativaKuder = null;
 function resolverHojaInformativaKuder() {
   if (cacheHojaInformativaKuder) return cacheHojaInformativaKuder;
   const LIMITE_PAGINA_PX = ALTO_PAGINA_PX - PADDING_INFERIOR_PX;
-  const lineaMuestra = `<div class="linea-estudiante"><span>N° 1</span><span><b>Nombre:</b> Nombre de Prueba</span><span><b>RUT:</b> 11.111.111-1</span></div>`;
+  const lineaMuestra = `<div class="linea-estudiante"><span>N° 1</span><span><b>Nombre:</b> Nombre de Prueba</span><span><b>RUT:</b> 11.111.111-1</span><span><b>Curso:</b> 2do A</span><span class="linea-colegio"><b>Colegio:</b> Colegio de Prueba</span></div>`;
   const banner = construirBanner("Informe de Intereses Vocacionales", "Test de Intereses Vocacionales de Kuder · Enseñanza Media · UMAG");
   const pie = construirCalloutSiguienteKuder("Conoce tus resultados en la página siguiente") + `<div class="kuder-inf-pie">${construirFooter()}</div>`;
 
@@ -401,26 +395,15 @@ function construirPaginasResultadosKuder(estudiante) {
 
 // ==================== armado + descarga ====================
 
-function limpiarParaArchivoKuder(s) {
-  return (s || "")
-    .toString()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-zA-Z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
-
-// si el test quedó mal traspasado, el nombre del archivo lleva su suma entre
-// paréntesis, por ejemplo "Informe_Kuder_Juan_Perez_2doA (44 de 45).pdf" (no se puede
-// usar "44/45": la barra no está permitida en nombres de archivo). Va después del
-// nombre, así no cambia el orden alfabético de la carpeta ni la numeración.
+// "01 - Nombre Alumno - Segundo C - Colegio.pdf" (ver nombreArchivoNumerado en
+// js/report.js). Si el test quedó mal traspasado, lleva su suma entre paréntesis al
+// final, por ejemplo "... - Colegio (44 de 45).pdf" (no se puede usar "44/45": la barra
+// no está permitida en nombres de archivo).
 function nombreArchivoInformeIndividualKuder(estudiante) {
-  const nombre = limpiarParaArchivoKuder(estudiante.nombre) || "estudiante";
-  const curso = limpiarParaArchivoKuder((estudiante.curso || "") + (estudiante.letra || ""));
   const traspaso = analizarTraspasoKuder(estudiante.puntajes);
   // los revisados y dejados así ("✓ Dejar así") ya no llevan la marca
   const marca = traspaso.estado === "ok" || traspasoDejadoAsiKuder(estudiante) ? "" : ` (${traspaso.total} de ${SUMA_ESPERADA_KUDER})`;
-  return `Informe_Kuder_${nombre}${curso ? "_" + curso : ""}${marca}.pdf`;
+  return nombreArchivoNumerado(estudiante, numeracionEnGrupoKuder(estudiante), marca);
 }
 
 // nota de texto que va dentro del ZIP cuando hay tests mal traspasados: quiénes son,
@@ -483,20 +466,17 @@ async function descargarInformeIndividualKuder(estudiante) {
   storeKuder.registrarInformeGenerado();
 }
 
+// el ZIP de un curso se llama igual que su carpeta: "KUDER_Colegio_SegundoC_2026-10-02.zip"
 function nombreZipInformesIndividualesKuder(estudiantes) {
-  const colegios = [...new Set(estudiantes.map((e) => e.colegio).filter(Boolean))];
-  const cursos = [...new Set(estudiantes.map((e) => (e.curso || "") + (e.letra || "")).filter(Boolean))];
-  const colegio = colegios.length === 1 ? limpiarParaArchivoKuder(colegios[0]) : "VariosColegios";
-  const curso = cursos.length === 1 ? limpiarParaArchivoKuder(cursos[0]) : "VariosCursos";
-  const fecha = new Date().toISOString().slice(0, 10);
-  return `Informes_Kuder_${colegio}_${curso}_${fecha}.zip`;
+  return `${nombreCarpetaCurso("KUDER", estudiantes)}.zip`;
 }
 
 // agrega a "carpeta" (el ZIP completo o una subcarpeta de él) el informe de cada
-// estudiante, y la nota con los tests mal traspasados si los hay
+// estudiante, numerados del 1 al total, y la nota con los tests mal traspasados si los hay
 async function agregarInformesACarpetaKuder(carpeta, estudiantes, alTerminarUno) {
   const usados = new Map();
-  for (const e of estudiantes) {
+  const numerados = numerarParaCarpeta(estudiantes);
+  for (const e of numerados) {
     const blob = await construirBlobInformeIndividualKuder(e);
     let nombre = nombreArchivoInformeIndividualKuder(e);
     const veces = usados.get(nombre) || 0;
@@ -507,7 +487,7 @@ async function agregarInformesACarpetaKuder(carpeta, estudiantes, alTerminarUno)
     if (alTerminarUno) alTerminarUno();
   }
   // el guion bajo al inicio la deja primera en la carpeta, antes de los informes
-  const nota = notaTestsMalTraspasadosKuder(estudiantes);
+  const nota = notaTestsMalTraspasadosKuder(numerados);
   if (nota) carpeta.file("_Revisar_tests_mal_traspasados.txt", nota);
 }
 
@@ -529,19 +509,14 @@ async function descargarCarpetasDeCursosKuder(cursos, onProgreso) {
   let hechos = 0;
   const nombresCarpeta = new Map();
   for (const estudiantes of cursos) {
-    const e0 = estudiantes[0];
-    let nombre = `${limpiarParaArchivoKuder(e0.colegio) || "Colegio"}_${limpiarParaArchivoKuder((e0.curso || "") + (e0.letra || "")) || "Curso"}`;
+    let nombre = nombreCarpetaCurso("KUDER", estudiantes);
     const veces = nombresCarpeta.get(nombre) || 0;
     nombresCarpeta.set(nombre, veces + 1);
     if (veces > 0) nombre += `_${veces + 1}`;
     await agregarInformesACarpetaKuder(zip.folder(nombre), estudiantes, () => onProgreso && onProgreso(++hechos, total));
   }
   const contenidoZip = await zip.generateAsync({ type: "blob" });
-  const todos = cursos.flat();
-  const colegios = [...new Set(todos.map((e) => e.colegio).filter(Boolean))];
-  const colegio = colegios.length === 1 ? limpiarParaArchivoKuder(colegios[0]) : "VariosColegios";
-  const fecha = new Date().toISOString().slice(0, 10);
-  descargarBlobKuder(contenidoZip, `Informes_Kuder_${colegio}_${cursos.length}cursos_${fecha}.zip`);
+  descargarBlobKuder(contenidoZip, nombreZipVariosCursos("KUDER", cursos.flat(), cursos.length));
 }
 
 // informe GRUPAL (para orientadores, js/kuder-report.js) de un curso ya cargado en la

@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Orientando mis Intereses — Informes</title>
-<link rel="stylesheet" href="css/styles.css?v=20261002b" />
+<link rel="stylesheet" href="css/styles.css?v=20261002d" />
 </head>
 <body class="test-octavo">
 
@@ -406,6 +406,21 @@
     </div>
   </div>
 
+  <!-- ===================== MODAL: PREVISUALIZACIÓN DE "DESCARGAR TODOS LOS CURSOS" ===================== -->
+  <div id="modal-exportar" class="modal-overlay" style="display:none;">
+    <div class="modal-caja modal-caja--info modal-exportar">
+      <h3>📦 Revisa lo que se va a descargar</h3>
+      <p id="mx-resumen" class="ayuda" style="margin:0 0 12px;"></p>
+      <div id="mx-lista"></div>
+      <div id="mx-avisos" class="mx-avisos"></div>
+      <div class="modal-acciones modal-acciones--opciones">
+        <button type="button" id="mx-cancelar" class="secundario">Cancelar</button>
+        <button type="button" id="mx-revisar" class="secundario">🔎 Revisar primero los pendientes</button>
+        <button type="button" id="mx-exportar">⬇ Exportar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===================== MODAL: NOMBRE Y RUT DE UN ESTUDIANTE (lápiz ✎ junto a su nombre) ===================== -->
   <div id="modal-datos-alumno" class="modal-overlay" style="display:none;">
     <div class="modal-caja modal-caja--info">
@@ -465,27 +480,27 @@
        cada actualización (si no, puede mezclar archivos nuevos con otros guardados en
        caché y la app deja de funcionar); se cambia cada vez que se publica una versión -->
   <!-- datos de cada test (van primero: js/store.js arma un guardado por test) -->
-  <script src="js/data.js?v=20261002b"></script>
-  <script src="js/icons.js?v=20261002b"></script>
-  <script src="js/kuder-data.js?v=20261002b"></script>
-  <script src="js/kuder-icons.js?v=20261002b"></script>
-  <script src="js/logo.js?v=20261002b"></script>
-  <script src="js/store.js?v=20261002b"></script>
+  <script src="js/data.js?v=20261002d"></script>
+  <script src="js/icons.js?v=20261002d"></script>
+  <script src="js/kuder-data.js?v=20261002d"></script>
+  <script src="js/kuder-icons.js?v=20261002d"></script>
+  <script src="js/logo.js?v=20261002d"></script>
+  <script src="js/store.js?v=20261002d"></script>
 
   <!-- informes: 8° básico (individual) y Kuder (grupal para orientadores e individual) -->
-  <script src="js/report.js?v=20261002b"></script>
-  <script src="js/excel.js?v=20261002b"></script>
-  <script src="js/kuder.js?v=20261002b"></script>
-  <script src="js/kuder-report.js?v=20261002b"></script>
-  <script src="js/kuder-individual-report.js?v=20261002b"></script>
+  <script src="js/report.js?v=20261002d"></script>
+  <script src="js/excel.js?v=20261002d"></script>
+  <script src="js/kuder.js?v=20261002d"></script>
+  <script src="js/kuder-report.js?v=20261002d"></script>
+  <script src="js/kuder-individual-report.js?v=20261002d"></script>
 
   <!-- interfaz común (selector de test, pestañas, formularios) -->
-  <script src="js/app.js?v=20261002b"></script>
+  <script src="js/app.js?v=20261002d"></script>
 
   <!-- informe interno de Kuder (Admisión y Marketing) — reutiliza el lector de
        planillas de js/kuder.js y varias utilidades genéricas de js/kuder-report.js -->
-  <script src="js/kuder-internal-data.js?v=20261002b"></script>
-  <script src="js/kuder-internal-report.js?v=20261002b"></script>
-  <script src="js/kuder-internal.js?v=20261002b"></script>
+  <script src="js/kuder-internal-data.js?v=20261002d"></script>
+  <script src="js/kuder-internal-report.js?v=20261002d"></script>
+  <script src="js/kuder-internal.js?v=20261002d"></script>
 </body>
 </html>
