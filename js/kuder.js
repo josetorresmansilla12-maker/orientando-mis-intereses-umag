@@ -153,6 +153,7 @@ function leerPlanillaKuderParaImportar(arrayBuffer) {
   const lectura = leerPlanillaKuder(arrayBuffer);
   let { curso, letra } = lectura;
   if (curso && !letra) ({ curso, letra } = separarCursoLetraKuder(curso));
+  curso = normalizarCursoKuder(curso); // "2do" → "2do Medio" (en Kuder todo es enseñanza media)
   // los tests mal traspasados se muestran ordenados en la ventana de importación
   // (revisionTraspaso), así que no se repiten como advertencias sueltas
   return { ...lectura, advertencias: [], curso, letra: (letra || "").toUpperCase() };

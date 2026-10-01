@@ -268,6 +268,28 @@ const UMBRAL_INTERES_KUDER = 7; // 7 o más = área de interés
 const PUNTAJE_MIN_KUDER = 0;
 const PUNTAJE_MAX_KUDER = 9;
 
+// En el Test de Kuder todos los cursos son de enseñanza media: "2do", "2°", "Segundo",
+// "II medio", "2do medio"... quedan todos como "2do Medio", para que un mismo curso no
+// aparezca dos veces (en los filtros, las carpetas y los informes). Lo que no se
+// reconoce como 1° a 4° medio (o dice "básico") se deja tal cual.
+const CURSOS_MEDIA_KUDER = { 1: "1ro Medio", 2: "2do Medio", 3: "3ro Medio", 4: "4to Medio" };
+
+function normalizarCursoKuder(curso) {
+  const original = (curso || "").toString().trim().replace(/\s+/g, " ");
+  const t = original
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[°º.]/g, " ")
+    .replace(/\b(ano|anio|de|ensenanza|medio|media|m)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!t || /basic/.test(t)) return original;
+  const m = /^([1-4])\s*(ro|do|to|er|ero|ra|da|ta|m)?$/.exec(t);
+  const nivel = m ? Number(m[1]) : { primero: 1, primer: 1, segundo: 2, tercero: 3, tercer: 3, cuarto: 4, i: 1, ii: 2, iii: 3, iv: 4 }[t];
+  return CURSOS_MEDIA_KUDER[nivel] || original;
+}
+
 function calcularAreasDeInteresKuder(puntajes) {
   return AREAS_KUDER.filter((a) => {
     const p = Number(puntajes[a.id]);

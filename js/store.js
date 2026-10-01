@@ -15,10 +15,12 @@ function uid() {
 
 class Store {
   // claveStorage: dónde se guarda en localStorage; idsPuntaje: los ids de las áreas
-  // del test (cada estudiante guarda un puntaje por cada uno).
-  constructor(claveStorage, idsPuntaje) {
+  // del test (cada estudiante guarda un puntaje por cada uno); normalizarCurso: cómo se
+  // escribe el curso al guardarlo (Kuder: "2do" → "2do Medio"; en 8° queda tal cual).
+  constructor(claveStorage, idsPuntaje, { normalizarCurso = null } = {}) {
     this.claveStorage = claveStorage;
     this.idsPuntaje = idsPuntaje;
+    this._normalizarCurso = normalizarCurso;
     this.estudiantes = [];
     this.contadorInformes = 0;
     this.deshacerPila = [];
@@ -32,11 +34,26 @@ class Store {
       const datos = raw ? JSON.parse(raw) : {};
       this.estudiantes = datos.estudiantes || [];
       this.contadorInformes = Number(datos.contadorInformes) || 0;
+      // los guardados de antes quedan con el curso escrito igual que los nuevos
+      let cambiados = 0;
+      this.estudiantes.forEach((e) => {
+        const curso = this.normalizarCurso(e.curso);
+        if (curso !== (e.curso || "")) {
+          e.curso = curso;
+          cambiados++;
+        }
+      });
+      if (cambiados) this._guardar();
     } catch (e) {
       console.error("No se pudo leer el guardado local, se parte vacío.", e);
       this.estudiantes = [];
       this.contadorInformes = 0;
     }
+  }
+
+  normalizarCurso(curso) {
+    const c = (curso || "").toString().trim();
+    return this._normalizarCurso ? this._normalizarCurso(c) : c;
   }
 
   _guardar() {
@@ -104,7 +121,7 @@ class Store {
     return {
       id: uid(),
       colegio: datos.colegio || "",
-      curso: datos.curso || "",
+      curso: this.normalizarCurso(datos.curso),
       letra: datos.letra || "",
       nombre: datos.nombre || "",
       rut: datos.rut || "",
@@ -141,7 +158,7 @@ class Store {
     const e = this.estudiantes.find((x) => x.id === id);
     if (!e) return null;
     e.colegio = datos.colegio ?? e.colegio;
-    e.curso = datos.curso ?? e.curso;
+    e.curso = this.normalizarCurso(datos.curso ?? e.curso);
     e.letra = datos.letra ?? e.letra;
     e.nombre = datos.nombre ?? e.nombre;
     e.rut = datos.rut ?? e.rut;
@@ -251,4 +268,4 @@ function num(v) {
 // "store" = 8° básico (el nombre se mantiene porque js/report.js y js/excel.js lo usan
 // así); "storeKuder" = Test de Kuder. js/kuder-data.js se carga antes que este archivo.
 const store = new Store(STORAGE_KEY, ["ciencias", "humanidades", "artistico", "tecnico", "salud", "administracion"]);
-const storeKuder = new Store(STORAGE_KEY_KUDER, AREAS_KUDER.map((a) => a.id));
+const storeKuder = new Store(STORAGE_KEY_KUDER, AREAS_KUDER.map((a) => a.id), { normalizarCurso: normalizarCursoKuder });

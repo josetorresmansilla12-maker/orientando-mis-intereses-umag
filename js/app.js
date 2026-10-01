@@ -600,7 +600,7 @@ function pedirDatosPorArchivo(lecturas, cursoHeader) {
             ? activos.filter(
                 (e) =>
                   (e.colegio || "").trim().toLowerCase() === d.colegio.toLowerCase() &&
-                  (e.curso || "").trim().toLowerCase() === d.curso.toLowerCase() &&
+                  (e.curso || "").trim().toLowerCase() === c.store.normalizarCurso(d.curso).toLowerCase() &&
                   (e.letra || "").trim().toLowerCase() === d.letra.toLowerCase()
               ).length
             : 0;

@@ -38,8 +38,11 @@ Paso 2: las pestañas
      exportados del sistema de Kuder, uno por curso). Antes de importar, la app te
      muestra cada archivo por su nombre para confirmar o corregir su colegio, curso
      y letra (en Kuder se leen solos del archivo; por ejemplo "2do A" queda como
-     curso "2do" y letra "A"). Si ese curso ya tenía estudiantes cargados, te avisa,
+     curso "2do Medio" y letra "A"). Si ese curso ya tenía estudiantes cargados, te avisa,
      para que no lo importes dos veces.
+   - En Kuder todos los cursos son de enseñanza media: "2do", "2°", "Segundo" o
+     "II medio" quedan siempre como "2do Medio" (igual para 1ro, 3ro y 4to), así un
+     mismo curso no aparece dos veces. Los estudiantes ya cargados se ajustaron solos.
    - También puedes ingresar estudiantes a mano: escribes una vez el colegio, curso,
      letra y fecha en "Datos del curso", y luego el nombre y los puntajes de cada
      estudiante (8vos: 0 a 8 por área; Kuder: 0 a 9 por área). Un área queda "de
