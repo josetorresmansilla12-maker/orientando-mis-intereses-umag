@@ -28,6 +28,8 @@ const TESTS = {
     revisarTraspaso: null, // el cuestionario de 8° no tiene una suma fija que revisar
     describirTraspaso: null,
     descargarIndividual: descargarInformeIndividual,
+    construirBlobIndividual: (e) => paginasAPdfBlob([construirPaginaPortada(e), ...construirPaginasResultados(e)]),
+    nombreArchivoIndividual: nombreArchivoInforme,
     descargarMasivo: descargarInformesMasivo,
     agregarInformesACarpeta: agregarInformesACarpeta,
     prefijoArchivos: "8vo",
@@ -51,6 +53,8 @@ const TESTS = {
     revisarTraspaso: analizarTraspasoKuder, // las 10 áreas deben sumar 45 (js/kuder-data.js)
     describirTraspaso: describirTraspasoKuder,
     descargarIndividual: descargarInformeIndividualKuder,
+    construirBlobIndividual: construirBlobInformeIndividualKuder,
+    nombreArchivoIndividual: nombreArchivoInformeIndividualKuder,
     descargarMasivo: descargarInformesMasivoKuder,
     descargarVariosCursos: descargarCarpetasDeCursosKuder,
     agregarInformesACarpeta: agregarInformesACarpetaKuder,
@@ -67,9 +71,11 @@ const estado = {
   tab: "ingresar",
   editandoId: null,
   filtros: { colegio: "", curso: "", letra: "", nombre: "", soloTraspaso: false },
-  // pestaña "Estudiantes e informes": qué colegios/cursos están desplegados (para que
-  // no se cierren cada vez que se actualiza la lista) y a quién se está editando ahí mismo
+  // pestaña "Estudiantes e informes": qué colegios/cursos están desplegados o plegados a
+  // mano (para que no cambien cada vez que se actualiza la lista) y a quién se está
+  // editando ahí mismo
   gruposAbiertos: new Set(),
+  gruposCerrados: new Set(),
   edicionEnLista: null,
   filtrosPapelera: { colegio: "", curso: "", nombre: "" },
 };
@@ -95,6 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
   cablearImportacion();
   cablearModal();
   cablearCorreccionPuntajes();
+  cablearVistaPdf();
   render();
 });
 
@@ -200,6 +207,7 @@ function cambiarTest(idTest) {
   // los filtros de un test (colegio, curso...) no tienen sentido en el otro
   estado.filtros = { colegio: "", curso: "", letra: "", nombre: "", soloTraspaso: false };
   estado.gruposAbiertos = new Set();
+  estado.gruposCerrados = new Set();
   estado.edicionEnLista = null;
   estado.filtrosPapelera = { colegio: "", curso: "", nombre: "" };
   if (idTest !== "kuder" && TABS_SOLO_KUDER.includes(estado.tab)) estado.tab = "ingresar";
@@ -1084,6 +1092,8 @@ function renderEstudiantes() {
   const porColegio = agrupar(filtrados);
   // con el filtro de tests mal traspasados se abre todo, para ver al tiro a quién revisar
   const abrirSoloUno = porColegio.size === 1 || estado.filtros.soloTraspaso;
+  if (estado.filtros.soloTraspaso && !estado.soloTraspasoAnterior) estado.gruposCerrados.clear();
+  estado.soloTraspasoAnterior = estado.filtros.soloTraspaso;
 
   // si el estudiante que se estaba editando ya no está en la lista (se filtró, se borró),
   // se cierra su editor; si está, su colegio y su curso quedan desplegados
@@ -1092,8 +1102,10 @@ function renderEstudiantes() {
   estado.pendientesVisibles = filtrados.filter((e) => revisionTraspaso(e.puntajes)).map((e) => e.id);
   if (!editando) estado.edicionEnLista = null;
   else {
-    estado.gruposAbiertos.add(claveGrupoColegio(editando.colegio));
-    estado.gruposAbiertos.add(claveGrupoCurso(editando.colegio, etiquetaCurso(editando)));
+    for (const clave of [claveGrupoColegio(editando.colegio), claveGrupoCurso(editando.colegio, etiquetaCurso(editando))]) {
+      estado.gruposAbiertos.add(clave);
+      estado.gruposCerrados.delete(clave);
+    }
   }
 
   let html = "";
@@ -1101,10 +1113,13 @@ function renderEstudiantes() {
     const totalColegio = [...porCurso.values()].reduce((n, arr) => n + arr.length, 0);
     const soloUnCurso = porCurso.size === 1 || estado.filtros.soloTraspaso;
     const claveCol = claveGrupoColegio(colegio);
-    html += `<details class="grupo-colegio" data-grupo="${escaparHtml(claveCol)}" ${abrirSoloUno || estado.gruposAbiertos.has(claveCol) ? "open" : ""}>
-      <summary>🏫 ${escaparHtml(colegio)} <span class="chip">${totalColegio} ${totalColegio === 1 ? "estudiante" : "estudiantes"}</span>${chipTraspasoHtml([...porCurso.values()].flat())}</summary>
+    // cursos que quedan desplegados (para saber cómo parte el botón "Minimizar alumnos")
+    const cursosAbiertos = [...porCurso.keys()].filter((k) => grupoAbierto(claveGrupoCurso(colegio, k), soloUnCurso)).length;
+    html += `<details class="grupo-colegio" data-grupo="${escaparHtml(claveCol)}" ${grupoAbierto(claveCol, abrirSoloUno) ? "open" : ""}>
+      <summary>🏫 ${escaparHtml(colegio)} <span class="chip">${porCurso.size} ${porCurso.size === 1 ? "curso" : "cursos"}</span><span class="chip">${totalColegio} ${totalColegio === 1 ? "estudiante" : "estudiantes"}</span>${chipTraspasoHtml([...porCurso.values()].flat())}</summary>
       <div class="grupo-colegio-cont">
-        <div style="margin-bottom:10px;">
+        <div class="grupo-colegio-acciones">
+          <button type="button" class="chico secundario btn-minimizar-alumnos" ${atributosBotonMinimizar(cursosAbiertos > 0)}>${textoBotonMinimizar(cursosAbiertos > 0)}</button>
           <button class="chico peligro" id="${idSeguro("delcol", colegio)}">🗑 Eliminar colegio completo</button>
         </div>`;
 
@@ -1113,8 +1128,8 @@ function renderEstudiantes() {
       // mismo orden alfabético y mismo número que lleva cada informe (y su PDF en la carpeta)
       const ordenados = [...estudiantesCurso].sort((a, b) => compararNombres(a.nombre, b.nombre));
       const claveCur = claveGrupoCurso(colegio, claveCurso);
-      html += `<details class="grupo-curso" data-grupo="${escaparHtml(claveCur)}" ${soloUnCurso || estado.gruposAbiertos.has(claveCur) ? "open" : ""}>
-        <summary>📘 ${escaparHtml(claveCurso)} <span class="chip">${estudiantesCurso.length}</span>${chipTraspasoHtml(estudiantesCurso)}</summary>
+      html += `<details class="grupo-curso" data-grupo="${escaparHtml(claveCur)}" ${grupoAbierto(claveCur, soloUnCurso) ? "open" : ""}>
+        <summary>📘 ${escaparHtml(claveCurso)} <span class="chip">${estudiantesCurso.length} ${estudiantesCurso.length === 1 ? "estudiante" : "estudiantes"}</span>${chipTraspasoHtml(estudiantesCurso)}</summary>
         <div class="grupo-curso-cont">
           <div style="margin-bottom:10px; display:flex; gap:8px; flex-wrap:wrap;">
             <button class="chico" id="${idSeguro("grp", clave)}">⬇ Descargar informes de este curso (ZIP)</button>
@@ -1134,6 +1149,7 @@ function renderEstudiantes() {
                     <td>
                       <div class="fila-acciones">
                         <button class="chico secundario" onclick="abrirEdicionEnLista('${e.id}')">${estado.edicionEnLista === e.id ? "Editando…" : "Editar"}</button>
+                        <button class="chico secundario" onclick="accionVerPdf('${e.id}')" title="Ver el informe sin descargarlo">👁 Ver PDF</button>
                         <button class="chico" onclick="accionDescargar('${e.id}', this)">Descargar PDF</button>
                         <button class="chico peligro" onclick="accionEliminar('${e.id}')">Eliminar</button>
                       </div>
@@ -1154,10 +1170,27 @@ function renderEstudiantes() {
   // recordar qué colegios/cursos se despliegan o pliegan a mano
   cont.querySelectorAll("details[data-grupo]").forEach((d) =>
     d.addEventListener("toggle", () => {
-      if (d.open) estado.gruposAbiertos.add(d.dataset.grupo);
-      else estado.gruposAbiertos.delete(d.dataset.grupo);
+      if (d.open) {
+        estado.gruposAbiertos.add(d.dataset.grupo);
+        estado.gruposCerrados.delete(d.dataset.grupo);
+      } else {
+        estado.gruposAbiertos.delete(d.dataset.grupo);
+        estado.gruposCerrados.add(d.dataset.grupo);
+      }
+      if (d.classList.contains("grupo-curso")) actualizarBotonMinimizar(d.closest("details.grupo-colegio"));
     })
   );
+  // "Minimizar alumnos": pliega todos los cursos del colegio (quedan solo los cursos y
+  // cuántos estudiantes tiene cada uno); el mismo botón los vuelve a desplegar
+  cont.querySelectorAll(".btn-minimizar-alumnos").forEach((btn) => {
+    btn.onclick = () => {
+      const detColegio = btn.closest("details.grupo-colegio");
+      const cursos = [...detColegio.querySelectorAll("details.grupo-curso")];
+      const abrir = !cursos.some((d) => d.open);
+      cursos.forEach((d) => (d.open = abrir));
+      actualizarBotonMinimizar(detColegio);
+    };
+  });
   if (editando) cablearEditorEnLista(editando);
 
   // botones de descarga y de eliminación grupal (se cablean después de insertar el HTML)
@@ -1224,6 +1257,35 @@ function renderResumenTraspaso(todos) {
 // pestaña. Al guardar, la lista se actualiza en el lugar: los colegios/cursos abiertos
 // siguen abiertos y la pantalla queda en la misma posición, para seguir con el
 // siguiente. La edición desde "Ingresar datos" sigue igual que antes.
+
+// un colegio/curso queda desplegado si se abrió a mano, o si se abre solo (colegio o
+// curso único, filtro de pendientes) y no se plegó a mano
+function grupoAbierto(clave, abiertoPorDefecto) {
+  return estado.gruposAbiertos.has(clave) || (abiertoPorDefecto && !estado.gruposCerrados.has(clave));
+}
+
+function textoBotonMinimizar(hayCursosAbiertos) {
+  return hayCursosAbiertos ? "▴ Minimizar alumnos" : "▾ Mostrar alumnos";
+}
+
+function tituloBotonMinimizar(hayCursosAbiertos) {
+  return hayCursosAbiertos
+    ? "Contraer los cursos: se ven solo los cursos y cuántos estudiantes tiene cada uno"
+    : "Desplegar los estudiantes de todos los cursos de este colegio";
+}
+
+function atributosBotonMinimizar(hayCursosAbiertos) {
+  return `title="${tituloBotonMinimizar(hayCursosAbiertos)}" aria-expanded="${hayCursosAbiertos}"`;
+}
+
+function actualizarBotonMinimizar(detColegio) {
+  const btn = detColegio && detColegio.querySelector(".btn-minimizar-alumnos");
+  if (!btn) return;
+  const hayAbiertos = [...detColegio.querySelectorAll("details.grupo-curso")].some((d) => d.open);
+  btn.textContent = textoBotonMinimizar(hayAbiertos);
+  btn.title = tituloBotonMinimizar(hayAbiertos);
+  btn.setAttribute("aria-expanded", String(hayAbiertos));
+}
 
 function claveGrupoColegio(colegio) {
   return "col|" + (colegio || "");
@@ -1648,6 +1710,83 @@ function accionEliminar(id) {
   c.store.moverAPapelera(id);
   mostrarToast("Estudiante enviado a la papelera");
   render();
+}
+
+// ---------------- "Ver PDF": vista previa del informe de un estudiante ----------------
+// Genera el informe y lo muestra en una ventana dentro de la app (con el visor de PDF
+// del navegador), sin descargarlo. Desde ahí se puede descargar (se usa el mismo PDF
+// ya generado, sin volver a armarlo) o abrir en una pestaña nueva. Ver no cuenta como
+// "informe generado" en Estadísticas; descargar desde la vista, sí.
+
+const vistaPdf = { url: null, blob: null, estudiante: null, turno: 0 };
+
+async function accionVerPdf(id) {
+  const c = cfg();
+  const e = c.store.obtener(id);
+  if (!e) return;
+  const turno = ++vistaPdf.turno;
+  liberarVistaPdf();
+  vistaPdf.estudiante = e;
+
+  document.getElementById("vp-titulo").textContent = `Informe de ${e.nombre}`;
+  const r = revisionTraspaso(e.puntajes);
+  document.getElementById("vp-aviso").innerHTML = r
+    ? `⚠ Test mal traspasado (${escaparHtml(r.texto.resumen)}): este informe puede cambiar cuando se corrijan sus puntajes.`
+    : "";
+  document.getElementById("vp-contenido").innerHTML = `<div class="vista-pdf-cargando">Generando el informe…</div>`;
+  document.getElementById("vp-descargar").disabled = true;
+  document.getElementById("vp-pestana").disabled = true;
+  document.getElementById("modal-vista-pdf").style.display = "flex";
+
+  try {
+    const blob = await c.construirBlobIndividual(e);
+    if (turno !== vistaPdf.turno) return; // se cerró o se pidió otro mientras se generaba
+    vistaPdf.blob = blob;
+    vistaPdf.url = URL.createObjectURL(blob);
+    document.getElementById("vp-contenido").innerHTML = `<iframe class="vista-pdf-marco" title="Informe de ${escaparHtml(e.nombre)}" src="${vistaPdf.url}#navpanes=0&view=FitH"></iframe>`;
+    document.getElementById("vp-descargar").disabled = false;
+    document.getElementById("vp-pestana").disabled = false;
+  } catch (err) {
+    console.error(err);
+    if (turno === vistaPdf.turno) {
+      document.getElementById("vp-contenido").innerHTML = `<div class="vista-pdf-cargando">No se pudo generar el informe. Revisa el mensaje en la consola.</div>`;
+    }
+  }
+}
+
+function liberarVistaPdf() {
+  if (vistaPdf.url) URL.revokeObjectURL(vistaPdf.url);
+  vistaPdf.url = null;
+  vistaPdf.blob = null;
+}
+
+function cerrarVistaPdf() {
+  vistaPdf.turno++;
+  document.getElementById("modal-vista-pdf").style.display = "none";
+  document.getElementById("vp-contenido").innerHTML = "";
+  liberarVistaPdf();
+  vistaPdf.estudiante = null;
+}
+
+function cablearVistaPdf() {
+  const modal = document.getElementById("modal-vista-pdf");
+  document.getElementById("vp-cerrar").addEventListener("click", cerrarVistaPdf);
+  modal.addEventListener("click", (ev) => {
+    if (ev.target === modal) cerrarVistaPdf();
+  });
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && modal.style.display === "flex") cerrarVistaPdf();
+  });
+  document.getElementById("vp-descargar").addEventListener("click", () => {
+    if (!vistaPdf.blob || !vistaPdf.estudiante) return;
+    const c = cfg();
+    descargarArchivo(vistaPdf.blob, c.nombreArchivoIndividual(vistaPdf.estudiante));
+    c.store.registrarInformeGenerado();
+    mostrarToast("Informe descargado");
+  });
+  document.getElementById("vp-pestana").addEventListener("click", () => {
+    if (vistaPdf.url) window.open(vistaPdf.url, "_blank");
+  });
 }
 
 // ---------------- corrección rápida de puntajes (ícono ⚠) ----------------

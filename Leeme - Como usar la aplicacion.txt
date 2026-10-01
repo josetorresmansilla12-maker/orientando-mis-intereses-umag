@@ -46,7 +46,15 @@ Paso 2: las pestañas
      interés" con 7 puntos o más.
 
 2. "Estudiantes e informes": los estudiantes aparecen agrupados por colegio y curso,
-   en orden alfabético y con su número de lista. Ahí puedes:
+   en orden alfabético y con su número de lista. Cada colegio muestra cuántos cursos
+   y cuántos estudiantes tiene. Ahí puedes:
+   - Abrir o cerrar un colegio o un curso haciendo clic en su título (la flechita ▸
+     indica si está abierto).
+   - "▴ Minimizar alumnos" (dentro de cada colegio): cierra todos sus cursos, así se
+     ven solo los cursos y cuántos estudiantes tiene cada uno. El mismo botón,
+     "▾ Mostrar alumnos", los vuelve a abrir.
+   - Ver el informe de un estudiante sin descargarlo ("👁 Ver PDF"): se abre dentro
+     de la app, y desde ahí se puede descargar o abrir en una pestaña nueva.
    - Descargar el informe de un estudiante en PDF ("Descargar PDF").
    - "Descargar todos los cursos": genera los informes de todos los cursos cargados
      (o de los filtrados) y descarga un ZIP por colegio, con una carpeta por curso

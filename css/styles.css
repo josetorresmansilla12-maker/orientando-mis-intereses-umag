@@ -367,6 +367,18 @@ details.grupo-colegio > summary .chip {
   border-color: rgba(255,255,255,0.4);
 }
 .grupo-colegio-cont { padding: 14px 18px; }
+.grupo-colegio-acciones { margin-bottom: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+/* flechita que muestra si el colegio/curso está desplegado (clic en el título para abrir o cerrar) */
+details.grupo-colegio > summary::before,
+details.grupo-curso > summary::before {
+  content: "▸";
+  display: inline-block;
+  width: 12px;
+  font-size: 12px;
+  transition: transform 0.15s;
+}
+details.grupo-colegio[open] > summary::before,
+details.grupo-curso[open] > summary::before { transform: rotate(90deg); }
 
 details.grupo-curso {
   border: 1px solid var(--borde);
@@ -1282,3 +1294,22 @@ body.test-kuder .editor-en-lista { border-left-color: var(--teal); }
 @media (max-width: 800px) {
   .editor-en-lista-datos, .editor-en-lista-puntajes { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ---------- "Ver PDF": vista previa del informe dentro de la app ---------- */
+.modal-caja.modal-vista-pdf {
+  max-width: 980px;
+  width: 96vw;
+  height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px 16px;
+  overflow: hidden;
+}
+.vista-pdf-encabezado { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.vista-pdf-encabezado h3 { margin: 0; }
+.vista-pdf-acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+.vista-pdf-aviso:empty { display: none; }
+.vista-pdf-aviso { font-size: 12.5px; color: #7a5200; background: #fff4e0; border: 1px solid #f0d9a6; border-radius: 7px; padding: 6px 10px; margin-bottom: 8px; }
+.vista-pdf-contenido { flex: 1; min-height: 0; border: 1px solid var(--borde); border-radius: 8px; background: #f4f3f6; overflow: hidden; }
+.vista-pdf-marco { width: 100%; height: 100%; border: 0; display: block; }
+.vista-pdf-cargando { height: 100%; display: flex; align-items: center; justify-content: center; color: var(--texto-suave); font-size: 14px; }
