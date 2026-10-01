@@ -152,14 +152,16 @@ class Store {
       }
     }
     if (datos.traspasoAceptado !== undefined) this._fijarTraspasoAceptado(e, datos.traspasoAceptado);
+    if (datos.correccion !== undefined) this._fijarCorreccion(e, datos.correccion);
     e.actualizadoEn = new Date().toISOString();
     this._guardar();
     return e;
   }
 
   // "✓ Dejar así" (Kuder): guarda en cada estudiante la huella de los puntajes que se
-  // aceptaron tal cual ("huella" es una función de los puntajes), o la borra con null.
-  // Un solo paso de deshacer para todos.
+  // aceptaron tal cual ("huella" es una función de los puntajes), o la borra con null
+  // ("Volver a pendiente"). También anota cuándo, para "Recién corregidos". Un solo
+  // paso de deshacer para todos.
   marcarTraspasoAceptado(ids, huella) {
     this._antesDeCambiar();
     const idsSet = new Set(ids);
@@ -167,6 +169,7 @@ class Store {
     this.estudiantes.forEach((e) => {
       if (!idsSet.has(e.id)) return;
       this._fijarTraspasoAceptado(e, huella ? huella(e.puntajes) : null);
+      this._fijarCorreccion(e, huella ? { como: "dejado", en: ahora } : null);
       e.actualizadoEn = ahora;
     });
     this._guardar();
@@ -175,6 +178,12 @@ class Store {
   _fijarTraspasoAceptado(e, valor) {
     if (valor) e.traspasoAceptado = valor;
     else delete e.traspasoAceptado;
+  }
+
+  // última corrección de un test mal traspasado: { como: "dejado" | "corregido", en: fecha ISO }
+  _fijarCorreccion(e, valor) {
+    if (valor) e.correccion = valor;
+    else delete e.correccion;
   }
 
   moverAPapelera(id) {

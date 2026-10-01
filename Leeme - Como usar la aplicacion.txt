@@ -48,6 +48,8 @@ Paso 2: las pestañas
 2. "Estudiantes e informes": los estudiantes aparecen agrupados por colegio y curso,
    en orden alfabético y con su número de lista. Cada colegio muestra cuántos cursos
    y cuántos estudiantes tiene. Ahí puedes:
+   - Corregir el nombre o el RUT de un estudiante con el lápiz ✎ que está junto a su
+     nombre (se abre una ventanita con esos dos datos; Enter guarda).
    - Abrir o cerrar un colegio o un curso haciendo clic en su título (la flechita ▸
      indica si está abierto).
    - "▴ Minimizar alumnos" (dentro de cada colegio): cierra todos sus cursos, así se
@@ -73,9 +75,15 @@ Paso 2: las pestañas
      próximo estudiante por revisar.
    - Eliminar estudiantes (lo eliminado queda en la Papelera).
 
-3. "Corrección" (solo Kuder): todos los estudiantes cargados cuyo test no suma 45,
-   por colegio y curso, para revisarlos de corrido con sus hojas de respuestas. Al
-   lado de la pestaña aparece cuántos quedan pendientes. Ver "Revisión de traspaso".
+3. "Corrección" (solo Kuder), con dos subpestañas:
+   - "Pendientes": todos los estudiantes cargados cuyo test no suma 45, por colegio y
+     curso, para revisarlos de corrido con sus hojas de respuestas. Al lado de la
+     pestaña aparece cuántos quedan pendientes.
+   - "Recién corregidos": los últimos 10 estudiantes que corregiste (ya suman 45) o
+     marcaste con "✓ Dejar así", del más reciente al más antiguo. Si te equivocaste
+     con alguno, lo arreglas ahí mismo ("✏️ Modificar" o "↩ Volver a pendiente"), sin
+     buscarlo en su curso. Abajo está la lista de todos los dejados así.
+   Ver "Revisión de traspaso".
 
 4. "Estadísticas": resumen de cuántos estudiantes hay cargados en el test elegido y
    cuántos salieron con interés en cada área.
@@ -120,7 +128,7 @@ la hoja de respuestas al cuadro). La app lo revisa sola:
   los que no necesitan revisión.
   * Si después le cambias los puntajes y sigue sin sumar 45, vuelve a quedar pendiente.
   * Si dejaste así a alguien por error: "Deshacer" arriba, o en la pestaña "Corrección",
-    sección "Revisados y dejados así", botón "↩ Volver a pendiente".
+    subpestaña "Recién corregidos", botón "↩ Volver a pendiente".
 - Al cargar los archivos, la ventana de importación da dos opciones:
   a) "Cargar y descargar la carpeta del curso": se genera altiro la carpeta (ZIP) con
      todos los informes. Los de quienes no suman 45 llevan la suma en el nombre del

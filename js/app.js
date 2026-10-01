@@ -83,6 +83,7 @@ const estado = {
   edicionEnLista: null,
   filtrosPapelera: { colegio: "", curso: "", nombre: "" },
   filtrosCorreccion: { colegio: "", tipo: "", nombre: "" },
+  subCorreccion: "pendientes", // pestaña "Corrección": "pendientes" o "recientes" (Recién corregidos)
 };
 
 // configuración del test elegido arriba
@@ -107,6 +108,7 @@ document.addEventListener("DOMContentLoaded", () => {
   cablearModal();
   cablearCorreccionPuntajes();
   cablearVistaPdf();
+  cablearDatosAlumno();
   render();
 });
 
@@ -374,6 +376,24 @@ function botonTraspasoHtml(estudiante, accion = "abrirCorreccionPuntajes") {
     return `<button type="button" class="btn-traspaso dejado" title="Revisado: se dejó así, con ${r.analisis.total} de ${SUMA_ESPERADA_KUDER} puntos. Haz clic para ver o cambiar sus puntajes" onclick="${accion}('${estudiante.id}')">✓ ${r.analisis.total}/${SUMA_ESPERADA_KUDER}</button>`;
   }
   return `<button type="button" class="btn-traspaso${r.analisis.afecta ? " afecta" : ""}" title="Test mal traspasado: haz clic para corregir sus puntajes" onclick="${accion}('${estudiante.id}')">⚠ ${r.analisis.total}/${SUMA_ESPERADA_KUDER}</button>`;
+}
+
+// al guardar los puntajes de un estudiante: qué anotar para "Recién corregidos".
+// "dejado" si se deja así sin sumar 45; "corregido" si no sumaba 45 y ahora sí.
+// Se llama antes de guardar (con el estudiante todavía con sus puntajes anteriores).
+function datosDeCorreccion(estudiante, puntajesNuevos, dejarAsi) {
+  const c = cfg();
+  if (!c.huellaTraspaso || !estudiante) return {};
+  const ahora = new Date().toISOString();
+  const malNuevo = !!revisionTraspaso(puntajesNuevos);
+  if (dejarAsi && malNuevo) return { traspasoAceptado: c.huellaTraspaso(puntajesNuevos), correccion: { como: "dejado", en: ahora } };
+  if (revisionTraspaso(estudiante.puntajes) && !malNuevo) return { correccion: { como: "corregido", en: ahora } };
+  return {};
+}
+
+// nombre del estudiante en las listas, con un lápiz chico para editar su nombre y RUT
+function nombreConLapizHtml(estudiante) {
+  return `<strong>${escaparHtml(estudiante.nombre)}</strong><button type="button" class="btn-lapiz" title="Editar nombre y RUT" aria-label="Editar nombre y RUT" onclick="abrirDatosAlumno('${estudiante.id}')">✎</button>`;
 }
 
 function botonDejarAsiHtml(estudiante) {
@@ -1176,7 +1196,7 @@ function renderEstudiantes() {
                   (e) => `
                   <tr data-id="${e.id}" class="${estado.edicionEnLista === e.id ? "editando" : ""}">
                     <td style="color:#6a6178;">${c.numeroEnGrupo(e) || ""}</td>
-                    <td><strong>${escaparHtml(e.nombre)}</strong> ${botonTraspasoHtml(e, "abrirEdicionEnLista")}<br/><span style="color:#6a6178;font-size:11px;">${escaparHtml(c.formatearRut(e.rut))}</span></td>
+                    <td>${nombreConLapizHtml(e)} ${botonTraspasoHtml(e, "abrirEdicionEnLista")}<br/><span style="color:#6a6178;font-size:11px;">${escaparHtml(c.formatearRut(e.rut))}</span></td>
                     <td>${chipsAreas(e)}${avisoTraspasoHtml(e, { conDejarAsi: true })}</td>
                     <td>
                       <div class="fila-acciones">
@@ -1297,11 +1317,13 @@ function renderResumenTraspaso(todos) {
 }
 
 // ---------------- pestaña "Corrección" (solo Kuder) ----------------
-// Todos los estudiantes cargados cuyo test no suma 45, por colegio y curso, para
-// revisarlos de corrido con sus hojas de respuestas: "✏️ Corregir" abre el mismo panel
-// de edición de "Estudiantes e informes" (justo debajo del estudiante) y "✓ Dejar así"
-// lo saca de los pendientes sin cambiar sus puntajes. Abajo quedan los que se dejaron
-// así, por si alguno hay que volver a marcarlo como pendiente.
+// Subpestaña "Pendientes": todos los estudiantes cargados cuyo test no suma 45, por
+// colegio y curso, para revisarlos de corrido con sus hojas de respuestas: "✏️ Corregir"
+// abre el mismo panel de edición de "Estudiantes e informes" (justo debajo del
+// estudiante) y "✓ Dejar así" lo saca de los pendientes sin cambiar sus puntajes.
+// Subpestaña "Recién corregidos": los últimos 10 corregidos o dejados así, para arreglar
+// al tiro una equivocación sin tener que buscar al estudiante en su curso; abajo, todos
+// los que se dejaron así.
 
 function renderConteoCorreccion() {
   const el = document.getElementById("conteo-correccion");
@@ -1313,17 +1335,36 @@ function renderConteoCorreccion() {
 
 function irACorreccion() {
   estado.tab = "correccion";
+  estado.subCorreccion = "pendientes";
   render();
   document.querySelector(".tabs").scrollIntoView({ block: "start" });
 }
 
 function renderCorreccion() {
   const c = cfg();
+  document.querySelectorAll("#panel-correccion .subtab-btn").forEach((b) => {
+    b.classList.toggle("activo", b.dataset.sub === estado.subCorreccion);
+    b.onclick = () => {
+      if (estado.subCorreccion === b.dataset.sub) return;
+      estado.subCorreccion = b.dataset.sub;
+      estado.edicionEnLista = null; // el panel de edición no se lleva a la otra subpestaña
+      renderCorreccion();
+    };
+  });
+  document.getElementById("sub-pendientes").style.display = estado.subCorreccion === "recientes" ? "none" : "";
+  document.getElementById("sub-recientes").style.display = estado.subCorreccion === "recientes" ? "" : "none";
+  const nPendientes = c.revisarTraspaso ? c.store.listar().filter((e) => pendienteTraspaso(e)).length : 0;
+  document.getElementById("conteo-sub-pendientes").textContent = nPendientes ? String(nPendientes) : "";
+  if (estado.subCorreccion === "recientes") renderRecientesCorreccion();
+  else renderPendientesCorreccion();
+}
+
+function renderPendientesCorreccion() {
+  const c = cfg();
   const cont = document.getElementById("lista-correccion");
   const contResumen = document.getElementById("resumen-correccion");
-  const contDejados = document.getElementById("dejados-correccion");
   if (!c.revisarTraspaso) {
-    cont.innerHTML = contResumen.innerHTML = contDejados.innerHTML = "";
+    cont.innerHTML = contResumen.innerHTML = "";
     return;
   }
   const todos = c.store.listar();
@@ -1336,7 +1377,7 @@ function renderCorreccion() {
   const selColegio = document.getElementById("c-colegio");
   const selTipo = document.getElementById("c-tipo");
   const inpNombre = document.getElementById("c-nombre");
-  const colegios = opcionesUnicas([...pendientes, ...dejados], "colegio");
+  const colegios = opcionesUnicas(pendientes, "colegio");
   selColegio.innerHTML =
     `<option value="">Todos</option>` + colegios.map((v) => `<option value="${escaparHtml(v)}">${escaparHtml(v)}</option>`).join("");
   if (!colegios.includes(f.colegio)) f.colegio = "";
@@ -1361,7 +1402,7 @@ function renderCorreccion() {
   } else if (pendientes.length === 0) {
     contResumen.innerHTML = `<div class="resumen-traspaso ok">✓ No hay tests pendientes por revisar: ${
       dejados.length
-        ? `los demás suman 45, y ${dejados.length} ${dejados.length === 1 ? "se revisó y se dejó así" : "se revisaron y se dejaron así"}.`
+        ? `los demás suman 45, y ${dejados.length} ${dejados.length === 1 ? "se revisó y se dejó así" : "se revisaron y se dejaron así"} (están en "Recién corregidos").`
         : "todos los estudiantes cargados suman 45 puntos."
     }</div>`;
   } else {
@@ -1406,7 +1447,7 @@ function renderCorreccion() {
                   return `
                   <tr data-id="${e.id}" class="${editandoEste ? "editando" : ""}">
                     <td style="color:#6a6178;">${c.numeroEnGrupo(e) || ""}</td>
-                    <td><strong>${escaparHtml(e.nombre)}</strong> ${botonTraspasoHtml(e, "abrirEdicionEnLista")}<br/><span style="color:#6a6178;font-size:11px;">${escaparHtml(c.formatearRut(e.rut))}</span></td>
+                    <td>${nombreConLapizHtml(e)} ${botonTraspasoHtml(e, "abrirEdicionEnLista")}<br/><span style="color:#6a6178;font-size:11px;">${escaparHtml(c.formatearRut(e.rut))}</span></td>
                     <td><div class="traspaso-aviso${t.afecta ? " afecta" : ""}">${t.afecta ? "⚠" : "ℹ️"} <b>${escaparHtml(t.resumen)}.</b> ${escaparHtml(t.accion)}. ${escaparHtml(t.detalle)}</div></td>
                     <td>
                       <div class="fila-acciones">
@@ -1431,38 +1472,184 @@ function renderCorreccion() {
   else if (visibles.length === 0) cont.innerHTML = `<div class="vacio">No hay pendientes que coincidan con el filtro.</div>`;
   else cont.innerHTML = html;
   if (editando) cablearEditorEnLista(editando);
+}
 
-  // los que se revisaron y se dejaron así, por si hay que volver a marcarlos como pendientes
-  const dejadosVisibles = dejados.filter(pasaFiltro).sort((a, b) => compararNombres(a.nombre, b.nombre));
+const MAX_RECIEN_CORREGIDOS = 10;
+
+// la última corrección de un estudiante, si sigue valiendo con sus puntajes de ahora
+// ("dejado": sigue dejado así; "corregido": sigue sumando 45). Los que se dejaron así
+// antes de que existiera este registro usan su última actualización como fecha.
+function correccionVigente(e) {
+  const corr = e.correccion || (e.traspasoAceptado ? { como: "dejado", en: e.actualizadoEn || "" } : null);
+  if (!corr) return null;
+  const malTraspasado = !!revisionTraspaso(e.puntajes);
+  if (corr.como === "dejado") return malTraspasado && traspasoDejadoAsi(e) ? corr : null;
+  return malTraspasado ? null : corr;
+}
+
+function fmtCuando(iso) {
+  const d = new Date(iso || "");
+  if (isNaN(d)) return "";
+  const dos = (n) => String(n).padStart(2, "0");
+  const hora = `${dos(d.getHours())}:${dos(d.getMinutes())}`;
+  const ayer = new Date();
+  ayer.setDate(ayer.getDate() - 1);
+  if (d.toDateString() === new Date().toDateString()) return `Hoy, ${hora}`;
+  if (d.toDateString() === ayer.toDateString()) return `Ayer, ${hora}`;
+  return `${dos(d.getDate())}-${dos(d.getMonth() + 1)}-${d.getFullYear()}, ${hora}`;
+}
+
+function renderRecientesCorreccion() {
+  const c = cfg();
+  const cont = document.getElementById("lista-recientes");
+  const contDejados = document.getElementById("dejados-correccion");
+  if (!c.revisarTraspaso) {
+    cont.innerHTML = contDejados.innerHTML = "";
+    return;
+  }
+  const todos = c.store.listar();
+  const recientes = todos
+    .map((e) => ({ e, corr: correccionVigente(e) }))
+    .filter((x) => x.corr)
+    .sort((a, b) => (a.corr.en < b.corr.en ? 1 : a.corr.en > b.corr.en ? -1 : 0))
+    .slice(0, MAX_RECIEN_CORREGIDOS);
+
+  estado.pendientesVisibles = []; // aquí no va "Guardar y seguir con el siguiente pendiente"
+  const editando = (recientes.find((x) => x.e.id === estado.edicionEnLista) || {}).e || null;
+  if (!editando) estado.edicionEnLista = null;
+
+  cont.innerHTML = recientes.length
+    ? `
+    <table class="lista">
+      <thead><tr><th style="width:120px;">Cuándo</th><th>Estudiante</th><th>Colegio y curso</th><th>Corrección</th><th>Área(s) de interés</th><th style="width:230px;">Acciones</th></tr></thead>
+      <tbody>
+        ${recientes
+          .map(({ e, corr }) => {
+            const r = revisionTraspaso(e.puntajes);
+            const editandoEste = estado.edicionEnLista === e.id;
+            const numero = c.numeroEnGrupo(e);
+            return `
+            <tr data-id="${e.id}" class="${editandoEste ? "editando" : ""}">
+              <td style="color:#6a6178;font-size:12px;">${escaparHtml(fmtCuando(corr.en))}</td>
+              <td>${nombreConLapizHtml(e)}<br/><span style="color:#6a6178;font-size:11px;">${escaparHtml(c.formatearRut(e.rut))}</span></td>
+              <td>${escaparHtml(e.colegio)}<br/><span style="color:#6a6178;font-size:12px;">${escaparHtml(etiquetaCurso(e))}${numero ? ` · N° ${numero}` : ""}</span></td>
+              <td>${
+                corr.como === "dejado"
+                  ? `<span class="chip chip-dejado">✓ Dejado así · ${r.analisis.total}/${SUMA_ESPERADA_KUDER}</span>`
+                  : `<span class="chip chip-corregido">✏️ Corregido · suma ${SUMA_ESPERADA_KUDER}</span>`
+              }</td>
+              <td>${chipsAreas(e)}</td>
+              <td>
+                <div class="fila-acciones">
+                  <button class="chico secundario" onclick="abrirEdicionEnLista('${e.id}')">${editandoEste ? "Modificando…" : "✏️ Modificar"}</button>
+                  ${corr.como === "dejado" ? `<button class="chico secundario" onclick="accionVolverAPendiente('${e.id}')">↩ Volver a pendiente</button>` : ""}
+                </div>
+              </td>
+            </tr>
+            ${editandoEste ? `<tr class="fila-edicion"><td colspan="6">${htmlEditorEnLista(e)}</td></tr>` : ""}`;
+          })
+          .join("")}
+      </tbody>
+    </table>`
+    : `<div class="vacio">Todavía no has corregido ni dejado así a ningún estudiante.</div>`;
+  if (editando) cablearEditorEnLista(editando);
+
+  // todos los que se revisaron y se dejaron así, por si hay que volver a marcar alguno como pendiente
+  const dejados = todos
+    .filter((e) => traspasoDejadoAsi(e) && revisionTraspaso(e.puntajes))
+    .sort((a, b) => compararNombres(a.nombre, b.nombre));
   contDejados.innerHTML = dejados.length
     ? `
       <details class="correccion-dejados" ${estado.dejadosAbierto ? "open" : ""}>
-        <summary>✓ Revisados y dejados así <span class="chip">${dejadosVisibles.length}</span></summary>
+        <summary>✓ Todos los dejados así <span class="chip">${dejados.length}</span></summary>
         <p class="ayuda">No suman 45, pero se revisaron y se dejaron así: ya no aparecen como pendientes y su informe sale sin la marca "(44 de 45)". Si alguno se dejó así por error, vuelve a marcarlo como pendiente (o usa "Deshacer" arriba).</p>
-        ${
-          dejadosVisibles.length
-            ? `<table class="lista">
-            <thead><tr><th>Estudiante</th><th>Colegio y curso</th><th>Suma</th><th style="width:210px;">Acción</th></tr></thead>
-            <tbody>
-              ${dejadosVisibles
-                .map((e) => {
-                  const r = revisionTraspaso(e.puntajes);
-                  return `<tr>
-                    <td><strong>${escaparHtml(e.nombre)}</strong></td>
-                    <td>${escaparHtml(e.colegio)} · ${escaparHtml(etiquetaCurso(e))}</td>
-                    <td>${escaparHtml(r.texto.resumen)}</td>
-                    <td><button class="chico secundario" onclick="accionVolverAPendiente('${e.id}')">↩ Volver a pendiente</button></td>
-                  </tr>`;
-                })
-                .join("")}
-            </tbody>
-          </table>`
-            : `<div class="vacio" style="padding:14px;">Ninguno coincide con el filtro.</div>`
-        }
+        <table class="lista">
+          <thead><tr><th>Estudiante</th><th>Colegio y curso</th><th>Suma</th><th style="width:210px;">Acción</th></tr></thead>
+          <tbody>
+            ${dejados
+              .map((e) => {
+                const r = revisionTraspaso(e.puntajes);
+                return `<tr>
+                  <td>${nombreConLapizHtml(e)}</td>
+                  <td>${escaparHtml(e.colegio)} · ${escaparHtml(etiquetaCurso(e))}</td>
+                  <td>${escaparHtml(r.texto.resumen)}</td>
+                  <td><button class="chico secundario" onclick="accionVolverAPendiente('${e.id}')">↩ Volver a pendiente</button></td>
+                </tr>`;
+              })
+              .join("")}
+          </tbody>
+        </table>
       </details>`
     : "";
   const det = contDejados.querySelector("details");
   if (det) det.addEventListener("toggle", () => (estado.dejadosAbierto = det.open));
+}
+
+// ---------------- nombre y RUT de un estudiante (lápiz ✎ junto a su nombre) ----------------
+
+let datosAlumnoId = null;
+
+function abrirDatosAlumno(id) {
+  const c = cfg();
+  const e = c.store.obtener(id);
+  if (!e) return;
+  datosAlumnoId = id;
+  document.getElementById("mda-sub").textContent = [e.colegio, etiquetaCurso(e)].filter(Boolean).join(" · ");
+  const nombre = document.getElementById("mda-nombre");
+  nombre.value = e.nombre;
+  nombre.classList.remove("invalido");
+  document.getElementById("mda-rut").value = e.rut || "";
+  document.getElementById("modal-datos-alumno").style.display = "flex";
+  nombre.focus();
+  nombre.select();
+}
+
+function cerrarDatosAlumno() {
+  document.getElementById("modal-datos-alumno").style.display = "none";
+  datosAlumnoId = null;
+}
+
+function guardarDatosAlumno() {
+  const c = cfg();
+  const id = datosAlumnoId;
+  if (!id || !c.store.obtener(id)) return cerrarDatosAlumno();
+  const inpNombre = document.getElementById("mda-nombre");
+  const nombre = inpNombre.value.trim();
+  inpNombre.classList.toggle("invalido", !nombre);
+  if (!nombre) {
+    mostrarToast("El nombre no puede quedar vacío");
+    return;
+  }
+  const rut = document.getElementById("mda-rut").value.trim();
+  c.store.actualizar(id, { nombre, rut });
+  cerrarDatosAlumno();
+  if (TABS_CON_EDICION_EN_LISTA.includes(estado.tab)) actualizarListaConservandoPosicion(id);
+  else render();
+  // si su panel de edición estaba abierto, se le pone el nombre y RUT nuevos
+  const editor = estado.edicionEnLista === id ? enListaEditable(".editor-en-lista") : null;
+  if (editor) {
+    editor.querySelector("[name='ed_nombre']").value = nombre;
+    editor.querySelector("[name='ed_rut']").value = rut;
+  }
+  mostrarToast(`Datos actualizados: ${nombre}`);
+}
+
+function cablearDatosAlumno() {
+  const modal = document.getElementById("modal-datos-alumno");
+  document.getElementById("mda-cancelar").addEventListener("click", cerrarDatosAlumno);
+  document.getElementById("mda-guardar").addEventListener("click", guardarDatosAlumno);
+  modal.addEventListener("click", (ev) => {
+    if (ev.target === modal) cerrarDatosAlumno();
+  });
+  modal.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter") {
+      ev.preventDefault();
+      guardarDatosAlumno();
+    } else if (ev.key === "Escape") {
+      ev.preventDefault();
+      cerrarDatosAlumno();
+    }
+  });
 }
 
 // "✓ Dejar así" de un estudiante: sus puntajes quedan como están y deja de aparecer
@@ -1565,7 +1752,10 @@ function claveGrupoCurso(colegio, claveCurso) {
 
 // lista donde se edita: "Estudiantes e informes" o "Corrección"
 function contenedorListaEditable() {
-  return document.getElementById(estado.tab === "correccion" ? "lista-correccion" : "grupos-estudiantes");
+  if (estado.tab === "correccion") {
+    return document.getElementById(estado.subCorreccion === "recientes" ? "lista-recientes" : "lista-correccion");
+  }
+  return document.getElementById("grupos-estudiantes");
 }
 
 // busca dentro de la lista de la pestaña abierta (la otra lista puede seguir en la
@@ -1702,7 +1892,7 @@ function htmlEditorEnLista(e) {
       <div class="editor-en-lista-acciones">
         <button type="button" class="chico" data-ed="guardar">💾 Guardar</button>
         ${hayOtroPendiente ? `<button type="button" class="chico" data-ed="siguiente">💾 Guardar y seguir con el siguiente pendiente</button>` : ""}
-        ${r ? `<button type="button" class="chico exito" data-ed="dejar" title="Guarda lo escrito y deja sus puntajes así aunque no sumen ${SUMA_ESPERADA_KUDER}: deja de aparecer como pendiente">✓ Dejar así</button>` : ""}
+        ${r || rDejado ? `<button type="button" class="chico exito" data-ed="dejar" title="Guarda lo escrito y deja sus puntajes así aunque no sumen ${SUMA_ESPERADA_KUDER}: deja de aparecer como pendiente">✓ Dejar así</button>` : ""}
         <button type="button" class="chico secundario" data-ed="descargar">Guardar y descargar su informe</button>
         <button type="button" class="chico secundario" data-ed="cancelar">Cancelar</button>
         <span class="editor-en-lista-ayuda">Enter guarda · Esc cancela</span>
@@ -1779,8 +1969,8 @@ function guardarEdicionEnLista(id, { seguir = false, dejarAsi = false } = {}) {
     curso,
     letra: campo("ed_letra").value.trim().toUpperCase(),
     puntajes,
+    ...datosDeCorreccion(c.store.obtener(id), puntajes, dejarAsi),
   };
-  if (dejarAsi && c.huellaTraspaso && revisionTraspaso(puntajes)) datos.traspasoAceptado = c.huellaTraspaso(puntajes);
   const actualizado = c.store.actualizar(id, datos);
   estado.edicionEnLista = siguiente;
   actualizarListaConservandoPosicion(id);
@@ -2187,8 +2377,7 @@ function guardarCorreccionPuntajes({ dejarAsi = false } = {}) {
     mostrarToast(`Cada puntaje debe ser un número entero de ${c.puntajeMin} a ${c.puntajeMax}`);
     return null;
   }
-  const datos = { puntajes };
-  if (dejarAsi && c.huellaTraspaso && revisionTraspaso(puntajes)) datos.traspasoAceptado = c.huellaTraspaso(puntajes);
+  const datos = { puntajes, ...datosDeCorreccion(e, puntajes, dejarAsi) };
   const actualizado = c.store.actualizar(e.id, datos);
   cerrarCorreccionPuntajes();
 
