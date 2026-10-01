@@ -1435,9 +1435,9 @@ function renderPendientesCorreccion() {
       enOrden.push(...ordenados);
       html += `
         <div class="correccion-grupo">
-          <div class="correccion-grupo-titulo">🏫 ${escaparHtml(colegio)} <span class="correccion-sep">·</span> 📘 ${escaparHtml(claveCurso)} ${chipTraspasoHtml(ordenados)}</div>
+          <div class="correccion-grupo-titulo">🏫 ${escaparHtml(colegio)} <span class="correccion-sep">·</span> 📘 ${escaparHtml(claveCurso)} ${chipTraspasoHtml(ordenados)}<span class="marcas-conteo">${textoConteoMarcas(ordenados.filter((e) => hojasMarcadas.has(e.id)).length, ordenados.length)}</span></div>
           <table class="lista">
-            <thead><tr><th style="width:44px;">N°</th><th>Estudiante</th><th>Qué revisar</th><th style="width:210px;">Acciones</th></tr></thead>
+            <thead><tr><th class="celda-marca" title="Ayuda visual: marca las hojas que ya sacaste de la pila (no guarda nada)">☑</th><th style="width:44px;">N°</th><th>Estudiante</th><th>Qué revisar</th><th style="width:210px;">Acciones</th></tr></thead>
             <tbody>
               ${ordenados
                 .map((e) => {
@@ -1445,7 +1445,8 @@ function renderPendientesCorreccion() {
                   const t = r.texto;
                   const editandoEste = estado.edicionEnLista === e.id;
                   return `
-                  <tr data-id="${e.id}" class="${editandoEste ? "editando" : ""}">
+                  <tr data-id="${e.id}" class="${[editandoEste ? "editando" : "", hojasMarcadas.has(e.id) ? "marcado-visual" : ""].join(" ").trim()}">
+                    <td class="celda-marca"><input type="checkbox" class="chk-marca-visual" data-id="${e.id}" ${hojasMarcadas.has(e.id) ? "checked" : ""} title="Marcar como hoja ya sacada (solo ayuda visual: no cambia ni guarda nada)" aria-label="Marcar a ${escaparHtml(e.nombre)} (solo ayuda visual)" /></td>
                     <td style="color:#6a6178;">${c.numeroEnGrupo(e) || ""}</td>
                     <td>${nombreConLapizHtml(e)} ${botonTraspasoHtml(e, "abrirEdicionEnLista")}<br/><span style="color:#6a6178;font-size:11px;">${escaparHtml(c.formatearRut(e.rut))}</span></td>
                     <td><div class="traspaso-aviso${t.afecta ? " afecta" : ""}">${t.afecta ? "⚠" : "ℹ️"} <b>${escaparHtml(t.resumen)}.</b> ${escaparHtml(t.accion)}. ${escaparHtml(t.detalle)}</div></td>
@@ -1456,7 +1457,7 @@ function renderPendientesCorreccion() {
                       </div>
                     </td>
                   </tr>
-                  ${editandoEste ? `<tr class="fila-edicion"><td colspan="4">${htmlEditorEnLista(e)}</td></tr>` : ""}`;
+                  ${editandoEste ? `<tr class="fila-edicion"><td colspan="5">${htmlEditorEnLista(e)}</td></tr>` : ""}`;
                 })
                 .join("")}
             </tbody>
@@ -1472,6 +1473,28 @@ function renderPendientesCorreccion() {
   else if (visibles.length === 0) cont.innerHTML = `<div class="vacio">No hay pendientes que coincidan con el filtro.</div>`;
   else cont.innerHTML = html;
   if (editando) cablearEditorEnLista(editando);
+  cont.querySelectorAll(".chk-marca-visual").forEach((chk) => (chk.onchange = () => alternarMarcaVisual(chk)));
+}
+
+// Casilla junto a cada pendiente: solo una ayuda visual para ir marcando las hojas que
+// ya se sacaron de la pila (la fila queda atenuada). Vive en la memoria de la página:
+// no cambia la corrección, no se guarda en ningún lado y se pierde al recargar.
+const hojasMarcadas = new Set();
+
+function textoConteoMarcas(marcados, total) {
+  return marcados ? `☑ ${marcados} de ${total} ${marcados === 1 ? "marcado" : "marcados"}` : "";
+}
+
+function alternarMarcaVisual(chk) {
+  if (chk.checked) hojasMarcadas.add(chk.dataset.id);
+  else hojasMarcadas.delete(chk.dataset.id);
+  const fila = chk.closest("tr");
+  if (fila) fila.classList.toggle("marcado-visual", chk.checked);
+  const grupo = chk.closest(".correccion-grupo");
+  if (grupo) {
+    const casillas = [...grupo.querySelectorAll(".chk-marca-visual")];
+    grupo.querySelector(".marcas-conteo").textContent = textoConteoMarcas(casillas.filter((x) => x.checked).length, casillas.length);
+  }
 }
 
 const MAX_RECIEN_CORREGIDOS = 10;

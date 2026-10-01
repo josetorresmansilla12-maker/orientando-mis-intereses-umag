@@ -1430,3 +1430,14 @@ details.correccion-dejados > table.lista { border-radius: 0; box-shadow: none; }
 tr:hover .btn-lapiz { opacity: 0.8; }
 .mda-campos { grid-template-columns: 2fr 1fr; }
 #modal-datos-alumno .modal-caja { max-width: 520px; }
+
+/* casilla de ayuda visual en "Corrección" (hojas ya sacadas de la pila): la fila marcada
+   se atenúa, pero la casilla queda nítida para poder desmarcarla */
+table.lista th.celda-marca,
+table.lista td.celda-marca { width: 34px; padding-right: 0; text-align: center; }
+.chk-marca-visual { width: 17px; height: 17px; margin: 0; cursor: pointer; accent-color: var(--teal); vertical-align: middle; }
+tr.marcado-visual > td { opacity: 0.35; }
+tr.marcado-visual > td.celda-marca { opacity: 1; }
+tr.marcado-visual:hover > td { opacity: 0.6; }
+tr.marcado-visual:hover > td.celda-marca { opacity: 1; }
+.marcas-conteo { margin-left: auto; font-size: 12px; font-weight: 600; color: #1f6f63; }

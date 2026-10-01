@@ -78,7 +78,10 @@ Paso 2: las pestañas
 3. "Corrección" (solo Kuder), con dos subpestañas:
    - "Pendientes": todos los estudiantes cargados cuyo test no suma 45, por colegio y
      curso, para revisarlos de corrido con sus hojas de respuestas. Al lado de la
-     pestaña aparece cuántos quedan pendientes.
+     pestaña aparece cuántos quedan pendientes. La casilla ☐ junto a cada estudiante
+     sirve para ir marcando las hojas que ya sacaste de la pila: la fila se ve
+     atenuada y el curso muestra cuántos llevas. Es solo una ayuda visual: no cambia
+     nada, no se guarda y se borra al recargar la página.
    - "Recién corregidos": los últimos 10 estudiantes que corregiste (ya suman 45) o
      marcaste con "✓ Dejar así", del más reciente al más antiguo. Si te equivocaste
      con alguno, lo arreglas ahí mismo ("✏️ Modificar" o "↩ Volver a pendiente"), sin
