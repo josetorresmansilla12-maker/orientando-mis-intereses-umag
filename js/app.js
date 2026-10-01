@@ -163,8 +163,10 @@ function render() {
 }
 
 function cablearTabs() {
+  window.addEventListener("scroll", recortarEspaciadorFinal, { passive: true });
   document.querySelectorAll(".tab-btn").forEach((b) => {
     b.addEventListener("click", () => {
+      document.getElementById("espaciador-final").style.height = ""; // otra pestaña parte sin espacio extra
       if (estado.tab !== b.dataset.tab) estado.edicionEnLista = null; // el panel de edición no se lleva a la otra pestaña
       estado.tab = b.dataset.tab;
       render();
@@ -206,7 +208,7 @@ function cablearSelectorTest() {
 
 function cambiarTest(idTest) {
   if (!TESTS[idTest] || idTest === estado.test) return;
-  if (estado.editandoId) cancelarEdicion();
+  if (estado.editandoId) cancelarEdicion({ volver: false });
   guardarCursoHeaderEnLocal(); // lo escrito en "Datos del curso" queda con el test anterior
   estado.test = idTest;
   try {
@@ -233,7 +235,7 @@ function cablearTopbar() {
     if (cfg().store.deshacer()) {
       mostrarToast("Se deshizo el último cambio");
       render();
-      if (estado.tab === "ingresar") cancelarEdicion();
+      if (estado.tab === "ingresar") cancelarEdicion({ volver: false });
     }
   });
   document.getElementById("btn-rehacer").addEventListener("click", () => {
@@ -893,7 +895,7 @@ function cablearFormulario() {
     if (ev.target.name && ev.target.name.startsWith("p_")) renderSumaPuntajes();
   });
   form.addEventListener("reset", () => setTimeout(renderSumaPuntajes, 0));
-  document.getElementById("btn-cancelar-edicion").addEventListener("click", cancelarEdicion);
+  document.getElementById("btn-cancelar-edicion").addEventListener("click", () => cancelarEdicion());
 }
 
 function limpiarValidacion() {
@@ -951,9 +953,13 @@ function guardarDesdeFormulario() {
   const traspaso = revisionTraspaso(puntajes);
   const avisoTraspaso = traspaso ? ` Ojo: ${traspaso.texto.resumen.toLowerCase()}, test mal traspasado.` : "";
   if (estado.editandoId) {
-    c.store.actualizar(estado.editandoId, datos);
+    const id = estado.editandoId;
+    c.store.actualizar(id, datos);
     mostrarToast("Estudiante actualizado." + avisoTraspaso);
-    cancelarEdicion();
+    cancelarEdicion({ volver: false });
+    render();
+    volverAFilaEditada(id);
+    return;
   } else {
     c.store.crear(datos);
     mostrarToast((traspaso ? "Estudiante guardado." : "Estudiante guardado. Sigue con el próximo.") + avisoTraspaso);
@@ -1011,7 +1017,7 @@ function renderDatosRecientes() {
         ${delCurso
           .map(
             (e, i) => `
-            <tr>
+            <tr data-id="${e.id}">
               <td>${i + 1}</td>
               <td>${escaparHtml(e.nombre)} ${botonTraspasoHtml(e)}</td>
               <td>${chipsAreas(e)}${avisoTraspasoHtml(e, { compacto: true })}</td>
@@ -1044,15 +1050,25 @@ function cargarEnFormulario(estudiante) {
   document.getElementById("btn-guardar").textContent = "Guardar cambios";
   estado.tab = "ingresar";
   render();
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  document.getElementById("form-estudiante").closest(".tarjeta").scrollIntoView({ block: "start" });
 }
 
-function cancelarEdicion() {
+// al terminar de editar en "Ingresar datos" (guardar o cancelar) se vuelve a la fila de
+// ese estudiante en la lista de abajo, en la misma pestaña: cancelar solo deja de
+// editarlo, no saca de donde se estaba trabajando
+function volverAFilaEditada(id) {
+  const fila = id && document.querySelector(`#datos-recientes tr[data-id="${id}"]`);
+  if (fila) fila.scrollIntoView({ block: "center" });
+}
+
+function cancelarEdicion({ volver = true } = {}) {
+  const id = estado.editandoId;
   estado.editandoId = null;
   limpiarFormularioEstudiante();
   document.getElementById("titulo-form").textContent = "Agregar estudiante";
   document.getElementById("btn-cancelar-edicion").style.display = "none";
   document.getElementById("btn-guardar").textContent = "Guardar y agregar siguiente";
+  if (volver) volverAFilaEditada(id);
 }
 
 // ---------------- pestaña: estudiantes (agrupado por colegio > curso) ----------------
@@ -1801,9 +1817,33 @@ function idsDeFilasEnPantalla() {
 // vuelve a dibujar la lista dejando la fila de "idAncla" en el mismo lugar de la
 // pantalla; si esa fila ya no está (por ejemplo, dejó de estar pendiente con el filtro
 // "Ver solo estos estudiantes"), se usa la siguiente que sí esté
+// Al cerrarse un panel de edición (o salir un estudiante de la lista) la página se
+// acorta; si eso pasa cerca del final, el navegador sube la pantalla solo y parece que
+// la app "lleva a otra parte". Para evitarlo, se agrega al final un espacio en blanco
+// del mismo alto que se perdió, y ese espacio se va achicando a medida que se sube, sin
+// mover nunca lo que se está viendo.
+function mantenerAlturaPagina(altoAntes) {
+  const espaciador = document.getElementById("espaciador-final");
+  if (!espaciador) return;
+  const actual = espaciador.offsetHeight;
+  const perdido = altoAntes - document.documentElement.scrollHeight;
+  if (perdido > 0) espaciador.style.height = `${actual + perdido}px`;
+  recortarEspaciadorFinal();
+}
+
+// achica el espacio del final en todo lo que ya no se ve (debajo de la pantalla)
+function recortarEspaciadorFinal() {
+  const espaciador = document.getElementById("espaciador-final");
+  if (!espaciador || !espaciador.offsetHeight) return;
+  const debajoDeLaPantalla = document.documentElement.scrollHeight - (window.scrollY + window.innerHeight);
+  const nuevo = Math.max(0, espaciador.offsetHeight - Math.max(0, debajoDeLaPantalla));
+  espaciador.style.height = nuevo ? `${nuevo}px` : "";
+}
+
 function actualizarListaConservandoPosicion(idAncla) {
   const antes = filaDeEstudiante(idAncla);
   const top = antes ? antes.getBoundingClientRect().top : null;
+  const altoPagina = document.documentElement.scrollHeight;
   const ids = idsDeFilasEnPantalla();
   const siguientes = ids.slice(ids.indexOf(idAncla) + 1);
   // si queda abierto el panel de otro estudiante (por ejemplo, se dejó así a uno
@@ -1814,6 +1854,7 @@ function actualizarListaConservandoPosicion(idAncla) {
       ? [...editor.querySelectorAll("input[name]")].map((inp) => [inp.name, inp.value])
       : null;
   render();
+  mantenerAlturaPagina(altoPagina);
   if (escrito) {
     const nuevo = enListaEditable(".editor-en-lista");
     if (nuevo && nuevo.dataset.id === estado.edicionEnLista) {

@@ -82,9 +82,10 @@ Paso 2: las pestañas
    - "Informe grupal para el orientador": el informe del curso completo para el
      colegio (en los dos tests), sin tener que volver a subir el archivo.
    - Editar a un estudiante ahí mismo: "Editar" (o el ícono ⚠ de un pendiente) abre
-     un panel justo debajo de él, sin cambiar de pestaña. Al guardar (botón o Enter),
-     la lista se actualiza en el mismo lugar, con los cursos abiertos y en la misma
-     posición. En Kuder, "Guardar y seguir con el siguiente pendiente" abre al tiro al
+     un panel justo debajo de él, sin cambiar de pestaña. Al guardar (botón o Enter)
+     o al cancelar, la lista se actualiza en el mismo lugar, con los cursos abiertos y
+     en la misma posición (también si es el último de la lista). Cancelar solo deja de
+     editar a ese estudiante. En Kuder, "Guardar y seguir con el siguiente pendiente" abre al tiro al
      próximo estudiante por revisar.
    - Eliminar estudiantes (lo eliminado queda en la Papelera).
 
@@ -169,9 +170,15 @@ Cómo se ve el informe de Kuder (individual)
 - Hojas siguientes: los datos del estudiante y un recuadro por cada área de interés
   (7 puntos o más), con su descripción, "Tus Carreras UMAG" y "Otras carreras".
 - Aparecen todas sus áreas de interés, sin límite. Si ningún área llega a 7, el
-  informe le dice que sus puntajes fueron parejos (intereses amplios y variados) y le
-  muestra las 10 áreas (igual que en 8° básico, donde se muestran las 6), cada una con
-  una descripción propia para ese caso, que no habla de un interés alto.
+  informe se lo dice (intereses amplios y variados) y le muestra las 10 áreas (igual
+  que en 8° básico, donde se muestran las 6), cada una con una descripción propia
+  para ese caso, que no habla de un interés alto. En esa descripción, la frase sobre
+  el puntaje se calcula con el puntaje real del área comparado con las demás: "entre
+  las de más puntaje", "parecido a otras áreas" o "menos puntaje que otras áreas"
+  (solo dice "de forma pareja" si de verdad los puntajes fueron parejos).
+- En 8° básico, en ese caso las 6 áreas van ordenadas de mayor a menor puntaje (y el
+  informe lo dice). En Kuder no se ordenan: con 10 áreas, ordenarlas dejaba más
+  espacios en blanco y a veces una hoja más.
 - Las descripciones de las áreas (en los dos tests) están escritas en tono de
   posibilidad ("podría indicar que...", "es posible que..."): explican qué representa
   cada área y qué podría abrirle al estudiante, sin dar por hecho sus gustos ni rasgos.

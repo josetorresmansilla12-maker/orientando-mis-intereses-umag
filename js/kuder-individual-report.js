@@ -274,9 +274,10 @@ function construirCajaEstudianteKuder(estudiante) {
 // (Mecánica, Servicio Social, etc.), ese cuadro toma dos tercios del ancho y reparte
 // sus carreras en dos columnas, para que la tarjeta no quede tan alta (y quepan más
 // tarjetas por hoja). "espaciosa" = más aire interno, solo para una tarjeta que quedó
-// sola en su hoja (misma clase que usan los informes grupales de Kuder). "diversa":
-// puntajes parejos (ninguna área llegó a 7), con la descripción para ese caso.
-function construirTarjetaAreaIndividualKuder(area, espaciosa, diversa = false) {
+// sola en su hoja (misma clase que usan los informes grupales de Kuder). "textoDiverso":
+// sin área destacada (ninguna llegó a 7), la descripción armada para ese caso
+// (descripcionesAreasDiversas, js/report.js).
+function construirTarjetaAreaIndividualKuder(area, espaciosa, textoDiverso = null) {
   const umagAncho = area.carrerasUMAG.length >= 9;
   return `
     <div class="area-card${espaciosa ? " kuder-area-card-espaciosa" : ""}" style="border-left-color:${area.color};">
@@ -284,7 +285,7 @@ function construirTarjetaAreaIndividualKuder(area, espaciosa, diversa = false) {
         ${iconoCirculoKuder(area, 42)}
         <h3 style="color:${area.color};">${area.nombre}</h3>
       </div>
-      <p class="area-card-desc">${diversa ? area.descripcionDiversa : area.descripcionEstudiante}</p>
+      <p class="area-card-desc">${textoDiverso || area.descripcionEstudiante}</p>
       <div class="area-card-carreras-split${umagAncho ? " kuder-split-umag-ancho" : ""}">
         ${construirListaCarreras("Tus Carreras UMAG", area.carrerasUMAG, "umag")}
         ${construirListaCarreras("Otras carreras", area.carrerasOtras)}
@@ -310,8 +311,7 @@ function seleccionarAreasInformeKuder(puntajes) {
 function construirEncabezadoResultadosKuder(estudiante, areas, caso) {
   let mensaje;
   if (caso === "ninguna") {
-    mensaje =
-      "Tus puntajes se repartieron de forma pareja entre las áreas: esto podría indicar que tus intereses son amplios y variados, algo que también puede ser una ventaja. Aquí te mostramos las 10 áreas, para que sigas explorando tus opciones:";
+    mensaje = mensajeSinAreaDestacada(areas, estudiante.puntajes);
   } else {
     mensaje = `De acuerdo a tus respuestas, ${areas.length === 1 ? "tu área de interés es" : "tus áreas de interés son"}:`;
   }
@@ -333,9 +333,9 @@ function construirPaginasResultadosKuder(estudiante) {
   const htmlEncabezado = construirEncabezadoResultadosKuder(estudiante, areas, caso);
   const htmlEncabezadoCont = construirLineaEstudianteKuder(estudiante, { inicioPagina: true });
   const htmlAviso = construirAvisoContinua();
-  const diversa = caso === "ninguna";
-  const htmlTarjetas = areas.map((a) => construirTarjetaAreaIndividualKuder(a, false, diversa));
-  const htmlTarjetasEspaciosas = areas.map((a) => construirTarjetaAreaIndividualKuder(a, true, diversa));
+  const textosDiversos = caso === "ninguna" ? descripcionesAreasDiversas(areas, estudiante.puntajes) : [];
+  const htmlTarjetas = areas.map((a, i) => construirTarjetaAreaIndividualKuder(a, false, textosDiversos[i] || null));
+  const htmlTarjetasEspaciosas = areas.map((a, i) => construirTarjetaAreaIndividualKuder(a, true, textosDiversos[i] || null));
 
   const altoEncabezado = medirAlturaFragmento(htmlEncabezado);
   const altoEncabezadoCont = medirAlturaFragmento(htmlEncabezadoCont);
