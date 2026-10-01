@@ -179,6 +179,25 @@ class Store {
     return e;
   }
 
+  // cambia el nombre de uno o más colegios en todos sus estudiantes (también los de la
+  // papelera): [[nombreAnterior, nombreNuevo], ...]. Si el nombre nuevo es el de otro
+  // colegio ya cargado, quedan juntos. Un solo paso de deshacer. Devuelve cuántos cambió.
+  renombrarColegios(cambios) {
+    const mapa = new Map(cambios.filter(([anterior, nuevo]) => nuevo && anterior !== nuevo));
+    if (!mapa.size) return 0;
+    this._antesDeCambiar();
+    const ahora = new Date().toISOString();
+    let n = 0;
+    this.estudiantes.forEach((e) => {
+      if (!mapa.has(e.colegio)) return;
+      e.colegio = mapa.get(e.colegio);
+      e.actualizadoEn = ahora;
+      n++;
+    });
+    this._guardar();
+    return n;
+  }
+
   // "✓ Dejar así" (Kuder): guarda en cada estudiante la huella de los puntajes que se
   // aceptaron tal cual ("huella" es una función de los puntajes), o la borra con null
   // ("Volver a pendiente"). También anota cuándo, para "Recién corregidos". Un solo

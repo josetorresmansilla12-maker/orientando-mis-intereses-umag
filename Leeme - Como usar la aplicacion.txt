@@ -53,6 +53,11 @@ Paso 2: las pestañas
    y cuántos estudiantes tiene. Ahí puedes:
    - Corregir el nombre o el RUT de un estudiante con el lápiz ✎ que está junto a su
      nombre (se abre una ventanita con esos dos datos; Enter guarda).
+   - Cambiar el nombre de un colegio con el lápiz ✎ junto a su nombre (por ejemplo,
+     "Barrera" → "Liceo Luis Alberto Barrera"): se cambia en todos sus estudiantes,
+     así sale en los informes, las carpetas y los CSV de "Uso interno". Si escribes el
+     nombre de otro colegio ya cargado, quedan juntos. También se puede cambiar en la
+     previsualización de "Descargar todos los cursos", haciendo clic en el nombre.
    - Abrir o cerrar un colegio o un curso haciendo clic en su título (la flechita ▸
      indica si está abierto).
    - "▴ Minimizar alumnos" (dentro de cada colegio): cierra todos sus cursos, así se
@@ -70,8 +75,8 @@ Paso 2: las pestañas
      archivos, elegir "Permitir".
    - Descargar todos los informes de un curso en un ZIP.
    - Nombres de carpetas y archivos:
-     * Carpeta (o ZIP) de un curso: "KUDER_Colegio_Alfa_2do_Medio_C_2026-10-02" (en
-       8° básico empieza con "8VO").
+     * Carpeta (o ZIP) de un curso: "KUDER_Colegio_Alfa_2do_Medio_C_2026" (en
+       8° básico empieza con "8VO"). Lleva el año, no la fecha completa.
      * Cada informe: "01 - Nombre Alumno - Segundo C - Colegio Alfa.pdf". El número
        va del 1 al total de archivos de la carpeta, sin saltos, en orden alfabético,
        y es el mismo N° que lleva impreso el informe: si al imprimir falta una hoja,
@@ -122,7 +127,7 @@ Paso 2: las pestañas
      orden, separados por punto y coma. Sirven para juntarlos con los de otro
      computador y subirlos todos juntos para el informe final. Los archivos se llaman,
      por ejemplo, "KUDER_LEUMAG_4to_Medio_A.csv", dentro de
-     "KUDER_CSV_34cursos_2026-10-02.zip". "contacto" y "nacimiento" solo traen datos en
+     "KUDER_CSV_34cursos_2026.zip". "contacto" y "nacimiento" solo traen datos en
      los cursos importados desde esta versión (antes la app no los guardaba).
 
 6. "Papelera": ahí puedes restaurar a un estudiante eliminado, o borrarlo para

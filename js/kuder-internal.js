@@ -330,7 +330,7 @@ async function descargarCsvCursosKuder(btn) {
   btn.textContent = "Preparando…";
   try {
     const blob = await zip.generateAsync({ type: "blob" });
-    descargarArchivo(blob, `KUDER_CSV_${cursos.length}${cursos.length === 1 ? "curso" : "cursos"}_${fechaParaArchivo()}.zip`);
+    descargarArchivo(blob, `KUDER_CSV_${cursos.length}${cursos.length === 1 ? "curso" : "cursos"}_${anioParaArchivo()}.zip`);
     mostrarToast(`Listo: ${cursos.length} ${cursos.length === 1 ? "archivo CSV" : "archivos CSV"} en un ZIP`);
   } finally {
     btn.disabled = false;

@@ -64,7 +64,7 @@ function numerarParaCarpeta(estudiantes) {
 }
 
 // ==================== nombres de carpetas y archivos (los dos tests) ====================
-// Carpeta (o ZIP) de un curso: "KUDER_Colegio_Alfa_2do_Medio_C_2026-10-02" ("8VO_..." en 8°).
+// Carpeta (o ZIP) de un curso: "KUDER_Colegio_Alfa_2do_Medio_C_2026" ("8VO_..." en 8°).
 // Archivo de cada informe: "01 - Nombre Alumno - Segundo C - Colegio Alfa.pdf", con el
 // número correlativo de la carpeta adelante (con cero a la izquierda, para que el
 // explorador de archivos los ordene bien): si al imprimir falta una hoja, se sabe qué
@@ -89,10 +89,10 @@ function limpiarParaNombreArchivo(s) {
     .trim();
 }
 
-// fecha de hoy (del computador, no en hora UTC) para los nombres: 2026-10-02
-function fechaParaArchivo() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+// año (del computador) para los nombres de carpetas y ZIP: "2026" (la fecha completa no
+// hace falta)
+function anioParaArchivo() {
+  return String(new Date().getFullYear());
 }
 
 function nombreColegioParaCarpeta(estudiantes) {
@@ -104,12 +104,12 @@ function nombreCarpetaCurso(prefijo, estudiantes) {
   // curso y letra separados: "2do Medio" + "C" → "2do_Medio_C"
   const cursos = [...new Set(estudiantes.map((e) => [e.curso, e.letra].filter(Boolean).join(" ")).filter(Boolean))];
   const curso = cursos.length === 1 ? limpiarParaCarpeta(cursos[0]) || "Curso" : cursos.length ? "VariosCursos" : "SinCurso";
-  return `${prefijo}_${nombreColegioParaCarpeta(estudiantes)}_${curso}_${fechaParaArchivo()}`;
+  return `${prefijo}_${nombreColegioParaCarpeta(estudiantes)}_${curso}_${anioParaArchivo()}`;
 }
 
 // ZIP con varios cursos (una carpeta por curso adentro)
 function nombreZipVariosCursos(prefijo, estudiantes, nCursos) {
-  return `${prefijo}_${nombreColegioParaCarpeta(estudiantes)}_${nCursos}${nCursos === 1 ? "curso" : "cursos"}_${fechaParaArchivo()}.zip`;
+  return `${prefijo}_${nombreColegioParaCarpeta(estudiantes)}_${nCursos}${nCursos === 1 ? "curso" : "cursos"}_${anioParaArchivo()}.zip`;
 }
 
 function numeroConCeros(numero, total) {
@@ -723,7 +723,7 @@ async function descargarInformeIndividual(estudiante) {
   if (typeof store !== "undefined" && store.registrarInformeGenerado) store.registrarInformeGenerado();
 }
 
-// el ZIP de un curso se llama igual que su carpeta: "8VO_Colegio_8vo_A_2026-10-02.zip"
+// el ZIP de un curso se llama igual que su carpeta: "8VO_Colegio_8vo_A_2026.zip"
 function nombreArchivoZip(estudiantes) {
   return `${nombreCarpetaCurso("8VO", estudiantes)}.zip`;
 }

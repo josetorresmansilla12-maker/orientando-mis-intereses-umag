@@ -1474,3 +1474,26 @@ tr.marcado-visual:hover > td.celda-marca { opacity: 1; }
 .csv-cursos-detalle summary { cursor: pointer; color: var(--morado); font-weight: 600; }
 .csv-cursos-detalle ul { margin: 6px 0 0; padding-left: 18px; }
 .csv-cursos-detalle li { margin-bottom: 3px; }
+
+/* nombre del colegio editable en la previsualización de "Descargar todos los cursos"
+   (se ve como el título; al pasar el mouse o hacer clic, como campo) y lápiz junto al
+   colegio en "Estudiantes e informes" */
+.mx-colegio-nombre {
+  font: inherit;
+  font-weight: 700;
+  color: var(--morado-oscuro);
+  background: transparent;
+  border: 1px dashed transparent;
+  border-radius: 6px;
+  padding: 2px 6px;
+  min-width: 200px;
+  width: min(420px, 100%);
+}
+.mx-colegio-nombre:hover { border-color: var(--morado-claro); background: white; }
+.mx-colegio-nombre:focus { border-style: solid; border-color: var(--morado); background: white; outline: none; }
+.mx-lapiz { color: var(--texto-suave); font-weight: 400; font-size: 13px; margin-left: -2px; }
+details.grupo-colegio > summary .btn-lapiz-colegio { color: white; opacity: 0.7; }
+details.grupo-colegio > summary .btn-lapiz-colegio:hover,
+details.grupo-colegio > summary .btn-lapiz-colegio:focus-visible { opacity: 1; color: white; background: rgba(255, 255, 255, 0.2); }
+#modal-renombrar-colegio .modal-caja { max-width: 480px; }
+#modal-renombrar-colegio input { width: 100%; }

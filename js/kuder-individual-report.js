@@ -468,7 +468,7 @@ async function descargarInformeIndividualKuder(estudiante) {
   storeKuder.registrarInformeGenerado();
 }
 
-// el ZIP de un curso se llama igual que su carpeta: "KUDER_Colegio_2do_Medio_C_2026-10-02.zip"
+// el ZIP de un curso se llama igual que su carpeta: "KUDER_Colegio_2do_Medio_C_2026.zip"
 function nombreZipInformesIndividualesKuder(estudiantes) {
   return `${nombreCarpetaCurso("KUDER", estudiantes)}.zip`;
 }

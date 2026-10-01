@@ -33,7 +33,7 @@ const TESTS = {
     nombreArchivoIndividual: nombreArchivoInforme,
     descargarMasivo: descargarInformesMasivo,
     agregarInformesACarpeta: agregarInformesACarpeta,
-    prefijoCarpetas: "8VO", // carpetas y ZIP: 8VO_Colegio_8vo_A_2026-10-02
+    prefijoCarpetas: "8VO", // carpetas y ZIP: 8VO_Colegio_8vo_A_2026
     configGrupal: CONFIG_GRUPAL_OCTAVO, // informe grupal para orientadores (js/kuder-report.js)
     exportarExcel: exportarExcel,
   },
@@ -60,7 +60,7 @@ const TESTS = {
     descargarMasivo: descargarInformesMasivoKuder,
     descargarVariosCursos: descargarCarpetasDeCursosKuder,
     agregarInformesACarpeta: agregarInformesACarpetaKuder,
-    prefijoCarpetas: "KUDER", // carpetas y ZIP: KUDER_Colegio_2do_Medio_C_2026-10-02
+    prefijoCarpetas: "KUDER", // carpetas y ZIP: KUDER_Colegio_2do_Medio_C_2026
     configGrupal: CONFIG_GRUPAL_KUDER,
     exportarExcel: exportarExcelKuder,
   },
@@ -109,6 +109,7 @@ document.addEventListener("DOMContentLoaded", () => {
   cablearCorreccionPuntajes();
   cablearVistaPdf();
   cablearDatosAlumno();
+  cablearRenombrarColegio();
   render();
 });
 
@@ -1187,7 +1188,7 @@ function renderEstudiantes() {
     // cursos que quedan desplegados (para saber cómo parte el botón "Minimizar alumnos")
     const cursosAbiertos = [...porCurso.keys()].filter((k) => grupoAbierto(claveGrupoCurso(colegio, k), soloUnCurso)).length;
     html += `<details class="grupo-colegio" data-grupo="${escaparHtml(claveCol)}" ${grupoAbierto(claveCol, abrirSoloUno) ? "open" : ""}>
-      <summary>🏫 ${escaparHtml(colegio)} <span class="chip">${porCurso.size} ${porCurso.size === 1 ? "curso" : "cursos"}</span><span class="chip">${totalColegio} ${totalColegio === 1 ? "estudiante" : "estudiantes"}</span>${chipTraspasoHtml([...porCurso.values()].flat())}</summary>
+      <summary>🏫 ${escaparHtml(colegio)}<button type="button" class="btn-lapiz btn-lapiz-colegio" data-colegio="${escaparHtml(colegio)}" title="Cambiar el nombre del colegio" aria-label="Cambiar el nombre del colegio">✎</button> <span class="chip">${porCurso.size} ${porCurso.size === 1 ? "curso" : "cursos"}</span><span class="chip">${totalColegio} ${totalColegio === 1 ? "estudiante" : "estudiantes"}</span>${chipTraspasoHtml([...porCurso.values()].flat())}</summary>
       <div class="grupo-colegio-cont">
         <div class="grupo-colegio-acciones">
           <button type="button" class="chico secundario btn-minimizar-alumnos" ${atributosBotonMinimizar(cursosAbiertos > 0)}>${textoBotonMinimizar(cursosAbiertos > 0)}</button>
@@ -1251,6 +1252,13 @@ function renderEstudiantes() {
       if (d.classList.contains("grupo-curso")) actualizarBotonMinimizar(d.closest("details.grupo-colegio"));
     })
   );
+  cont.querySelectorAll(".btn-lapiz-colegio").forEach((b) => {
+    b.onclick = (ev) => {
+      ev.preventDefault(); // que el clic no abra ni cierre el colegio
+      ev.stopPropagation();
+      abrirRenombrarColegio(b.dataset.colegio);
+    };
+  });
   // "Minimizar alumnos": pliega todos los cursos del colegio (quedan solo los cursos y
   // cuántos estudiantes tiene cada uno); el mismo botón los vuelve a desplegar
   cont.querySelectorAll(".btn-minimizar-alumnos").forEach((btn) => {
@@ -1625,6 +1633,63 @@ function renderRecientesCorreccion() {
     : "";
   const det = contDejados.querySelector("details");
   if (det) det.addEventListener("toggle", () => (estado.dejadosAbierto = det.open));
+}
+
+// ---------------- nombre de un colegio (lápiz ✎ junto al colegio) ----------------
+// Cambia el nombre en todos sus estudiantes (también en la previsualización de
+// "Descargar todos los cursos"): sale así en los informes, carpetas y CSV.
+
+let colegioARenombrar = null;
+
+function abrirRenombrarColegio(colegio) {
+  colegioARenombrar = colegio;
+  const n = cfg().store.listar().filter((e) => e.colegio === colegio).length;
+  document.getElementById("mrc-sub").textContent = `Se cambia en ${n === 1 ? "su estudiante" : `sus ${n} estudiantes`}: así saldrá en los informes, las carpetas y los CSV. Si escribes el nombre de otro colegio ya cargado, quedan juntos.`;
+  const inp = document.getElementById("mrc-nombre");
+  inp.value = colegio;
+  inp.classList.remove("invalido");
+  document.getElementById("modal-renombrar-colegio").style.display = "flex";
+  inp.focus();
+  inp.select();
+}
+
+function cerrarRenombrarColegio() {
+  document.getElementById("modal-renombrar-colegio").style.display = "none";
+  colegioARenombrar = null;
+}
+
+function guardarRenombrarColegio() {
+  const inp = document.getElementById("mrc-nombre");
+  const nuevo = inp.value.replace(/\s+/g, " ").trim();
+  inp.classList.toggle("invalido", !nuevo);
+  if (!nuevo) return mostrarToast("El nombre del colegio no puede quedar vacío");
+  const anterior = colegioARenombrar;
+  cerrarRenombrarColegio();
+  if (anterior === null || nuevo === anterior) return;
+  cfg().store.renombrarColegios([[anterior, nuevo]]);
+  if (estado.filtros.colegio === anterior) estado.filtros.colegio = nuevo;
+  // el colegio sigue abierto (o cerrado) como estaba
+  if (estado.gruposAbiertos.delete(claveGrupoColegio(anterior))) estado.gruposAbiertos.add(claveGrupoColegio(nuevo));
+  render();
+  mostrarToast(`Colegio renombrado: ${nuevo} (puedes deshacerlo arriba)`);
+}
+
+function cablearRenombrarColegio() {
+  const modal = document.getElementById("modal-renombrar-colegio");
+  document.getElementById("mrc-cancelar").addEventListener("click", cerrarRenombrarColegio);
+  document.getElementById("mrc-guardar").addEventListener("click", guardarRenombrarColegio);
+  modal.addEventListener("click", (ev) => {
+    if (ev.target === modal) cerrarRenombrarColegio();
+  });
+  modal.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter") {
+      ev.preventDefault();
+      guardarRenombrarColegio();
+    } else if (ev.key === "Escape") {
+      ev.preventDefault();
+      cerrarRenombrarColegio();
+    }
+  });
 }
 
 // ---------------- nombre y RUT de un estudiante (lápiz ✎ junto a su nombre) ----------------
@@ -2132,15 +2197,20 @@ function accionDescargarTodosLosCursos(lista, btn) {
   const pendientes = lista.filter((e) => pendienteTraspaso(e)).length;
   const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
 
-  // cursos en el orden en que se van a exportar, con su carpeta propuesta
+  // cursos en el orden en que se van a exportar, con su carpeta propuesta; el nombre de
+  // cada colegio también se puede cambiar aquí (queda cambiado en la app, así también
+  // sale con ese nombre en los CSV de "Uso interno")
   const cursos = [];
+  const colegios = [];
   let html = "";
   for (const [colegio, porCurso] of porColegio) {
     const delColegio = [...porCurso.values()].flat();
+    const k = colegios.length;
+    colegios.push({ original: colegio, nCursos: porCurso.size, cursos: [] });
     html += `
       <div class="mx-colegio">
-        <div class="mx-colegio-titulo">🏫 ${escaparHtml(colegio || "Sin colegio")}
-          <span class="mx-zip">archivo: ${escaparHtml(nombreZipVariosCursos(c.prefijoCarpetas, delColegio, porCurso.size))}</span></div>
+        <div class="mx-colegio-titulo">🏫 <input type="text" class="mx-colegio-nombre" data-k="${k}" value="${escaparHtml(colegio)}" placeholder="Nombre del colegio" spellcheck="false" title="Haz clic para cambiar el nombre del colegio" aria-label="Nombre del colegio" /><span class="mx-lapiz" aria-hidden="true">✎</span>
+          <span class="mx-zip">archivo: <span class="mx-zip-nombre">${escaparHtml(nombreZipVariosCursos(c.prefijoCarpetas, delColegio, porCurso.size))}</span></span></div>
         <table class="lista mx-tabla">
           <thead><tr><th style="width:110px;">Curso</th><th>Nombre de la carpeta <span class="mx-editable">(puedes corregirlo)</span></th><th style="width:150px;">Archivos</th></tr></thead>
           <tbody>`;
@@ -2149,13 +2219,14 @@ function accionDescargarTodosLosCursos(lista, btn) {
       const numerados = numerarParaCarpeta(estudiantes);
       const propuesta = nombreCarpetaCurso(c.prefijoCarpetas, estudiantes);
       const nPend = estudiantes.filter((e) => pendienteTraspaso(e)).length;
-      cursos.push({ colegio, claveCurso, propuesta });
+      cursos.push({ colegio, claveCurso, propuesta, estudiantes, primero: numerados[0] });
+      colegios[k].cursos.push(i);
       html += `
             <tr>
               <td><b>📘 ${escaparHtml(claveCurso)}</b></td>
               <td>
                 <input type="text" class="mx-carpeta" data-i="${i}" value="${escaparHtml(propuesta)}" spellcheck="false" aria-label="Nombre de la carpeta de ${escaparHtml(claveCurso)}" />
-                <div class="mx-ejemplo">1.er archivo: ${escaparHtml(c.nombreArchivoIndividual(numerados[0]))}</div>
+                <div class="mx-ejemplo">1.er archivo: <span class="mx-ejemplo-archivo">${escaparHtml(c.nombreArchivoIndividual(numerados[0]))}</span></div>
               </td>
               <td>${plural(estudiantes.length, "informe", "informes")}<br/><span class="mx-ejemplo">del ${numeroConCeros(1, estudiantes.length)} al ${numeroConCeros(estudiantes.length, estudiantes.length)}${nPend ? ` + nota de ${plural(nPend, "pendiente", "pendientes")}` : ""}</span></td>
             </tr>`;
@@ -2177,11 +2248,32 @@ function accionDescargarTodosLosCursos(lista, btn) {
   const modal = document.getElementById("modal-exportar");
   const cerrar = () => (modal.style.display = "none");
   const inputs = [...modal.querySelectorAll(".mx-carpeta")];
-  inputs.forEach((inp) => {
+  const inputsColegio = [...modal.querySelectorAll(".mx-colegio-nombre")];
+  const nombreColegioEscrito = (k) => inputsColegio[k].value.replace(/\s+/g, " ").trim() || colegios[k].original;
+  [...inputs, ...inputsColegio].forEach((inp) => {
     inp.onkeydown = (ev) => {
       if (ev.key === "Enter") ev.preventDefault(); // Enter no exporta: se confirma solo con el botón
     };
   });
+  // una carpeta que ya se corrigió a mano no se vuelve a proponer
+  inputs.forEach((inp) => inp.addEventListener("input", () => (inp.dataset.editado = "1")));
+  // al cambiar el nombre del colegio se actualizan, en vivo, el nombre de su ZIP, las
+  // carpetas de sus cursos (las que no se corrigieron a mano) y el ejemplo de archivo
+  inputsColegio.forEach((inp) =>
+    inp.addEventListener("input", () => {
+      const k = Number(inp.dataset.k);
+      const nombre = nombreColegioEscrito(k);
+      const conNombre = (e) => ({ ...e, colegio: nombre });
+      inp.closest(".mx-colegio").querySelector(".mx-zip-nombre").textContent = nombreZipVariosCursos(c.prefijoCarpetas, [{ colegio: nombre }], colegios[k].nCursos);
+      colegios[k].cursos.forEach((i) => {
+        const curso = cursos[i];
+        curso.propuesta = nombreCarpetaCurso(c.prefijoCarpetas, curso.estudiantes.map(conNombre));
+        const inpCarpeta = inputs[i];
+        if (!inpCarpeta.dataset.editado) inpCarpeta.value = curso.propuesta;
+        inpCarpeta.closest("td").querySelector(".mx-ejemplo-archivo").textContent = c.nombreArchivoIndividual(conNombre(curso.primero));
+      });
+    })
+  );
   document.getElementById("mx-cancelar").onclick = cerrar;
   modal.onclick = (ev) => {
     if (ev.target === modal) cerrar();
@@ -2198,13 +2290,26 @@ function accionDescargarTodosLosCursos(lista, btn) {
   const btnExportar = document.getElementById("mx-exportar");
   btnExportar.textContent = `⬇ Exportar ${plural(lista.length, "informe", "informes")}`;
   btnExportar.onclick = () => {
+    // nombres de colegio corregidos: se cambian en la app (en todos sus estudiantes)
+    const nuevoNombre = new Map(colegios.map((col, k) => [col.original, nombreColegioEscrito(k)]));
+    const cambios = [...nuevoNombre].filter(([anterior, nuevo]) => anterior !== nuevo);
+    if (cambios.length) {
+      c.store.renombrarColegios(cambios);
+      cambios.forEach(([anterior, nuevo]) => {
+        if (estado.filtros.colegio === anterior) estado.filtros.colegio = nuevo;
+      });
+    }
     // nombre de carpeta de cada curso: lo escrito (sin caracteres no permitidos) o el propuesto
     const nombres = new Map();
     inputs.forEach((inp) => {
       const curso = cursos[Number(inp.dataset.i)];
-      nombres.set(curso.colegio + "|" + curso.claveCurso, limpiarNombreCarpeta(inp.value) || curso.propuesta);
+      nombres.set(nuevoNombre.get(curso.colegio) + "|" + curso.claveCurso, limpiarNombreCarpeta(inp.value) || curso.propuesta);
     });
     cerrar();
+    if (cambios.length) {
+      render();
+      mostrarToast(`Nombre del colegio actualizado en la app: ${cambios.map(([, nuevo]) => nuevo).join(", ")}`);
+    }
     descargarTodosLosCursos(lista, btn, nombres);
   };
   modal.style.display = "flex";
