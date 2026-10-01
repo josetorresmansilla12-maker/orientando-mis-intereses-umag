@@ -3,12 +3,21 @@
 // js/data.js). Las 10 áreas salen del documento "Kuder - Descripciones por área con
 // carreras UMAG y otras carreras" y del informe de muestra de Kuder.
 //
-// Cada área tiene tres textos:
+// Cada área tiene cuatro textos:
 // - descripcion: redactada para el orientador (tercera persona), la usan los informes
 //   grupales por curso y global (js/kuder-report.js).
-// - descripcionEstudiante: la del informe de muestra de Kuder, dirigida al estudiante
-//   (con ortografía corregida), la usa el informe individual (js/kuder-individual-report.js).
+// - descripcionEstudiante: dirigida al estudiante, para el informe individual
+//   (js/kuder-individual-report.js) cuando el área destacó (7 puntos o más). Basada en
+//   el informe de muestra de Kuder.
+// - descripcionDiversa: también para el estudiante, cuando ninguna área llegó a 7 y los
+//   puntajes quedaron parejos (se muestran las 10 áreas como intereses amplios y
+//   variados, sin hablar de un interés alto en esa área).
 // - descripcionCorta: una línea, para la hoja informativa del informe individual.
+//
+// Los textos para el estudiante (descripcionEstudiante y descripcionDiversa) están
+// escritos en tono de posibilidad ("podría indicar que...", "es posible que..."):
+// explican qué representa el área y qué podría abrirle, sin dar por hecho gustos,
+// habilidades ni rasgos que la persona podría no reconocer en sí misma.
 //
 // Carreras UMAG revisadas contra la oferta vigente publicada en admision.umag.cl
 // (32 carreras profesionales y 13 técnicas de nivel superior). Las "otras carreras"
@@ -27,7 +36,9 @@ const AREAS_KUDER = [
     descripcion:
       "Esta área representa a personas con aptitudes para la exploración y la conexión con la naturaleza. Prefieren las actividades al aire libre y pasar más tiempo en entornos naturales, lo que favorece el conocimiento del medio, la capacidad de respuesta ante emergencias y la creatividad para usar herramientas con pocos recursos.",
     descripcionEstudiante:
-      "Esta área de interés representa a personas con aptitudes para la exploración y la conexión con la naturaleza. Prefieres las actividades al aire libre y pasar más tiempo en entornos naturales, lo que te permite adquirir conocimiento de la naturaleza, capacidad de respuesta ante emergencias y creatividad en el uso de herramientas en entornos con pocos recursos.",
+      "El área exterior se relaciona con las actividades al aire libre y el contacto con la naturaleza. Tu resultado podría indicar que te gustaría pasar más tiempo en entornos naturales, explorar terrenos o cuidar plantas y animales. Con el tiempo, esto podría ayudarte a desarrollar conocimiento del medio natural, capacidad para reaccionar ante imprevistos y creatividad para resolver problemas con pocos recursos.",
+    descripcionDiversa:
+      "El área exterior se relaciona con las actividades al aire libre y el contacto con la naturaleza. En tus respuestas quedó en un nivel parecido al de las otras áreas, así que podría ser una más entre tus varios intereses. Si alguna vez has disfrutado una salida a terreno o cuidar plantas o animales, podría valer la pena mirar las carreras de esta área.",
     descripcionCorta: "Actividades al aire libre y en contacto con la naturaleza.",
     carrerasUMAG: [
       "Agronomía",
@@ -53,7 +64,9 @@ const AREAS_KUDER = [
     descripcion:
       "Las personas con este interés destacan por el pensamiento práctico y la acción manual. Son hábiles en el uso de herramientas especializadas, y disfrutan reparar, mantener y crear equipos mecánicos, eléctricos y electrónicos, trabajando con eficacia y satisfacción en este tipo de tareas.",
     descripcionEstudiante:
-      "Las personas con este interés destacan por sus aptitudes y características centradas en el pensamiento práctico y la acción manual. Son hábiles en el uso de herramientas especializadas, así como en la reparación, mantenimiento y creación de equipos mecánicos, electrónicos y virtuales, trabajando con eficacia y satisfacción en estas áreas.",
+      "El área mecánica tiene que ver con el pensamiento práctico y el trabajo con las manos. Tu resultado podría indicar que te atrae usar herramientas, entender cómo funcionan las máquinas o reparar, mantener y crear equipos mecánicos, eléctricos o electrónicos. Es posible que en el futuro te desempeñes bien en tareas donde haya que llevar una idea a la práctica y ver resultados concretos.",
+    descripcionDiversa:
+      "El área mecánica tiene que ver con el trabajo práctico, las herramientas y las máquinas. Como tus puntajes fueron parejos, esta área podría ser uno de los caminos que te interesa explorar, junto con otros. Si te llama la atención entender cómo funciona un aparato o arreglar algo con tus manos, podría valer la pena conocer las carreras que aparecen aquí.",
     descripcionCorta: "Trabajar con máquinas, herramientas y equipos.",
     carrerasUMAG: [
       "Ingeniería en Construcción",
@@ -83,7 +96,9 @@ const AREAS_KUDER = [
     descripcion:
       "Lo poseen quienes tienen interés en las matemáticas y disfrutan explorar patrones, formular teorías y resolver ecuaciones, siempre buscando precisión y exactitud en sus resultados. Desarrollan habilidades para la resolución de problemas, el cálculo complejo, el análisis de datos y el razonamiento lógico.",
     descripcionEstudiante:
-      "Lo poseen aquellas personas con interés en las matemáticas, que disfrutan explorar patrones, formular teorías y resolver ecuaciones, siempre buscando precisión y exactitud en sus resultados. Además, presentan la capacidad de desarrollar aptitudes y habilidades relacionadas con la resolución de problemas, el cálculo complejo, el análisis de datos y el razonamiento lógico.",
+      "El área de cálculo podría indicar que te interesa trabajar con números, patrones o problemas que requieren precisión. Es posible que disfrutes buscar la respuesta exacta a un problema, analizar datos o seguir un razonamiento lógico paso a paso. Esto podría abrirte camino hacia carreras en que la matemática, el análisis de información y la resolución de problemas sean relevantes.",
+    descripcionDiversa:
+      "El área de cálculo se relaciona con los números, los patrones y los problemas que piden precisión. En tus respuestas no se destacó por sobre las demás, lo que podría indicar que es uno más de tus intereses. Si en algún momento has disfrutado resolver un problema paso a paso, es posible que las carreras de esta área también tengan algo para ti.",
     descripcionCorta: "Trabajar con números, datos y problemas lógicos.",
     carrerasUMAG: [
       "Ingeniería en Construcción",
@@ -115,7 +130,9 @@ const AREAS_KUDER = [
     descripcion:
       "Un alto interés en esta área indica aptitudes relacionadas con la investigación y el descubrimiento. Disfrutan trabajar con conceptos científicos, la experimentación y el análisis de problemas complejos, lo que permite desarrollar pensamiento lógico y crítico, y aprender a usar herramientas y teorías especializadas.",
     descripcionEstudiante:
-      "Un alto interés en el área científica indica que eres una persona con aptitudes y características que se relacionan con la investigación y los descubrimientos. Disfrutas trabajando con conceptos científicos, la experimentación y el análisis de problemas complejos. Lo anterior te permite desarrollar habilidades de pensamiento lógico y crítico, así como aprender a usar herramientas especializadas y teorías complejas.",
+      "El área científica se relaciona con la investigación y el descubrimiento. Tu resultado podría indicar que te gustaría entender cómo funcionan las cosas, hacer preguntas, experimentar y analizar problemas complejos. Es posible que, con el tiempo, desarrolles un pensamiento lógico y crítico, y que aprender a usar herramientas y teorías especializadas te abra caminos en la ciencia y la salud.",
+    descripcionDiversa:
+      "El área científica tiene que ver con investigar, experimentar y descubrir cómo funcionan las cosas. Como quedó en un nivel similar al de las otras áreas, podría ser parte de tus intereses variados. Si alguna vez te ha dado curiosidad el porqué de algún fenómeno, podrías explorar las carreras de esta área para ver si alguna te llama la atención.",
     descripcionCorta: "Investigar, experimentar y descubrir.",
     carrerasUMAG: [
       "Biología Marina",
@@ -141,7 +158,9 @@ const AREAS_KUDER = [
     descripcion:
       "Una alta puntuación en esta área indica una fuerte inclinación a la interacción social: habilidades blandas, comunicación eficaz y persuasión. Se relaciona con labores como la venta, la negociación, el liderazgo o la promoción de ideas.",
     descripcionEstudiante:
-      "Una alta puntuación en esta área indica que eres una persona con una fuerte inclinación a la interacción social. Las características de este perfil suelen ser las habilidades blandas, la comunicación eficaz y la persuasión. Las labores que se relacionan con él son la venta, la negociación, el liderazgo y la promoción de ideas.",
+      "El área persuasiva tiene que ver con la interacción con otras personas: comunicar, convencer y liderar. Tu resultado podría indicar que te gustaría presentar ideas, negociar o coordinar a un grupo para lograr una meta. Es posible que en el futuro te desempeñes bien en labores relacionadas con las ventas, la negociación, el liderazgo o la promoción de proyectos e ideas.",
+    descripcionDiversa:
+      "El área persuasiva se relaciona con comunicar ideas, convencer y liderar. Tus puntajes fueron parejos, así que esta podría ser una de las varias áreas que te interesan. Si alguna vez te ha gustado presentar una idea, organizar a un grupo o llegar a un acuerdo, podría valer la pena conocer las carreras que se vinculan con ella.",
     descripcionCorta: "Convencer, liderar, negociar y promover ideas.",
     carrerasUMAG: [
       "Psicología",
@@ -161,7 +180,9 @@ const AREAS_KUDER = [
     descripcion:
       "Aptitudes y características de las personas apasionadas por la creación de obras artísticas, como la pintura, el teatro, las manualidades, el diseño y la escritura. Destacan por su pensamiento creativo, su habilidad para transformar ideas en expresiones visuales o conceptuales, y su motivación por la autoexpresión a través del arte.",
     descripcionEstudiante:
-      "Aptitudes y características que se presentan en las personas apasionadas por la creación de obras artísticas, como la pintura, el teatro, las manualidades, el diseño y la escritura. Estas personas destacan por su pensamiento creativo, su habilidad para transformar ideas en expresiones visuales o conceptuales, y su motivación para generar formas de autoexpresión a través del arte.",
+      "El área artística se relaciona con la creación: dibujo, pintura, diseño, teatro o manualidades. Tu resultado podría indicar que te gustaría transformar ideas en algo visual o expresivo, y encontrar en el arte una forma de comunicar lo que piensas o sientes. Es posible que esta área te abra caminos donde la creatividad y la sensibilidad estética sean importantes.",
+    descripcionDiversa:
+      "El área artística tiene que ver con crear: dibujo, pintura, diseño, teatro o manualidades. En tus respuestas quedó a la par de las demás áreas, por lo que podría ser uno de tus muchos intereses. Si de vez en cuando disfrutas crear algo con tus propias ideas, es posible que alguna carrera de esta área te resulte atractiva.",
     descripcionCorta: "Crear: dibujo, pintura, diseño, teatro y manualidades.",
     carrerasUMAG: [
       "Arquitectura",
@@ -179,7 +200,9 @@ const AREAS_KUDER = [
     descripcion:
       "Indica un gran mundo interior, nutrido a través de la lectura, con capacidad de exteriorizarlo mediante el pensamiento creativo y la escritura. Permite desarrollar habilidades de análisis, imaginación y expresión escrita en ámbitos como la ciencia, la fantasía, el derecho o la lingüística.",
     descripcionEstudiante:
-      "Esta área de interés indica que eres una persona con un gran mundo interior, nutrido a través de la lectura, y con la capacidad de exteriorizarlo a través del pensamiento creativo y la escritura. Te permite desarrollar habilidades como el análisis, la imaginación y la expresión escrita en diferentes ámbitos, como la ciencia, la fantasía, las leyes o la lingüística.",
+      "El área literaria tiene que ver con la lectura, la escritura y la expresión de ideas con palabras. Tu resultado podría indicar que disfrutarías leer, imaginar historias o escribir y argumentar sobre distintos temas. Con el tiempo, podrías desarrollar habilidades de análisis, imaginación y expresión escrita, útiles en ámbitos tan distintos como la ciencia, las leyes, la comunicación o la lingüística.",
+    descripcionDiversa:
+      "El área literaria se relaciona con leer, escribir y expresar ideas con palabras. Como tus puntajes fueron parejos, esta área podría ser una más entre tus intereses. Si alguna vez te has entusiasmado con un libro, una historia o un debate, podrías revisar las carreras de esta área para ver si alguna conecta contigo.",
     descripcionCorta: "Leer, escribir y expresar ideas con palabras.",
     carrerasUMAG: [
       "Pedagogía en Castellano y Comunicación",
@@ -199,7 +222,9 @@ const AREAS_KUDER = [
     descripcion:
       "Un alto puntaje en esta área muestra un profundo interés por la música, tanto de manera personal como profesional. Abarca la composición, la interpretación y la producción, y se complementa con otras formas de expresión como el uso de instrumentos, la danza, el canto y la creación audiovisual.",
     descripcionEstudiante:
-      "Las personas con un alto puntaje en esta área muestran un profundo interés por la música, tanto de manera personal como profesional. Este interés abarca diversas ramas, como la composición, la interpretación y la producción, y se complementa con distintas formas de expresión, como el uso de instrumentos, la danza, el canto y la creación audiovisual.",
+      "El área musical se relaciona con escuchar, interpretar y crear música. Tu resultado podría indicar que la música ocupa un lugar importante para ti, ya sea en lo personal o como un posible camino profesional. Es posible que te atraigan la composición, la interpretación o la producción, y otras formas de expresión cercanas, como el canto, la danza o la creación audiovisual.",
+    descripcionDiversa:
+      "El área musical tiene que ver con escuchar, interpretar y crear música. En tus respuestas quedó en un nivel parecido al de las otras áreas, así que podría ser parte de tus intereses variados. Si la música te acompaña en tu día a día o te da curiosidad cómo se crea, es posible que valga la pena conocer las opciones de esta área.",
     descripcionCorta: "Escuchar, interpretar, cantar o crear música.",
     carrerasUMAG: ["Pedagogía en Música", "Fonoaudiología"],
     carrerasOtras: ["Danza", "Ingeniería en Sonido"],
@@ -212,7 +237,9 @@ const AREAS_KUDER = [
     descripcion:
       "Un alto puntaje en esta área indica una persona empática y orientada al servicio, con un profundo deseo de ayudar a los demás. Disfrutan de actividades que implican interacción social, enfocadas en ayudar, enseñar y apoyar las necesidades de otros, lo que favorece el desarrollo de habilidades blandas y la capacidad de analizar roles sociales.",
     descripcionEstudiante:
-      "Un alto puntaje en esta área indica que eres una persona empática y orientada al servicio, con un profundo deseo de ayudar a los demás. Disfrutas de actividades que implican interacción social, enfocándote en ayudar, enseñar y apoyar a otras personas en sus necesidades. Esto favorece el desarrollo de habilidades blandas y la capacidad de analizar los roles sociales.",
+      "El área de servicio social tiene que ver con ayudar, enseñar y acompañar a otras personas. Tu resultado podría indicar que te gustaría trabajar en contacto con la gente y aportar a su bienestar. Es posible que en el futuro te desempeñes bien en labores de educación, salud o apoyo social, donde la empatía, la comunicación y la comprensión de las necesidades de los demás son importantes.",
+    descripcionDiversa:
+      "El área de servicio social se relaciona con ayudar, enseñar y acompañar a otras personas. Como no se destacó por sobre las demás, podría ser uno de tus varios intereses. Si te ha gustado apoyar a alguien o explicarle algo a otra persona, podrías explorar las carreras de esta área, que abren caminos en la educación, la salud y el apoyo social.",
     descripcionCorta: "Ayudar, enseñar y acompañar a otros.",
     carrerasUMAG: [
       "Trabajo Social",
@@ -249,7 +276,9 @@ const AREAS_KUDER = [
     descripcion:
       "Un alto interés en esta área indica una persona ordenada, que favorece el trabajo con documentos, datos y sistemas de administración. Permite desarrollar habilidades como la gestión de información, la administración de recursos y la organización de personas.",
     descripcionEstudiante:
-      "Un alto interés en esta área indica que eres una persona ordenada y que prefieres el trabajo con documentos, datos y sistemas de administración. Esta área te permite aprender habilidades como la gestión de información, la administración de dinero o la organización de personas.",
+      "El área de oficina se relaciona con el orden y el trabajo con documentos, datos y sistemas administrativos. Tu resultado podría indicar que te sentirías a gusto organizando información, planificando tareas o llevando registros precisos. Es posible que esto te abra camino hacia labores de gestión de información, administración de recursos u organización de equipos de trabajo.",
+    descripcionDiversa:
+      "El área de oficina tiene que ver con organizar información, documentos y tareas. Tus puntajes fueron parejos, así que esta área podría ser una más entre tus intereses. Si te resulta cómodo planificar, ordenar o llevar registros, es posible que alguna de las carreras de esta área te parezca interesante.",
     descripcionCorta: "Organizar documentos, datos y tareas administrativas.",
     carrerasUMAG: [
       "Ingeniería Comercial",

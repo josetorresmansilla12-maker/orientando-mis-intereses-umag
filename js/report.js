@@ -348,14 +348,15 @@ function construirListaCarreras(titulo, carreras, clase) {
     </div>`;
 }
 
-function construirTarjetaArea(area) {
+// "diversa": puntajes parejos (ninguna área destacó), con la descripción para ese caso
+function construirTarjetaArea(area, diversa = false) {
   return `
     <div class="area-card" style="border-left-color:${area.color};">
       <div class="area-card-header">
         ${iconoCirculo(area, 42)}
         <h3 style="color:${area.color};">${area.nombre}</h3>
       </div>
-      <p class="area-card-desc">${area.descripcion}</p>
+      <p class="area-card-desc">${diversa ? area.descripcionDiversa : area.descripcion}</p>
       <div class="area-card-carreras-split">
         ${construirListaCarreras("Tus Carreras UMAG", area.carrerasUMAG, "umag")}
         ${construirListaCarreras("Otras carreras", area.carrerasOtras)}
@@ -370,9 +371,9 @@ function construirTarjetaArea(area) {
 function construirEncabezadoResultados(estudiante, areas, casoEspecial) {
   let mensaje;
   if (casoEspecial === "ninguna") {
-    mensaje = "Tus puntajes fueron muy diversos en todas las áreas (y eso también dice algo bueno de ti: tienes intereses variados). Aquí te mostramos las 6 áreas, para que sigas conociendo tus opciones:";
+    mensaje = "Tus puntajes fueron parejos en todas las áreas: esto podría indicar que tienes intereses amplios y variados, algo que también puede ser una ventaja. Aquí te mostramos las 6 áreas, para que sigas explorando tus opciones:";
   } else if (casoEspecial === "todas") {
-    mensaje = "¡Te interesan las 6 áreas! Aquí tienes toda la información:";
+    mensaje = "¡Tus respuestas destacaron en las 6 áreas! Esto podría indicar que te interesan muchas cosas a la vez. Aquí tienes la información de todas:";
   } else {
     mensaje = `De acuerdo a tus respuestas, ${areas.length === 1 ? "tu área de interés es" : "tus áreas de interés son"}:`;
   }
@@ -466,7 +467,7 @@ function construirPaginasResultados(estudiante) {
   const htmlEncabezado = construirEncabezadoResultados(estudiante, areas, casoEspecial);
   const htmlEncabezadoCont = construirEncabezadoContinuacion(estudiante);
   const htmlAviso = construirAvisoContinua();
-  const htmlTarjetas = areas.map(construirTarjetaArea);
+  const htmlTarjetas = areas.map((a) => construirTarjetaArea(a, casoEspecial === "ninguna"));
 
   const altoEncabezado = medirAlturaFragmento(htmlEncabezado);
   const altoEncabezadoCont = medirAlturaFragmento(htmlEncabezadoCont);
@@ -573,6 +574,17 @@ async function paginasAPdfBlob(paginas) {
         restante -= trozoAlto;
       }
     }
+  }
+
+  // número de página abajo a la derecha, chico y en gris claro, en el margen inferior
+  // que dejan libre todas las hojas (PADDING_INFERIOR_PX)
+  const totalHojas = pdf.getNumberOfPages();
+  for (let i = 1; i <= totalHojas; i++) {
+    pdf.setPage(i);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(7);
+    pdf.setTextColor(165, 158, 178);
+    pdf.text(`Página ${i} de ${totalHojas}`, pageW - 24, pageH - 10, { align: "right" });
   }
 
   host.innerHTML = "";
