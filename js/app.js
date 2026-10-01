@@ -33,7 +33,7 @@ const TESTS = {
     nombreArchivoIndividual: nombreArchivoInforme,
     descargarMasivo: descargarInformesMasivo,
     agregarInformesACarpeta: agregarInformesACarpeta,
-    prefijoCarpetas: "8VO", // carpetas y ZIP: 8VO_Colegio_8voA_2026-10-02
+    prefijoCarpetas: "8VO", // carpetas y ZIP: 8VO_Colegio_8vo_A_2026-10-02
     configGrupal: CONFIG_GRUPAL_OCTAVO, // informe grupal para orientadores (js/kuder-report.js)
     exportarExcel: exportarExcel,
   },
@@ -60,7 +60,7 @@ const TESTS = {
     descargarMasivo: descargarInformesMasivoKuder,
     descargarVariosCursos: descargarCarpetasDeCursosKuder,
     agregarInformesACarpeta: agregarInformesACarpetaKuder,
-    prefijoCarpetas: "KUDER", // carpetas y ZIP: KUDER_Colegio_SegundoC_2026-10-02
+    prefijoCarpetas: "KUDER", // carpetas y ZIP: KUDER_Colegio_2do_Medio_C_2026-10-02
     configGrupal: CONFIG_GRUPAL_KUDER,
     exportarExcel: exportarExcelKuder,
   },

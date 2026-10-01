@@ -70,7 +70,7 @@ Paso 2: las pestañas
      archivos, elegir "Permitir".
    - Descargar todos los informes de un curso en un ZIP.
    - Nombres de carpetas y archivos:
-     * Carpeta (o ZIP) de un curso: "KUDER_Colegio_Alfa_SegundoC_2026-10-02" (en
+     * Carpeta (o ZIP) de un curso: "KUDER_Colegio_Alfa_2do_Medio_C_2026-10-02" (en
        8° básico empieza con "8VO").
      * Cada informe: "01 - Nombre Alumno - Segundo C - Colegio Alfa.pdf". El número
        va del 1 al total de archivos de la carpeta, sin saltos, en orden alfabético,
