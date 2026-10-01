@@ -181,6 +181,13 @@ body.test-kuder .badge-test { background: #eef8f6; color: #1f6f63; border-color:
   .tabs-paso { display: none; }
   .tabs .tab-btn { padding: 10px 12px; font-size: 13.5px; }
 }
+/* en Kuder hay 7 pestañas (con "Corrección" y "Uso interno"): sin el rótulo y con
+   menos relleno, para que sigan cabiendo en una sola línea */
+body.test-kuder .tabs-paso { display: none; }
+body.test-kuder .tabs .tab-btn { padding: 10px 12px; font-size: 13.5px; }
+@media (max-width: 1100px) {
+  body.test-kuder .tabs .tab-btn { padding: 10px 8px; font-size: 13px; }
+}
 .tab-btn {
   border: none;
   background: transparent;
@@ -282,6 +289,12 @@ button.peligro {
   border-color: var(--rojo);
 }
 button.peligro:hover { background: #fdf0ef; }
+button.exito {
+  background: var(--verde);
+  border-color: var(--verde);
+  color: white;
+}
+button.exito:hover { background: #24805a; border-color: #24805a; }
 button.chico { padding: 5px 10px; font-size: 12px; }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 
@@ -1313,3 +1326,66 @@ body.test-kuder .editor-en-lista { border-left-color: var(--teal); }
 .vista-pdf-contenido { flex: 1; min-height: 0; border: 1px solid var(--borde); border-radius: 8px; background: #f4f3f6; overflow: hidden; }
 .vista-pdf-marco { width: 100%; height: 100%; border: 0; display: block; }
 .vista-pdf-cargando { height: 100%; display: flex; align-items: center; justify-content: center; color: var(--texto-suave); font-size: 14px; }
+
+/* =====================================================
+   "✓ Dejar así" y pestaña "Corrección" (solo Kuder): tests que no suman 45
+   ===================================================== */
+.btn-traspaso.dejado { color: #1f7a52; background: #eefaf3; border-color: #bfe6d0; }
+.btn-traspaso.dejado:hover { background: #dcf3e6; }
+.traspaso-aviso .btn-dejar-asi { margin-left: 4px; padding: 2px 8px; font-size: 11px; vertical-align: baseline; }
+.editor-en-lista-aviso.dejado { color: #1f7a52; background: #eefaf3; border-color: #bfe6d0; }
+.resumen-traspaso-botones { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+.tab-conteo:empty { display: none; }
+.tab-conteo {
+  display: inline-block;
+  min-width: 18px;
+  margin-left: 4px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #f0a83a;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.correccion-ayuda { color: var(--texto-suave); font-size: 13px; margin: -4px 0 14px; padding-left: 20px; }
+.correccion-ayuda li { margin-bottom: 3px; }
+.correccion-grupo {
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+.correccion-grupo-titulo {
+  padding: 10px 14px;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--morado-oscuro);
+  background: var(--lila-fondo);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.correccion-sep { color: var(--texto-suave); font-weight: 400; }
+.correccion-grupo table.lista { border-radius: 0; box-shadow: none; }
+
+details.correccion-dejados {
+  margin-top: 18px;
+  border: 1px solid #bfe6d0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+details.correccion-dejados > summary {
+  cursor: pointer;
+  padding: 10px 14px;
+  font-weight: 700;
+  font-size: 13px;
+  color: #1f7a52;
+  background: #eefaf3;
+}
+details.correccion-dejados > .ayuda { margin: 10px 14px; }
+details.correccion-dejados > table.lista { border-radius: 0; box-shadow: none; }

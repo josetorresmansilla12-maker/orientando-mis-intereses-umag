@@ -308,6 +308,19 @@ function analizarTraspasoKuder(puntajes) {
   return { total, diferencia, estado: diferencia > 0 ? "faltan" : "sobran", afecta: areas.length > 0, areas };
 }
 
+// "✓ Dejar así": cuando se revisa la hoja de respuestas y el puntaje se deja como está
+// (por ejemplo, porque el punto que falta o sobra no cambia sus resultados), el
+// estudiante guarda la "huella" de los puntajes que se aceptaron. Mientras sus
+// puntajes sigan siendo esos, deja de aparecer como pendiente y su informe sale sin la
+// marca "(44 de 45)"; si después se cambian, se vuelve a revisar.
+function huellaPuntajesKuder(puntajes) {
+  return AREAS_KUDER.map((a) => Number(puntajes[a.id]) || 0).join(",");
+}
+
+function traspasoDejadoAsiKuder(estudiante) {
+  return !!estudiante.traspasoAceptado && estudiante.traspasoAceptado === huellaPuntajesKuder(estudiante.puntajes);
+}
+
 // textos para mostrar el resultado de analizarTraspasoKuder: "resumen" (suma y
 // cuántos puntos faltan o sobran), "accion" (si hay que buscar el error o no) y
 // "detalle" (qué áreas podrían cambiar). Sin HTML: el llamador lo escapa si hace falta.

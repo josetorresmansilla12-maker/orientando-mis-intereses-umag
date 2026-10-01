@@ -73,14 +73,18 @@ Paso 2: las pestañas
      próximo estudiante por revisar.
    - Eliminar estudiantes (lo eliminado queda en la Papelera).
 
-3. "Estadísticas": resumen de cuántos estudiantes hay cargados en el test elegido y
+3. "Corrección" (solo Kuder): todos los estudiantes cargados cuyo test no suma 45,
+   por colegio y curso, para revisarlos de corrido con sus hojas de respuestas. Al
+   lado de la pestaña aparece cuántos quedan pendientes. Ver "Revisión de traspaso".
+
+4. "Estadísticas": resumen de cuántos estudiantes hay cargados en el test elegido y
    cuántos salieron con interés en cada área.
 
-4. "Informes para orientadores" (en los dos tests): informe grupal por curso o global
+5. "Informes para orientadores" (en los dos tests): informe grupal por curso o global
    de varios cursos, subiendo los archivos. Solo en Kuder: "Uso interno" (informe
    consolidado para la unidad de Admisión y Marketing).
 
-5. "Papelera": ahí puedes restaurar a un estudiante eliminado, o borrarlo para
+6. "Papelera": ahí puedes restaurar a un estudiante eliminado, o borrarlo para
    siempre.
 
 Revisión de traspaso (solo Kuder)
@@ -103,6 +107,20 @@ la hoja de respuestas al cuadro). La app lo revisa sola:
   marcadas en amarillo) y la suma en vivo. Al guardar se recalculan sus áreas de
   interés y, si ya suma 45, el aviso desaparece. No hace falta tocar el Excel ni volver
   a subir el archivo.
+- La pestaña "Corrección" junta a todos los pendientes en un solo lugar, con su número
+  de lista y qué revisar. Ahí cada uno tiene "✏️ Corregir" (abre el mismo panel, justo
+  debajo) y "✓ Dejar así". Se puede filtrar por colegio o ver solo los que deben
+  revisarse.
+- "✓ Dejar así" (botón verde): para cuando lo revisaste y el puntaje queda como está,
+  por ejemplo porque el punto que falta o sobra no cambia sus resultados. Deja de
+  aparecer como pendiente, el ⚠ junto a su nombre pasa a ser un ✓ verde (por ejemplo
+  "✓ 44/45") y su informe sale sin la marca "(44 de 45)". Está en la pestaña
+  "Corrección", en el aviso de cada pendiente en "Estudiantes e informes" y en el panel
+  de edición. En "Corrección" hay además un botón para dejar así, de una vez, a todos
+  los que no necesitan revisión.
+  * Si después le cambias los puntajes y sigue sin sumar 45, vuelve a quedar pendiente.
+  * Si dejaste así a alguien por error: "Deshacer" arriba, o en la pestaña "Corrección",
+    sección "Revisados y dejados así", botón "↩ Volver a pendiente".
 - Al cargar los archivos, la ventana de importación da dos opciones:
   a) "Cargar y descargar la carpeta del curso": se genera altiro la carpeta (ZIP) con
      todos los informes. Los de quienes no suman 45 llevan la suma en el nombre del

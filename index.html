@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Orientando mis Intereses — Informes</title>
-<link rel="stylesheet" href="css/styles.css?v=20261001" />
+<link rel="stylesheet" href="css/styles.css?v=20261001b" />
 </head>
 <body class="test-octavo">
 
@@ -47,6 +47,7 @@
       <span class="tabs-paso">2. ¿Qué necesitas hacer?</span>
       <button class="tab-btn activo" data-tab="ingresar">📝 Ingresar datos</button>
       <button class="tab-btn" data-tab="estudiantes">👥 Estudiantes e informes</button>
+      <button class="tab-btn" data-tab="correccion" data-solo-test="kuder" title="Tests mal traspasados (no suman 45) pendientes por revisar">🔎 Corrección <span class="tab-conteo" id="conteo-correccion"></span></button>
       <button class="tab-btn" data-tab="estadisticas">📊 Estadísticas</button>
       <button class="tab-btn" data-tab="kuder">🏫 Informes para orientadores</button>
       <button class="tab-btn" data-tab="kuder-interno" data-solo-test="kuder">🔒 Uso interno</button>
@@ -174,6 +175,39 @@
         </div>
         <div id="resumen-traspaso" data-solo-test="kuder"></div>
         <div id="grupos-estudiantes"></div>
+      </div>
+    </section>
+
+    <!-- ===================== CORRECCIÓN (solo Kuder) ===================== -->
+    <section id="panel-correccion" class="panel">
+      <div class="tarjeta">
+        <h2>Corrección de tests mal traspasados <span class="badge-test" data-badge-test></span></h2>
+        <p class="ayuda">En el Test de Kuder las 10 áreas de cada estudiante deben sumar 45 puntos. Aquí están todos los estudiantes cargados que no suman 45, por colegio y curso (con su número de lista). Con su hoja de respuestas a mano, para cada uno puedes:</p>
+        <ul class="ayuda correccion-ayuda">
+          <li><b>✏️ Corregir</b> sus puntajes: se abre el panel justo debajo, con la suma en vivo. Al guardar, si ya suma 45 sale de esta lista.</li>
+          <li><b>✓ Dejar así</b>, si lo revisaste y el puntaje queda como está (por ejemplo, porque el punto que falta o sobra no cambia sus resultados): deja de aparecer como pendiente y su informe sale sin la marca "(44 de 45)".</li>
+        </ul>
+        <div class="filtros">
+          <div>
+            <label>Colegio</label>
+            <select id="c-colegio"></select>
+          </div>
+          <div>
+            <label>Mostrar</label>
+            <select id="c-tipo">
+              <option value="">Todos los pendientes</option>
+              <option value="afecta">⚠ Solo los que deben revisarse</option>
+              <option value="sin-efecto">ℹ️ Solo los que no necesitan revisión</option>
+            </select>
+          </div>
+          <div>
+            <label>Buscar por nombre</label>
+            <input type="text" id="c-nombre" placeholder="Escribe un nombre..." />
+          </div>
+        </div>
+        <div id="resumen-correccion"></div>
+        <div id="lista-correccion"></div>
+        <div id="dejados-correccion"></div>
       </div>
     </section>
 
@@ -373,6 +407,7 @@
       <div class="modal-acciones">
         <button type="button" id="mp-cancelar" class="secundario">Cancelar</button>
         <button type="button" id="mp-guardar-descargar" class="secundario">Guardar y descargar su informe</button>
+        <button type="button" id="mp-dejar" class="exito" title="Guarda lo escrito y deja sus puntajes así aunque no sumen 45: deja de aparecer como pendiente">✓ Dejar así</button>
         <button type="button" id="mp-guardar">Guardar</button>
       </div>
     </div>
@@ -404,27 +439,27 @@
        cada actualización (si no, puede mezclar archivos nuevos con otros guardados en
        caché y la app deja de funcionar); se cambia cada vez que se publica una versión -->
   <!-- datos de cada test (van primero: js/store.js arma un guardado por test) -->
-  <script src="js/data.js?v=20261001"></script>
-  <script src="js/icons.js?v=20261001"></script>
-  <script src="js/kuder-data.js?v=20261001"></script>
-  <script src="js/kuder-icons.js?v=20261001"></script>
-  <script src="js/logo.js?v=20261001"></script>
-  <script src="js/store.js?v=20261001"></script>
+  <script src="js/data.js?v=20261001b"></script>
+  <script src="js/icons.js?v=20261001b"></script>
+  <script src="js/kuder-data.js?v=20261001b"></script>
+  <script src="js/kuder-icons.js?v=20261001b"></script>
+  <script src="js/logo.js?v=20261001b"></script>
+  <script src="js/store.js?v=20261001b"></script>
 
   <!-- informes: 8° básico (individual) y Kuder (grupal para orientadores e individual) -->
-  <script src="js/report.js?v=20261001"></script>
-  <script src="js/excel.js?v=20261001"></script>
-  <script src="js/kuder.js?v=20261001"></script>
-  <script src="js/kuder-report.js?v=20261001"></script>
-  <script src="js/kuder-individual-report.js?v=20261001"></script>
+  <script src="js/report.js?v=20261001b"></script>
+  <script src="js/excel.js?v=20261001b"></script>
+  <script src="js/kuder.js?v=20261001b"></script>
+  <script src="js/kuder-report.js?v=20261001b"></script>
+  <script src="js/kuder-individual-report.js?v=20261001b"></script>
 
   <!-- interfaz común (selector de test, pestañas, formularios) -->
-  <script src="js/app.js?v=20261001"></script>
+  <script src="js/app.js?v=20261001b"></script>
 
   <!-- informe interno de Kuder (Admisión y Marketing) — reutiliza el lector de
        planillas de js/kuder.js y varias utilidades genéricas de js/kuder-report.js -->
-  <script src="js/kuder-internal-data.js?v=20261001"></script>
-  <script src="js/kuder-internal-report.js?v=20261001"></script>
-  <script src="js/kuder-internal.js?v=20261001"></script>
+  <script src="js/kuder-internal-data.js?v=20261001b"></script>
+  <script src="js/kuder-internal-report.js?v=20261001b"></script>
+  <script src="js/kuder-internal.js?v=20261001b"></script>
 </body>
 </html>

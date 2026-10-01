@@ -418,7 +418,8 @@ function nombreArchivoInformeIndividualKuder(estudiante) {
   const nombre = limpiarParaArchivoKuder(estudiante.nombre) || "estudiante";
   const curso = limpiarParaArchivoKuder((estudiante.curso || "") + (estudiante.letra || ""));
   const traspaso = analizarTraspasoKuder(estudiante.puntajes);
-  const marca = traspaso.estado === "ok" ? "" : ` (${traspaso.total} de ${SUMA_ESPERADA_KUDER})`;
+  // los revisados y dejados así ("✓ Dejar así") ya no llevan la marca
+  const marca = traspaso.estado === "ok" || traspasoDejadoAsiKuder(estudiante) ? "" : ` (${traspaso.total} de ${SUMA_ESPERADA_KUDER})`;
   return `Informe_Kuder_${nombre}${curso ? "_" + curso : ""}${marca}.pdf`;
 }
 
@@ -427,7 +428,7 @@ function nombreArchivoInformeIndividualKuder(estudiante) {
 function notaTestsMalTraspasadosKuder(estudiantes) {
   const conError = estudiantes
     .map((e) => ({ e, analisis: analizarTraspasoKuder(e.puntajes) }))
-    .filter((x) => x.analisis.estado !== "ok")
+    .filter((x) => x.analisis.estado !== "ok" && !traspasoDejadoAsiKuder(x.e))
     .sort((a, b) => compararNombres(a.e.nombre, b.e.nombre));
   if (conError.length === 0) return null;
 
@@ -447,7 +448,7 @@ function notaTestsMalTraspasadosKuder(estudiantes) {
     `Generado el ${fecha}`,
     "",
     `En el Test de Kuder las 10 áreas de cada estudiante deben sumar ${SUMA_ESPERADA_KUDER} puntos. Estos ${conError.length === 1 ? "estudiante no suma" : `${conError.length} estudiantes no suman`} ${SUMA_ESPERADA_KUDER}: su informe está en esta carpeta igual, con la suma en el nombre del archivo, por ejemplo "(44 de 45)".`,
-    `Cuando tengas su hoja de respuestas, corrige sus puntajes en la aplicación (pestaña "Estudiantes e informes", ícono ⚠ junto a su nombre) y vuelve a descargar su informe.`,
+    `Cuando tengas su hoja de respuestas, corrige sus puntajes en la aplicación (pestaña "Corrección", o el ícono ⚠ junto a su nombre en "Estudiantes e informes") y vuelve a descargar su informe. Si lo revisas y el puntaje queda como está, usa "✓ Dejar así": deja de aparecer como pendiente y su informe sale sin la marca.`,
     "",
   ];
   if (buscar.length) {
@@ -572,7 +573,12 @@ function exportarExcelKuder() {
     const traspaso = analizarTraspasoKuder(e.puntajes);
     const d = describirTraspasoKuder(traspaso);
     fila[`Suma (debe ser ${SUMA_ESPERADA_KUDER})`] = traspaso.total;
-    fila["Revisión de traspaso"] = traspaso.estado === "ok" ? "Bien traspasado" : `${d.resumen}. ${d.accion}. ${d.detalle}`;
+    fila["Revisión de traspaso"] =
+      traspaso.estado === "ok"
+        ? "Bien traspasado"
+        : traspasoDejadoAsiKuder(e)
+          ? `${d.resumen}. Revisado y dejado así`
+          : `${d.resumen}. ${d.accion}. ${d.detalle}`;
     fila["Área(s) de interés"] = areas.length ? areas.map((a) => a.nombre).join(", ") : "Ninguna destacada";
     fila["Estado"] = e.eliminado ? "En papelera" : "Activo";
     fila["Última actualización"] = e.actualizadoEn ? new Date(e.actualizadoEn).toLocaleString("es-CL") : "";

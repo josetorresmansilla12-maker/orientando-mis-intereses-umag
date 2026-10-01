@@ -27,6 +27,7 @@ const TESTS = {
     formatearRut: (rut) => rut || "",
     revisarTraspaso: null, // el cuestionario de 8° no tiene una suma fija que revisar
     describirTraspaso: null,
+    huellaTraspaso: null,
     descargarIndividual: descargarInformeIndividual,
     construirBlobIndividual: (e) => paginasAPdfBlob([construirPaginaPortada(e), ...construirPaginasResultados(e)]),
     nombreArchivoIndividual: nombreArchivoInforme,
@@ -52,6 +53,7 @@ const TESTS = {
     formatearRut: (rut) => (rut ? formatearRutKuder(rut) : ""),
     revisarTraspaso: analizarTraspasoKuder, // las 10 áreas deben sumar 45 (js/kuder-data.js)
     describirTraspaso: describirTraspasoKuder,
+    huellaTraspaso: huellaPuntajesKuder, // "✓ Dejar así" (js/kuder-data.js)
     descargarIndividual: descargarInformeIndividualKuder,
     construirBlobIndividual: construirBlobInformeIndividualKuder,
     nombreArchivoIndividual: nombreArchivoInformeIndividualKuder,
@@ -64,7 +66,9 @@ const TESTS = {
   },
 };
 
-const TABS_SOLO_KUDER = ["kuder-interno"]; // "Informes para orientadores" (panel-kuder) es de los dos tests
+const TABS_SOLO_KUDER = ["correccion", "kuder-interno"]; // "Informes para orientadores" (panel-kuder) es de los dos tests
+// pestañas donde "Editar" abre el panel de edición debajo del estudiante, en la misma lista
+const TABS_CON_EDICION_EN_LISTA = ["estudiantes", "correccion"];
 
 const estado = {
   test: "octavo",
@@ -78,6 +82,7 @@ const estado = {
   gruposCerrados: new Set(),
   edicionEnLista: null,
   filtrosPapelera: { colegio: "", curso: "", nombre: "" },
+  filtrosCorreccion: { colegio: "", tipo: "", nombre: "" },
 };
 
 // configuración del test elegido arriba
@@ -146,9 +151,11 @@ function render() {
   document.getElementById("btn-deshacer").disabled = !cfg().store.puedeDeshacer();
   document.getElementById("btn-rehacer").disabled = !cfg().store.puedeRehacer();
   renderConteosSelector();
+  renderConteoCorreccion();
 
   if (estado.tab === "ingresar") renderDatosRecientes();
   if (estado.tab === "estudiantes") renderEstudiantes();
+  if (estado.tab === "correccion") renderCorreccion();
   if (estado.tab === "papelera") renderPapelera();
   if (estado.tab === "estadisticas") renderEstadisticas();
 }
@@ -156,6 +163,7 @@ function render() {
 function cablearTabs() {
   document.querySelectorAll(".tab-btn").forEach((b) => {
     b.addEventListener("click", () => {
+      if (estado.tab !== b.dataset.tab) estado.edicionEnLista = null; // el panel de edición no se lleva a la otra pestaña
       estado.tab = b.dataset.tab;
       render();
     });
@@ -210,6 +218,7 @@ function cambiarTest(idTest) {
   estado.gruposCerrados = new Set();
   estado.edicionEnLista = null;
   estado.filtrosPapelera = { colegio: "", curso: "", nombre: "" };
+  estado.filtrosCorreccion = { colegio: "", tipo: "", nombre: "" };
   if (idTest !== "kuder" && TABS_SOLO_KUDER.includes(estado.tab)) estado.tab = "ingresar";
   if (typeof reiniciarPanelOrientadores === "function") reiniciarPanelOrientadores();
   aplicarTestActivo();
@@ -331,21 +340,44 @@ function revisionTraspaso(puntajes) {
   return analisis.estado === "ok" ? null : { analisis, texto: c.describirTraspaso(analisis) };
 }
 
+// true si el test del estudiante no suma 45 pero se revisó y se dejó así ("✓ Dejar
+// así") con los mismos puntajes que tiene ahora
+function traspasoDejadoAsi(estudiante) {
+  const c = cfg();
+  return !!c.huellaTraspaso && !!estudiante.traspasoAceptado && estudiante.traspasoAceptado === c.huellaTraspaso(estudiante.puntajes);
+}
+
+// lo mismo que revisionTraspaso, pero de un estudiante guardado: null también si se
+// dejó así. Es lo que decide si aparece como "pendiente por revisar".
+function pendienteTraspaso(estudiante) {
+  return traspasoDejadoAsi(estudiante) ? null : revisionTraspaso(estudiante.puntajes);
+}
+
 // aviso para las listas de estudiantes: amarillo si el error podría cambiar sus
-// resultados (hay que buscarlo), gris si no
-function avisoTraspasoHtml(estudiante, { compacto = false } = {}) {
-  const r = revisionTraspaso(estudiante.puntajes);
+// resultados (hay que buscarlo), gris si no. "conDejarAsi" agrega el botón verde.
+function avisoTraspasoHtml(estudiante, { compacto = false, conDejarAsi = false } = {}) {
+  const r = pendienteTraspaso(estudiante);
   if (!r) return "";
   const t = r.texto;
-  return `<div class="traspaso-aviso${t.afecta ? " afecta" : ""}">${t.afecta ? "⚠" : "ℹ️"} <b>Test mal traspasado:</b> ${escaparHtml(t.resumen)}. ${escaparHtml(t.accion)}.${compacto ? "" : " " + escaparHtml(t.detalle)}</div>`;
+  return `<div class="traspaso-aviso${t.afecta ? " afecta" : ""}">${t.afecta ? "⚠" : "ℹ️"} <b>Test mal traspasado:</b> ${escaparHtml(t.resumen)}. ${escaparHtml(t.accion)}.${compacto ? "" : " " + escaparHtml(t.detalle)}${
+    conDejarAsi ? ` ${botonDejarAsiHtml(estudiante)}` : ""
+  }</div>`;
 }
 
 // ícono de advertencia junto al nombre de un estudiante con el test mal traspasado:
-// al hacer clic abre la corrección rápida de sus puntajes (ver abrirCorreccionPuntajes)
+// al hacer clic abre la corrección rápida de sus puntajes (ver abrirCorreccionPuntajes).
+// Si se dejó así, en vez del ⚠ va un ✓ verde (también se puede abrir para cambiarlo).
 function botonTraspasoHtml(estudiante, accion = "abrirCorreccionPuntajes") {
   const r = revisionTraspaso(estudiante.puntajes);
   if (!r) return "";
+  if (traspasoDejadoAsi(estudiante)) {
+    return `<button type="button" class="btn-traspaso dejado" title="Revisado: se dejó así, con ${r.analisis.total} de ${SUMA_ESPERADA_KUDER} puntos. Haz clic para ver o cambiar sus puntajes" onclick="${accion}('${estudiante.id}')">✓ ${r.analisis.total}/${SUMA_ESPERADA_KUDER}</button>`;
+  }
   return `<button type="button" class="btn-traspaso${r.analisis.afecta ? " afecta" : ""}" title="Test mal traspasado: haz clic para corregir sus puntajes" onclick="${accion}('${estudiante.id}')">⚠ ${r.analisis.total}/${SUMA_ESPERADA_KUDER}</button>`;
+}
+
+function botonDejarAsiHtml(estudiante) {
+  return `<button type="button" class="chico exito btn-dejar-asi" title="Ya lo revisé: dejar sus puntajes como están, aunque no sumen ${SUMA_ESPERADA_KUDER}. Deja de aparecer como pendiente" onclick="accionDejarAsi('${estudiante.id}')">✓ Dejar así</button>`;
 }
 
 // ventana con varias opciones (además de "Cancelar"): [{ texto, clase, accion }]
@@ -380,12 +412,12 @@ function elegirOpcion({ titulo, texto, opciones }) {
 // (test mal traspasado), se pregunta si generar igual (quedan marcados con su suma en
 // el nombre del archivo) o revisarlos primero
 function antesDeGenerarInformes(lista, generar, { individual = false } = {}) {
-  const pendientes = lista.filter((e) => revisionTraspaso(e.puntajes));
+  const pendientes = lista.filter((e) => pendienteTraspaso(e));
   if (pendientes.length === 0) return generar();
   const nombres =
     pendientes
       .slice(0, 8)
-      .map((e) => `${escaparHtml(e.nombre)} (${revisionTraspaso(e.puntajes).analisis.total}/${SUMA_ESPERADA_KUDER})`)
+      .map((e) => `${escaparHtml(e.nombre)} (${pendienteTraspaso(e).analisis.total}/${SUMA_ESPERADA_KUDER})`)
       .join(", ") + (pendientes.length > 8 ? ` y ${pendientes.length - 8} más` : "");
   const uno = individual;
   elegirOpcion({
@@ -416,7 +448,7 @@ function antesDeGenerarInformes(lista, generar, { individual = false } = {}) {
 
 // cuántos estudiantes de una lista tienen el test mal traspasado (para los encabezados de colegio/curso)
 function chipTraspasoHtml(lista) {
-  const n = lista.filter((e) => revisionTraspaso(e.puntajes)).length;
+  const n = lista.filter((e) => pendienteTraspaso(e)).length;
   return n ? `<span class="chip chip-traspaso">⚠ ${n} ${n === 1 ? "pendiente" : "pendientes"} por revisar</span>` : "";
 }
 
@@ -752,7 +784,7 @@ function cablearImportacion() {
         await c.descargarVariosCursos(cursos, (hecho, total) => {
           btn.textContent = `Generando informes ${hecho}/${total}…`;
         });
-        const nPendientes = creados.filter((e) => revisionTraspaso(e.puntajes)).length;
+        const nPendientes = creados.filter((e) => pendienteTraspaso(e)).length;
         mostrarToast(
           `Carpeta${cursos.length > 1 ? "s" : ""} descargada${cursos.length > 1 ? "s" : ""} (${creados.length} informes)` +
             (nPendientes ? `. ${nPendientes} con el test mal traspasado: marcados con su puntaje y pendientes por revisar.` : "")
@@ -1066,7 +1098,7 @@ function renderEstudiantes() {
       (!estado.filtros.curso || e.curso === estado.filtros.curso) &&
       (!estado.filtros.letra || e.letra === estado.filtros.letra) &&
       (!estado.filtros.nombre || coincideTexto(e.nombre, estado.filtros.nombre)) &&
-      (!estado.filtros.soloTraspaso || revisionTraspaso(e.puntajes))
+      (!estado.filtros.soloTraspaso || pendienteTraspaso(e))
   );
 
   const btnMasiva = document.getElementById("btn-descarga-masiva");
@@ -1099,7 +1131,7 @@ function renderEstudiantes() {
   // se cierra su editor; si está, su colegio y su curso quedan desplegados
   const editando = estado.edicionEnLista ? filtrados.find((e) => e.id === estado.edicionEnLista) : null;
   // pendientes por revisar que se ven en la lista (para "Guardar y seguir con el siguiente pendiente")
-  estado.pendientesVisibles = filtrados.filter((e) => revisionTraspaso(e.puntajes)).map((e) => e.id);
+  estado.pendientesVisibles = filtrados.filter((e) => pendienteTraspaso(e)).map((e) => e.id);
   if (!editando) estado.edicionEnLista = null;
   else {
     for (const clave of [claveGrupoColegio(editando.colegio), claveGrupoCurso(editando.colegio, etiquetaCurso(editando))]) {
@@ -1145,7 +1177,7 @@ function renderEstudiantes() {
                   <tr data-id="${e.id}" class="${estado.edicionEnLista === e.id ? "editando" : ""}">
                     <td style="color:#6a6178;">${c.numeroEnGrupo(e) || ""}</td>
                     <td><strong>${escaparHtml(e.nombre)}</strong> ${botonTraspasoHtml(e, "abrirEdicionEnLista")}<br/><span style="color:#6a6178;font-size:11px;">${escaparHtml(c.formatearRut(e.rut))}</span></td>
-                    <td>${chipsAreas(e)}${avisoTraspasoHtml(e)}</td>
+                    <td>${chipsAreas(e)}${avisoTraspasoHtml(e, { conDejarAsi: true })}</td>
                     <td>
                       <div class="fila-acciones">
                         <button class="chico secundario" onclick="abrirEdicionEnLista('${e.id}')">${estado.edicionEnLista === e.id ? "Editando…" : "Editar"}</button>
@@ -1229,10 +1261,17 @@ function renderResumenTraspaso(todos) {
     cont.innerHTML = "";
     return;
   }
-  const conError = todos.map((e) => revisionTraspaso(e.puntajes)).filter(Boolean);
+  const conError = todos.map((e) => pendienteTraspaso(e)).filter(Boolean);
+  const nDejados = todos.filter((e) => traspasoDejadoAsi(e) && revisionTraspaso(e.puntajes)).length;
   if (conError.length === 0) {
     estado.filtros.soloTraspaso = false;
-    cont.innerHTML = todos.length ? `<div class="resumen-traspaso ok">✓ Revisión de traspaso: todos los estudiantes cargados suman 45 puntos.</div>` : "";
+    cont.innerHTML = todos.length
+      ? `<div class="resumen-traspaso ok">✓ Revisión de traspaso: ${
+          nDejados
+            ? `no quedan pendientes (${nDejados} ${nDejados === 1 ? "se revisó y se dejó así" : "se revisaron y se dejaron así"}).`
+            : "todos los estudiantes cargados suman 45 puntos."
+        }</div>`
+      : "";
     return;
   }
   const nAfecta = conError.filter((r) => r.analisis.afecta).length;
@@ -1243,13 +1282,242 @@ function renderResumenTraspaso(todos) {
         <b>🔎 Pendientes por revisar:</b> ${conError.length} ${conError.length === 1 ? "estudiante tiene" : "estudiantes tienen"} el test mal traspasado (sus 10 áreas no suman 45).
         ${nAfecta ? `<br/>⚠ <b>${nAfecta}</b> ${nAfecta === 1 ? "debe revisarse" : "deben revisarse"}: el error podría cambiar sus resultados.` : ""}
         ${nSinEfecto ? `<br/>ℹ️ <b>${nSinEfecto}</b> no ${nSinEfecto === 1 ? "necesita" : "necesitan"} revisión: sus resultados quedan iguales.` : ""}
+        ${nDejados ? `<br/>✓ ${nDejados} ${nDejados === 1 ? "se revisó y se dejó así" : "se revisaron y se dejaron así"}.` : ""}
       </div>
-      <button type="button" class="chico secundario" id="btn-solo-traspaso">${estado.filtros.soloTraspaso ? "Ver todos los estudiantes" : "Ver solo estos estudiantes"}</button>
+      <div class="resumen-traspaso-botones">
+        <button type="button" class="chico secundario" id="btn-solo-traspaso">${estado.filtros.soloTraspaso ? "Ver todos los estudiantes" : "Ver solo estos estudiantes"}</button>
+        <button type="button" class="chico" id="btn-ir-correccion">🔎 Ir a la pestaña Corrección</button>
+      </div>
     </div>`;
   document.getElementById("btn-solo-traspaso").onclick = () => {
     estado.filtros.soloTraspaso = !estado.filtros.soloTraspaso;
     renderEstudiantes();
   };
+  document.getElementById("btn-ir-correccion").onclick = () => irACorreccion();
+}
+
+// ---------------- pestaña "Corrección" (solo Kuder) ----------------
+// Todos los estudiantes cargados cuyo test no suma 45, por colegio y curso, para
+// revisarlos de corrido con sus hojas de respuestas: "✏️ Corregir" abre el mismo panel
+// de edición de "Estudiantes e informes" (justo debajo del estudiante) y "✓ Dejar así"
+// lo saca de los pendientes sin cambiar sus puntajes. Abajo quedan los que se dejaron
+// así, por si alguno hay que volver a marcarlo como pendiente.
+
+function renderConteoCorreccion() {
+  const el = document.getElementById("conteo-correccion");
+  if (!el) return;
+  const c = cfg();
+  const n = c.revisarTraspaso ? c.store.listar().filter((e) => pendienteTraspaso(e)).length : 0;
+  el.textContent = n ? String(n) : "";
+}
+
+function irACorreccion() {
+  estado.tab = "correccion";
+  render();
+  document.querySelector(".tabs").scrollIntoView({ block: "start" });
+}
+
+function renderCorreccion() {
+  const c = cfg();
+  const cont = document.getElementById("lista-correccion");
+  const contResumen = document.getElementById("resumen-correccion");
+  const contDejados = document.getElementById("dejados-correccion");
+  if (!c.revisarTraspaso) {
+    cont.innerHTML = contResumen.innerHTML = contDejados.innerHTML = "";
+    return;
+  }
+  const todos = c.store.listar();
+  const pendientes = todos.filter((e) => pendienteTraspaso(e));
+  const dejados = todos.filter((e) => traspasoDejadoAsi(e) && revisionTraspaso(e.puntajes));
+  const afecta = (e) => pendienteTraspaso(e).analisis.afecta;
+  const f = estado.filtrosCorreccion;
+
+  // filtros
+  const selColegio = document.getElementById("c-colegio");
+  const selTipo = document.getElementById("c-tipo");
+  const inpNombre = document.getElementById("c-nombre");
+  const colegios = opcionesUnicas([...pendientes, ...dejados], "colegio");
+  selColegio.innerHTML =
+    `<option value="">Todos</option>` + colegios.map((v) => `<option value="${escaparHtml(v)}">${escaparHtml(v)}</option>`).join("");
+  if (!colegios.includes(f.colegio)) f.colegio = "";
+  selColegio.value = f.colegio;
+  selTipo.value = f.tipo;
+  inpNombre.value = f.nombre;
+  selColegio.onchange = () => { f.colegio = selColegio.value; renderCorreccion(); };
+  selTipo.onchange = () => { f.tipo = selTipo.value; renderCorreccion(); };
+  inpNombre.oninput = () => { f.nombre = inpNombre.value; renderCorreccion(); };
+
+  const pasaFiltro = (e) => (!f.colegio || e.colegio === f.colegio) && (!f.nombre || coincideTexto(e.nombre, f.nombre));
+  const visibles = pendientes
+    .filter(pasaFiltro)
+    .filter((e) => !f.tipo || (f.tipo === "afecta") === afecta(e));
+
+  // resumen y "dejar así" a todos los que no necesitan revisión
+  const nAfecta = pendientes.filter(afecta).length;
+  const nSinEfecto = pendientes.length - nAfecta;
+  const sinEfectoVisibles = visibles.filter((e) => !afecta(e));
+  if (todos.length === 0) {
+    contResumen.innerHTML = `<div class="vacio">Todavía no hay estudiantes del ${c.nombre}. Cárgalos desde la pestaña "📝 Ingresar datos".</div>`;
+  } else if (pendientes.length === 0) {
+    contResumen.innerHTML = `<div class="resumen-traspaso ok">✓ No hay tests pendientes por revisar: ${
+      dejados.length
+        ? `los demás suman 45, y ${dejados.length} ${dejados.length === 1 ? "se revisó y se dejó así" : "se revisaron y se dejaron así"}.`
+        : "todos los estudiantes cargados suman 45 puntos."
+    }</div>`;
+  } else {
+    contResumen.innerHTML = `
+      <div class="resumen-traspaso${nAfecta ? " afecta" : ""}">
+        <div>
+          <b>🔎 ${pendientes.length} ${pendientes.length === 1 ? "estudiante pendiente" : "estudiantes pendientes"} por revisar</b> (sus 10 áreas no suman 45).
+          ${nAfecta ? `<br/>⚠ <b>${nAfecta}</b> ${nAfecta === 1 ? "debe revisarse" : "deben revisarse"}: el error podría cambiar sus resultados.` : ""}
+          ${nSinEfecto ? `<br/>ℹ️ <b>${nSinEfecto}</b> no ${nSinEfecto === 1 ? "necesita" : "necesitan"} revisión: aunque se corrija, sus resultados quedan iguales.` : ""}
+        </div>
+        ${
+          sinEfectoVisibles.length
+            ? `<button type="button" class="chico exito" id="btn-dejar-sin-efecto" title="Dejar así a todos los que no necesitan revisión (con el filtro que tengas puesto)">✓ Dejar así ${
+                sinEfectoVisibles.length === 1 ? "al que no necesita revisión" : `a los ${sinEfectoVisibles.length} que no necesitan revisión`
+              }</button>`
+            : ""
+        }
+      </div>`;
+    const btnVarios = document.getElementById("btn-dejar-sin-efecto");
+    if (btnVarios) btnVarios.onclick = () => accionDejarAsiVarios(sinEfectoVisibles);
+  }
+
+  // lista de pendientes, por colegio y curso (en el mismo orden y con el mismo número de su informe)
+  const porColegio = agrupar(visibles);
+  const enOrden = [];
+  let html = "";
+  for (const [colegio, porCurso] of porColegio) {
+    for (const [claveCurso, estudiantesCurso] of porCurso) {
+      const ordenados = [...estudiantesCurso].sort((a, b) => compararNombres(a.nombre, b.nombre));
+      enOrden.push(...ordenados);
+      html += `
+        <div class="correccion-grupo">
+          <div class="correccion-grupo-titulo">🏫 ${escaparHtml(colegio)} <span class="correccion-sep">·</span> 📘 ${escaparHtml(claveCurso)} ${chipTraspasoHtml(ordenados)}</div>
+          <table class="lista">
+            <thead><tr><th style="width:44px;">N°</th><th>Estudiante</th><th>Qué revisar</th><th style="width:210px;">Acciones</th></tr></thead>
+            <tbody>
+              ${ordenados
+                .map((e) => {
+                  const r = pendienteTraspaso(e);
+                  const t = r.texto;
+                  const editandoEste = estado.edicionEnLista === e.id;
+                  return `
+                  <tr data-id="${e.id}" class="${editandoEste ? "editando" : ""}">
+                    <td style="color:#6a6178;">${c.numeroEnGrupo(e) || ""}</td>
+                    <td><strong>${escaparHtml(e.nombre)}</strong> ${botonTraspasoHtml(e, "abrirEdicionEnLista")}<br/><span style="color:#6a6178;font-size:11px;">${escaparHtml(c.formatearRut(e.rut))}</span></td>
+                    <td><div class="traspaso-aviso${t.afecta ? " afecta" : ""}">${t.afecta ? "⚠" : "ℹ️"} <b>${escaparHtml(t.resumen)}.</b> ${escaparHtml(t.accion)}. ${escaparHtml(t.detalle)}</div></td>
+                    <td>
+                      <div class="fila-acciones">
+                        <button class="chico secundario" onclick="abrirEdicionEnLista('${e.id}')">${editandoEste ? "Corrigiendo…" : "✏️ Corregir"}</button>
+                        ${botonDejarAsiHtml(e)}
+                      </div>
+                    </td>
+                  </tr>
+                  ${editandoEste ? `<tr class="fila-edicion"><td colspan="4">${htmlEditorEnLista(e)}</td></tr>` : ""}`;
+                })
+                .join("")}
+            </tbody>
+          </table>
+        </div>`;
+    }
+  }
+  // para "Guardar y seguir con el siguiente pendiente" y para saber si sigue en pantalla quien se editaba
+  estado.pendientesVisibles = enOrden.map((e) => e.id);
+  const editando = enOrden.find((e) => e.id === estado.edicionEnLista) || null;
+  if (!editando) estado.edicionEnLista = null;
+  if (todos.length === 0 || pendientes.length === 0) cont.innerHTML = "";
+  else if (visibles.length === 0) cont.innerHTML = `<div class="vacio">No hay pendientes que coincidan con el filtro.</div>`;
+  else cont.innerHTML = html;
+  if (editando) cablearEditorEnLista(editando);
+
+  // los que se revisaron y se dejaron así, por si hay que volver a marcarlos como pendientes
+  const dejadosVisibles = dejados.filter(pasaFiltro).sort((a, b) => compararNombres(a.nombre, b.nombre));
+  contDejados.innerHTML = dejados.length
+    ? `
+      <details class="correccion-dejados" ${estado.dejadosAbierto ? "open" : ""}>
+        <summary>✓ Revisados y dejados así <span class="chip">${dejadosVisibles.length}</span></summary>
+        <p class="ayuda">No suman 45, pero se revisaron y se dejaron así: ya no aparecen como pendientes y su informe sale sin la marca "(44 de 45)". Si alguno se dejó así por error, vuelve a marcarlo como pendiente (o usa "Deshacer" arriba).</p>
+        ${
+          dejadosVisibles.length
+            ? `<table class="lista">
+            <thead><tr><th>Estudiante</th><th>Colegio y curso</th><th>Suma</th><th style="width:210px;">Acción</th></tr></thead>
+            <tbody>
+              ${dejadosVisibles
+                .map((e) => {
+                  const r = revisionTraspaso(e.puntajes);
+                  return `<tr>
+                    <td><strong>${escaparHtml(e.nombre)}</strong></td>
+                    <td>${escaparHtml(e.colegio)} · ${escaparHtml(etiquetaCurso(e))}</td>
+                    <td>${escaparHtml(r.texto.resumen)}</td>
+                    <td><button class="chico secundario" onclick="accionVolverAPendiente('${e.id}')">↩ Volver a pendiente</button></td>
+                  </tr>`;
+                })
+                .join("")}
+            </tbody>
+          </table>`
+            : `<div class="vacio" style="padding:14px;">Ninguno coincide con el filtro.</div>`
+        }
+      </details>`
+    : "";
+  const det = contDejados.querySelector("details");
+  if (det) det.addEventListener("toggle", () => (estado.dejadosAbierto = det.open));
+}
+
+// "✓ Dejar así" de un estudiante: sus puntajes quedan como están y deja de aparecer
+// como pendiente (se puede deshacer, o volver a marcar desde la pestaña "Corrección")
+function accionDejarAsi(id) {
+  const c = cfg();
+  const e = c.store.obtener(id);
+  const r = e && pendienteTraspaso(e);
+  if (!r || !c.huellaTraspaso) return;
+  if (estado.edicionEnLista === id) estado.edicionEnLista = null; // su panel se cierra sin guardar lo escrito
+  c.store.marcarTraspasoAceptado([id], c.huellaTraspaso);
+  actualizarListaConservandoPosicion(id);
+  mostrarToast(`✓ ${e.nombre} queda así, con ${r.analisis.total} de ${SUMA_ESPERADA_KUDER}: ya no aparece como pendiente.`);
+}
+
+function accionDejarAsiVarios(lista) {
+  const c = cfg();
+  if (!lista.length || !c.huellaTraspaso) return;
+  const nombres =
+    lista
+      .slice(0, 8)
+      .map((e) => `${escaparHtml(e.nombre)} (${pendienteTraspaso(e).analisis.total}/${SUMA_ESPERADA_KUDER})`)
+      .join(", ") + (lista.length > 8 ? ` y ${lista.length - 8} más` : "");
+  elegirOpcion({
+    titulo: "✓ Dejar así a los que no necesitan revisión",
+    texto: `${lista.length === 1 ? "Este estudiante no suma" : `Estos ${lista.length} estudiantes no suman`} ${SUMA_ESPERADA_KUDER}, pero aunque se corrija el error sus resultados quedan iguales: ${nombres}.<br/><br/>${
+      lista.length === 1
+        ? "Sus puntajes quedan como están, deja de aparecer como pendiente y su informe sale sin la marca."
+        : "Sus puntajes quedan como están, dejan de aparecer como pendientes y sus informes salen sin la marca."
+    } Se puede deshacer con "Deshacer" arriba, o volver a marcar a cualquiera como pendiente.`,
+    opciones: [
+      {
+        texto: lista.length === 1 ? "✓ Sí, dejarlo así" : `✓ Sí, dejar así a los ${lista.length}`,
+        clase: "exito",
+        accion: () => {
+          if (lista.some((e) => e.id === estado.edicionEnLista)) estado.edicionEnLista = null;
+          c.store.marcarTraspasoAceptado(
+            lista.map((e) => e.id),
+            c.huellaTraspaso
+          );
+          render();
+          mostrarToast(`✓ ${lista.length === 1 ? "1 estudiante quedó así" : `${lista.length} estudiantes quedaron así`}: ya no aparecen como pendientes.`);
+        },
+      },
+    ],
+  });
+}
+
+function accionVolverAPendiente(id) {
+  const c = cfg();
+  const e = c.store.obtener(id);
+  if (!e) return;
+  c.store.marcarTraspasoAceptado([id], null);
+  render();
+  mostrarToast(`${e.nombre} vuelve a estar pendiente por revisar.`);
 }
 
 // ---------------- edición en la misma lista ("Estudiantes e informes") ----------------
@@ -1295,12 +1563,26 @@ function claveGrupoCurso(colegio, claveCurso) {
   return "cur|" + (colegio || "") + "|" + claveCurso;
 }
 
+// lista donde se edita: "Estudiantes e informes" o "Corrección"
+function contenedorListaEditable() {
+  return document.getElementById(estado.tab === "correccion" ? "lista-correccion" : "grupos-estudiantes");
+}
+
+// busca dentro de la lista de la pestaña abierta (la otra lista puede seguir en la
+// página, oculta, con su propio panel de edición)
+function enListaEditable(selector) {
+  const cont = contenedorListaEditable();
+  return cont ? cont.querySelector(selector) : null;
+}
+
 function filaDeEstudiante(id) {
-  return document.querySelector(`#grupos-estudiantes tr[data-id="${id}"]`);
+  const cont = contenedorListaEditable();
+  return cont ? cont.querySelector(`tr[data-id="${id}"]`) : null;
 }
 
 function idsDeFilasEnPantalla() {
-  return [...document.querySelectorAll("#grupos-estudiantes tr[data-id]")].map((tr) => tr.dataset.id);
+  const cont = contenedorListaEditable();
+  return cont ? [...cont.querySelectorAll("tr[data-id]")].map((tr) => tr.dataset.id) : [];
 }
 
 // vuelve a dibujar la lista dejando la fila de "idAncla" en el mismo lugar de la
@@ -1311,7 +1593,25 @@ function actualizarListaConservandoPosicion(idAncla) {
   const top = antes ? antes.getBoundingClientRect().top : null;
   const ids = idsDeFilasEnPantalla();
   const siguientes = ids.slice(ids.indexOf(idAncla) + 1);
+  // si queda abierto el panel de otro estudiante (por ejemplo, se dejó así a uno
+  // mientras se editaba a otro), lo que estaba escrito y sin guardar no se pierde
+  const editor = enListaEditable(".editor-en-lista");
+  const escrito =
+    editor && editor.dataset.id === estado.edicionEnLista
+      ? [...editor.querySelectorAll("input[name]")].map((inp) => [inp.name, inp.value])
+      : null;
   render();
+  if (escrito) {
+    const nuevo = enListaEditable(".editor-en-lista");
+    if (nuevo && nuevo.dataset.id === estado.edicionEnLista) {
+      escrito.forEach(([nombre, valor]) => {
+        const inp = nuevo.querySelector(`[name="${nombre}"]`);
+        if (inp) inp.value = valor;
+      });
+      const unPuntaje = nuevo.querySelector("input[name^='ed_p_']");
+      if (unPuntaje) unPuntaje.dispatchEvent(new Event("input"));
+    }
+  }
   if (top === null) return;
   let fila = filaDeEstudiante(idAncla);
   for (let i = 0; !fila && i < siguientes.length; i++) fila = filaDeEstudiante(siguientes[i]);
@@ -1319,20 +1619,20 @@ function actualizarListaConservandoPosicion(idAncla) {
 }
 
 function abrirEdicionEnLista(id) {
-  if (estado.tab !== "estudiantes") {
+  if (!TABS_CON_EDICION_EN_LISTA.includes(estado.tab)) {
     abrirCorreccionPuntajes(id);
     return;
   }
   estado.edicionEnLista = id;
   actualizarListaConservandoPosicion(id);
   const primero =
-    document.querySelector(".editor-en-lista .ed-candidata input") ||
-    document.querySelector(".editor-en-lista [name='ed_p_" + cfg().areas[0].id + "']");
+    enListaEditable(".editor-en-lista .ed-candidata input") ||
+    enListaEditable(".editor-en-lista [name='ed_p_" + cfg().areas[0].id + "']");
   if (primero) {
     primero.focus({ preventScroll: true });
     primero.select();
   }
-  const editor = document.querySelector(".fila-edicion");
+  const editor = enListaEditable(".fila-edicion");
   if (editor) {
     const r = editor.getBoundingClientRect();
     if (r.bottom > window.innerHeight) window.scrollBy(0, Math.min(r.bottom - window.innerHeight + 16, r.top - 90));
@@ -1354,23 +1654,30 @@ function siguientePendienteEnLista(id) {
   const orden = [...ids.slice(idx + 1), ...ids.slice(0, Math.max(0, idx))];
   return orden.find((otro) => {
     const e = c.store.obtener(otro);
-    return e && revisionTraspaso(e.puntajes);
+    return e && pendienteTraspaso(e);
   }) || null;
 }
 
 function htmlEditorEnLista(e) {
   const c = cfg();
-  const r = revisionTraspaso(e.puntajes);
+  const dejado = traspasoDejadoAsi(e);
+  const r = dejado ? null : revisionTraspaso(e.puntajes);
   const candidatas = new Set(r && r.analisis.afecta ? r.analisis.areas.map((v) => v.area.id) : []);
   const hayOtroPendiente = c.revisarTraspaso && (estado.pendientesVisibles || []).some((otro) => otro !== e.id);
+  const rDejado = dejado ? revisionTraspaso(e.puntajes) : null;
   return `
-    <div class="editor-en-lista">
+    <div class="editor-en-lista" data-id="${e.id}">
       <div class="editor-en-lista-titulo">✏️ Editando a <b>${escaparHtml(e.nombre)}</b></div>
       ${
         r
           ? `<div class="editor-en-lista-aviso${r.texto.afecta ? " afecta" : ""}">${r.texto.afecta ? "⚠" : "ℹ️"} ${escaparHtml(r.texto.resumen)}. ${escaparHtml(r.texto.accion)}. ${escaparHtml(r.texto.detalle)}${
               candidatas.size ? " Las áreas marcadas en amarillo son las primeras que conviene revisar en su hoja de respuestas." : ""
-            }</div>`
+            } Si ya lo revisaste y el puntaje queda como está, usa <b>✓ Dejar así</b>.</div>`
+          : ""
+      }
+      ${
+        rDejado
+          ? `<div class="editor-en-lista-aviso dejado">✓ ${escaparHtml(rDejado.texto.resumen)}: se revisó y se dejó así. Si cambias sus puntajes, se vuelve a revisar.</div>`
           : ""
       }
       <div class="editor-en-lista-datos">
@@ -1395,6 +1702,7 @@ function htmlEditorEnLista(e) {
       <div class="editor-en-lista-acciones">
         <button type="button" class="chico" data-ed="guardar">💾 Guardar</button>
         ${hayOtroPendiente ? `<button type="button" class="chico" data-ed="siguiente">💾 Guardar y seguir con el siguiente pendiente</button>` : ""}
+        ${r ? `<button type="button" class="chico exito" data-ed="dejar" title="Guarda lo escrito y deja sus puntajes así aunque no sumen ${SUMA_ESPERADA_KUDER}: deja de aparecer como pendiente">✓ Dejar así</button>` : ""}
         <button type="button" class="chico secundario" data-ed="descargar">Guardar y descargar su informe</button>
         <button type="button" class="chico secundario" data-ed="cancelar">Cancelar</button>
         <span class="editor-en-lista-ayuda">Enter guarda · Esc cancela</span>
@@ -1403,7 +1711,7 @@ function htmlEditorEnLista(e) {
 }
 
 function cablearEditorEnLista(e) {
-  const editor = document.querySelector(".editor-en-lista");
+  const editor = enListaEditable(".editor-en-lista");
   if (!editor) return;
   const suma = editor.querySelector(".editor-en-lista-suma");
   const leer = (idArea) => editor.querySelector(`[name="ed_p_${idArea}"]`).value;
@@ -1412,6 +1720,8 @@ function cablearEditorEnLista(e) {
   editor.querySelector("[data-ed='guardar']").onclick = () => guardarEdicionEnLista(e.id);
   const btnSiguiente = editor.querySelector("[data-ed='siguiente']");
   if (btnSiguiente) btnSiguiente.onclick = () => guardarEdicionEnLista(e.id, { seguir: true });
+  const btnDejar = editor.querySelector("[data-ed='dejar']");
+  if (btnDejar) btnDejar.onclick = () => guardarEdicionEnLista(e.id, { dejarAsi: true });
   editor.querySelector("[data-ed='descargar']").onclick = () => {
     const actualizado = guardarEdicionEnLista(e.id);
     if (actualizado) descargarUnInforme(actualizado, null);
@@ -1430,9 +1740,10 @@ function cablearEditorEnLista(e) {
 
 // guarda lo escrito en el editor de la lista; devuelve el estudiante actualizado, o null
 // si algún campo no es válido. "seguir": abre de inmediato al siguiente pendiente.
-function guardarEdicionEnLista(id, { seguir = false } = {}) {
+// "dejarAsi": además deja esos puntajes como revisados aunque no sumen 45.
+function guardarEdicionEnLista(id, { seguir = false, dejarAsi = false } = {}) {
   const c = cfg();
-  const editor = document.querySelector(".editor-en-lista");
+  const editor = enListaEditable(".editor-en-lista");
   if (!editor || !c.store.obtener(id)) return null;
   const campo = (nombre) => editor.querySelector(`[name="${nombre}"]`);
   let ok = true;
@@ -1461,14 +1772,16 @@ function guardarEdicionEnLista(id, { seguir = false } = {}) {
   }
 
   const siguiente = seguir ? siguientePendienteEnLista(id) : null;
-  const actualizado = c.store.actualizar(id, {
+  const datos = {
     nombre,
     rut: campo("ed_rut").value.trim(),
     colegio,
     curso,
     letra: campo("ed_letra").value.trim().toUpperCase(),
     puntajes,
-  });
+  };
+  if (dejarAsi && c.huellaTraspaso && revisionTraspaso(puntajes)) datos.traspasoAceptado = c.huellaTraspaso(puntajes);
+  const actualizado = c.store.actualizar(id, datos);
   estado.edicionEnLista = siguiente;
   actualizarListaConservandoPosicion(id);
 
@@ -1478,22 +1791,24 @@ function guardarEdicionEnLista(id, { seguir = false } = {}) {
   mostrarToast(
     c.revisarTraspaso
       ? r
-        ? `Guardado. Aún ${r.texto.resumen.toLowerCase()}. ${resultado}`
+        ? traspasoDejadoAsi(actualizado)
+          ? `✓ Queda así, con ${r.analisis.total} de ${SUMA_ESPERADA_KUDER}: ya no aparece como pendiente. ${resultado}`
+          : `Guardado. Aún ${r.texto.resumen.toLowerCase()}. ${resultado}`
         : `Guardado: ya suma ${SUMA_ESPERADA_KUDER}. ${resultado}`
       : `Guardado. ${resultado}`
   );
 
   if (siguiente) {
     const filaSig = filaDeEstudiante(siguiente);
-    const editorSig = document.querySelector(".fila-edicion");
+    const editorSig = enListaEditable(".fila-edicion");
     if (filaSig && editorSig) {
       const r1 = filaSig.getBoundingClientRect();
       const r2 = editorSig.getBoundingClientRect();
       if (r1.top < 80 || r2.bottom > window.innerHeight) window.scrollBy(0, r1.top - 120);
     }
     const primero =
-      document.querySelector(".editor-en-lista .ed-candidata input") ||
-      document.querySelector(".editor-en-lista input[name^='ed_p_']");
+      enListaEditable(".editor-en-lista .ed-candidata input") ||
+      enListaEditable(".editor-en-lista input[name^='ed_p_']");
     if (primero) {
       primero.focus({ preventScroll: true });
       primero.select();
@@ -1553,7 +1868,7 @@ function accionDescargarTodosLosCursos(lista, btn) {
   const nCursos = [...porColegio.values()].reduce((acc, porCurso) => acc + porCurso.size, 0);
   const segundos = Math.round(lista.length * SEGUNDOS_POR_INFORME_APROX);
   const tiempo = segundos < 60 ? "menos de un minuto" : `unos ${Math.ceil(segundos / 60)} minutos`;
-  const pendientes = lista.filter((e) => revisionTraspaso(e.puntajes)).length;
+  const pendientes = lista.filter((e) => pendienteTraspaso(e)).length;
   const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
 
   elegirOpcion({
@@ -1639,7 +1954,7 @@ async function descargarConProgreso(lista, btn) {
     await c.descargarMasivo(lista, (hecho, total) => {
       btn.textContent = `Generando ${hecho}/${total}…`;
     });
-    const nError = lista.filter((e) => revisionTraspaso(e.puntajes)).length;
+    const nError = lista.filter((e) => pendienteTraspaso(e)).length;
     mostrarToast(
       "Descarga lista (" + lista.length + (lista.length === 1 ? " informe)" : " informes)") +
         (nError ? `. ${nError} con el test mal traspasado: van marcados con su puntaje en el nombre del archivo y listados en la nota dentro de la carpeta.` : "")
@@ -1729,7 +2044,7 @@ async function accionVerPdf(id) {
   vistaPdf.estudiante = e;
 
   document.getElementById("vp-titulo").textContent = `Informe de ${e.nombre}`;
-  const r = revisionTraspaso(e.puntajes);
+  const r = pendienteTraspaso(e);
   document.getElementById("vp-aviso").innerHTML = r
     ? `⚠ Test mal traspasado (${escaparHtml(r.texto.resumen)}): este informe puede cambiar cuando se corrijan sus puntajes.`
     : "";
@@ -1810,14 +2125,20 @@ function abrirCorreccionPuntajes(id) {
 
   // las áreas que podrían cambiar de lado del 7 van marcadas: son las columnas que
   // conviene revisar primero en la hoja de respuestas
-  const r = revisionTraspaso(e.puntajes);
+  const dejado = traspasoDejadoAsi(e);
+  const rActual = revisionTraspaso(e.puntajes);
+  const r = dejado ? null : rActual;
   const candidatas = new Set(r && r.analisis.afecta ? r.analisis.areas.map((v) => v.area.id) : []);
 
   document.getElementById("mp-titulo").textContent = `Corregir puntajes: ${e.nombre}`;
   document.getElementById("mp-sub").innerHTML = r
     ? `${escaparHtml(r.texto.resumen)}. ${escaparHtml(r.texto.accion)}. ${escaparHtml(r.texto.detalle)}` +
-      (candidatas.size ? " <b>Las áreas marcadas en amarillo son las primeras que conviene revisar en su hoja de respuestas.</b>" : "")
-    : `Sus ${c.areas.length} áreas suman ${SUMA_ESPERADA_KUDER}: el test está bien traspasado.`;
+      (candidatas.size ? " <b>Las áreas marcadas en amarillo son las primeras que conviene revisar en su hoja de respuestas.</b>" : "") +
+      ` Si ya lo revisaste y el puntaje queda como está, usa <b>✓ Dejar así</b>.`
+    : dejado
+      ? `✓ ${escaparHtml(rActual.texto.resumen)}: se revisó y se dejó así. Si cambias sus puntajes, se vuelve a revisar.`
+      : `Sus ${c.areas.length} áreas suman ${SUMA_ESPERADA_KUDER}: el test está bien traspasado.`;
+  document.getElementById("mp-dejar").style.display = r ? "" : "none";
 
   document.getElementById("mp-campos").innerHTML = c.areas
     .map(
@@ -1846,8 +2167,9 @@ function cerrarCorreccionPuntajes() {
   correccionPuntajesId = null;
 }
 
-// guarda la corrección; devuelve el estudiante actualizado, o null si algún campo no es válido
-function guardarCorreccionPuntajes() {
+// guarda la corrección; devuelve el estudiante actualizado, o null si algún campo no es
+// válido. "dejarAsi": además deja esos puntajes como revisados aunque no sumen 45.
+function guardarCorreccionPuntajes({ dejarAsi = false } = {}) {
   const c = cfg();
   const e = c.store.obtener(correccionPuntajesId);
   if (!e) return null;
@@ -1865,20 +2187,29 @@ function guardarCorreccionPuntajes() {
     mostrarToast(`Cada puntaje debe ser un número entero de ${c.puntajeMin} a ${c.puntajeMax}`);
     return null;
   }
-  const actualizado = c.store.actualizar(e.id, { puntajes });
+  const datos = { puntajes };
+  if (dejarAsi && c.huellaTraspaso && revisionTraspaso(puntajes)) datos.traspasoAceptado = c.huellaTraspaso(puntajes);
+  const actualizado = c.store.actualizar(e.id, datos);
   cerrarCorreccionPuntajes();
 
   const r = revisionTraspaso(actualizado.puntajes);
   const areas = c.calcularAreas(actualizado.puntajes).map((a) => a.nombre);
   const resultado = areas.length ? `Áreas de interés: ${areas.join(", ")}.` : "Sin áreas sobre 7: su informe mostrará todas las áreas (intereses diversos).";
-  mostrarToast(r ? `Guardado. Aún ${r.texto.resumen.toLowerCase()}. ${resultado}` : `Corregido: ya suma ${SUMA_ESPERADA_KUDER}. ${resultado}`);
+  mostrarToast(
+    r
+      ? traspasoDejadoAsi(actualizado)
+        ? `✓ Queda así, con ${r.analisis.total} de ${SUMA_ESPERADA_KUDER}: ya no aparece como pendiente. ${resultado}`
+        : `Guardado. Aún ${r.texto.resumen.toLowerCase()}. ${resultado}`
+      : `Corregido: ya suma ${SUMA_ESPERADA_KUDER}. ${resultado}`
+  );
   render();
   return actualizado;
 }
 
 function cablearCorreccionPuntajes() {
   document.getElementById("mp-cancelar").addEventListener("click", cerrarCorreccionPuntajes);
-  document.getElementById("mp-guardar").addEventListener("click", guardarCorreccionPuntajes);
+  document.getElementById("mp-guardar").addEventListener("click", () => guardarCorreccionPuntajes());
+  document.getElementById("mp-dejar").addEventListener("click", () => guardarCorreccionPuntajes({ dejarAsi: true }));
   document.getElementById("mp-guardar-descargar").addEventListener("click", () => {
     const actualizado = guardarCorreccionPuntajes();
     if (actualizado) descargarUnInforme(actualizado, null);
@@ -1987,11 +2318,12 @@ function renderEstadisticas() {
   document.getElementById("stat-colegios").textContent = colegios;
 
   if (c.revisarTraspaso) {
-    const conError = todos.map((e) => revisionTraspaso(e.puntajes)).filter(Boolean);
+    const conError = todos.map((e) => pendienteTraspaso(e)).filter(Boolean);
     const nAfecta = conError.filter((r) => r.analisis.afecta).length;
+    const nDejados = todos.filter((e) => traspasoDejadoAsi(e) && revisionTraspaso(e.puntajes)).length;
     document.getElementById("stat-traspaso").textContent = conError.length;
     document.getElementById("stat-traspaso-lbl").textContent =
-      `Tests mal traspasados (no suman 45)${conError.length ? `: ${nAfecta} por revisar` : ""}`;
+      `Tests mal traspasados pendientes (no suman 45)${conError.length ? `: ${nAfecta} ${nAfecta === 1 ? "debe" : "deben"} revisarse` : ""}${nDejados ? ` · ${nDejados} ${nDejados === 1 ? "dejado" : "dejados"} así` : ""}`;
   }
 
   const conteoPorArea = {};

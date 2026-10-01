@@ -151,9 +151,30 @@ class Store {
         if (datos.puntajes[k] !== undefined) e.puntajes[k] = num(datos.puntajes[k]);
       }
     }
+    if (datos.traspasoAceptado !== undefined) this._fijarTraspasoAceptado(e, datos.traspasoAceptado);
     e.actualizadoEn = new Date().toISOString();
     this._guardar();
     return e;
+  }
+
+  // "✓ Dejar así" (Kuder): guarda en cada estudiante la huella de los puntajes que se
+  // aceptaron tal cual ("huella" es una función de los puntajes), o la borra con null.
+  // Un solo paso de deshacer para todos.
+  marcarTraspasoAceptado(ids, huella) {
+    this._antesDeCambiar();
+    const idsSet = new Set(ids);
+    const ahora = new Date().toISOString();
+    this.estudiantes.forEach((e) => {
+      if (!idsSet.has(e.id)) return;
+      this._fijarTraspasoAceptado(e, huella ? huella(e.puntajes) : null);
+      e.actualizadoEn = ahora;
+    });
+    this._guardar();
+  }
+
+  _fijarTraspasoAceptado(e, valor) {
+    if (valor) e.traspasoAceptado = valor;
+    else delete e.traspasoAceptado;
   }
 
   moverAPapelera(id) {
