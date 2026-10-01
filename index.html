@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Orientando mis Intereses — Informes</title>
-<link rel="stylesheet" href="css/styles.css?v=20261002p" />
+<link rel="stylesheet" href="css/styles.css?v=20261002q" />
 </head>
 <body class="test-octavo">
 
@@ -310,10 +310,12 @@
     <section id="panel-kuder-interno" class="panel">
       <div class="tarjeta">
         <h2>Informe interno — Admisión y Marketing <span class="badge-test" data-badge-test></span></h2>
-        <p class="ayuda">Uso interno de la unidad — no está pensado para orientadores ni estudiantes. Sube hasta 50 archivos Excel/CSV de aplicaciones del Test de Kuder (uno por curso) para un informe consolidado: estadísticas de aplicaciones, qué colegios y niveles (2°, 4°, etc.) solicitan el test con más frecuencia, qué áreas de interés concentran más demanda, y las carreras UMAG de cada área junto con carreras que la universidad podría incorporar a futuro. Sin límite de páginas — es un documento de uso interno.</p>
+        <p class="ayuda">Uso interno de la unidad — no está pensado para orientadores ni estudiantes. Sube los archivos Excel/CSV de las aplicaciones del Test de Kuder (uno por curso), sin límite: elígelos uno a uno o varios a la vez, o sube una carpeta completa (con sus subcarpetas; lo que no sea planilla se ignora). Arma un informe consolidado: estadísticas de aplicaciones, qué colegios y niveles (2°, 4°, etc.) solicitan el test con más frecuencia, qué áreas de interés concentran más demanda, y las carreras UMAG de cada área junto con carreras que la universidad podría incorporar a futuro. Sin límite de páginas — es un documento de uso interno.</p>
         <div class="acciones-form" style="align-items:center;">
           <input type="file" id="kuder-interno-input-planilla" accept=".xlsx,.xls,.csv" multiple style="display:none;" />
+          <input type="file" id="kuder-interno-input-carpeta" webkitdirectory directory multiple style="display:none;" />
           <button type="button" id="kuder-interno-btn-elegir-planilla" class="secundario">📤 Elegir archivo(s)…</button>
+          <button type="button" id="kuder-interno-btn-elegir-carpeta" class="secundario">📁 Subir una carpeta completa…</button>
           <span id="kuder-interno-nombre-archivo" class="ayuda" style="margin:0;"></span>
         </div>
       </div>
@@ -489,27 +491,27 @@
        cada actualización (si no, puede mezclar archivos nuevos con otros guardados en
        caché y la app deja de funcionar); se cambia cada vez que se publica una versión -->
   <!-- datos de cada test (van primero: js/store.js arma un guardado por test) -->
-  <script src="js/data.js?v=20261002p"></script>
-  <script src="js/icons.js?v=20261002p"></script>
-  <script src="js/kuder-data.js?v=20261002p"></script>
-  <script src="js/kuder-icons.js?v=20261002p"></script>
-  <script src="js/logo.js?v=20261002p"></script>
-  <script src="js/store.js?v=20261002p"></script>
+  <script src="js/data.js?v=20261002q"></script>
+  <script src="js/icons.js?v=20261002q"></script>
+  <script src="js/kuder-data.js?v=20261002q"></script>
+  <script src="js/kuder-icons.js?v=20261002q"></script>
+  <script src="js/logo.js?v=20261002q"></script>
+  <script src="js/store.js?v=20261002q"></script>
 
   <!-- informes: 8° básico (individual) y Kuder (grupal para orientadores e individual) -->
-  <script src="js/report.js?v=20261002p"></script>
-  <script src="js/excel.js?v=20261002p"></script>
-  <script src="js/kuder.js?v=20261002p"></script>
-  <script src="js/kuder-report.js?v=20261002p"></script>
-  <script src="js/kuder-individual-report.js?v=20261002p"></script>
+  <script src="js/report.js?v=20261002q"></script>
+  <script src="js/excel.js?v=20261002q"></script>
+  <script src="js/kuder.js?v=20261002q"></script>
+  <script src="js/kuder-report.js?v=20261002q"></script>
+  <script src="js/kuder-individual-report.js?v=20261002q"></script>
 
   <!-- interfaz común (selector de test, pestañas, formularios) -->
-  <script src="js/app.js?v=20261002p"></script>
+  <script src="js/app.js?v=20261002q"></script>
 
   <!-- informe interno de Kuder (Admisión y Marketing) — reutiliza el lector de
        planillas de js/kuder.js y varias utilidades genéricas de js/kuder-report.js -->
-  <script src="js/kuder-internal-data.js?v=20261002p"></script>
-  <script src="js/kuder-internal-report.js?v=20261002p"></script>
-  <script src="js/kuder-internal.js?v=20261002p"></script>
+  <script src="js/kuder-internal-data.js?v=20261002q"></script>
+  <script src="js/kuder-internal-report.js?v=20261002q"></script>
+  <script src="js/kuder-internal.js?v=20261002q"></script>
 </body>
 </html>

@@ -5,41 +5,61 @@
 // puntajes de Kuder por curso — y no tiene sentido duplicar ese lector.
 
 let kuderInternoEstadoActual = []; // [{ archivoNombre, estudiantes, errores, advertencias, colegio, curso }, ...]
-const KUDER_INTERNO_MAX_ARCHIVOS = 50;
+// sin límite de archivos: es el informe final del año (pueden ser muchos cursos, de
+// varios computadores); son archivos chicos, así que solo demora un poco más en leerlos
 
 document.addEventListener("DOMContentLoaded", () => {
   cablearKuderInterno();
 });
 
+// solo planillas: al subir una carpeta completa vienen también otros archivos (PDF,
+// imágenes, archivos ocultos del sistema o temporales de Excel "~$..."), que se ignoran
+function esPlanillaKuder(archivo) {
+  const nombre = archivo.name || "";
+  return /\.(csv|xlsx|xls)$/i.test(nombre) && !nombre.startsWith(".") && !nombre.startsWith("~$");
+}
+
 function cablearKuderInterno() {
   const input = document.getElementById("kuder-interno-input-planilla");
   if (!input) return; // esta página no incluye el informe interno de Kuder
+  const inputCarpeta = document.getElementById("kuder-interno-input-carpeta");
 
   const btn = document.getElementById("kuder-interno-btn-elegir-planilla");
+  const btnCarpeta = document.getElementById("kuder-interno-btn-elegir-carpeta");
   const etiquetaArchivo = document.getElementById("kuder-interno-nombre-archivo");
   const panelRevision = document.getElementById("kuder-interno-revision");
   const btnGenerar = document.getElementById("kuder-interno-btn-generar");
   const btnCancelar = document.getElementById("kuder-interno-btn-cancelar-revision");
 
   btn.addEventListener("click", () => input.click());
+  btnCarpeta.addEventListener("click", () => inputCarpeta.click());
 
-  input.addEventListener("change", async () => {
-    let archivos = Array.from(input.files || []);
-    if (archivos.length === 0) return;
-
-    if (archivos.length > KUDER_INTERNO_MAX_ARCHIVOS) {
-      alert(`Puedes subir hasta ${KUDER_INTERNO_MAX_ARCHIVOS} archivos a la vez. Se van a usar los primeros ${KUDER_INTERNO_MAX_ARCHIVOS}.`);
-      archivos = archivos.slice(0, KUDER_INTERNO_MAX_ARCHIVOS);
+  // los dos caminos (archivos sueltos o una carpeta completa, con sus subcarpetas)
+  // terminan en la misma pantalla de revisión
+  async function procesar(listaArchivos, { desdeCarpeta }) {
+    const todos = Array.from(listaArchivos || []);
+    if (todos.length === 0) return;
+    const archivos = todos
+      .filter(esPlanillaKuder)
+      .sort((a, b) => (a.webkitRelativePath || a.name).localeCompare(b.webkitRelativePath || b.name, "es", { numeric: true }));
+    const ignorados = todos.length - archivos.length;
+    if (archivos.length === 0) {
+      alert(desdeCarpeta ? "En esa carpeta no hay archivos CSV ni Excel." : "Elige archivos CSV o Excel.");
+      return;
     }
 
-    etiquetaArchivo.textContent = archivos.length === 1 ? archivos[0].name : `${archivos.length} archivos seleccionados`;
-    const textoOriginal = btn.textContent;
-    btn.disabled = true;
+    etiquetaArchivo.textContent =
+      (archivos.length === 1 ? archivos[0].name : `${archivos.length} archivos`) +
+      (desdeCarpeta && ignorados ? ` (se ignoraron ${ignorados} que no son planillas)` : "");
+    const botones = [btn, btnCarpeta];
+    const textos = botones.map((b) => b.textContent);
+    botones.forEach((b) => (b.disabled = true));
     btn.textContent = "Leyendo…";
 
     try {
       const lecturas = [];
-      for (const archivo of archivos) {
+      for (const [i, archivo] of archivos.entries()) {
+        if (archivos.length > 20) btn.textContent = `Leyendo ${i + 1}/${archivos.length}…`;
         let lectura;
         try {
           const arrayBuffer = await archivo.arrayBuffer();
@@ -48,7 +68,8 @@ function cablearKuderInterno() {
           console.error(err);
           lectura = { estudiantes: [], errores: ["No se pudo leer este archivo. ¿Es un .xlsx/.csv de Kuder válido?"], advertencias: [], colegio: "", curso: "" };
         }
-        lecturas.push({ ...lectura, archivoNombre: archivo.name });
+        // de una carpeta se muestra también en qué subcarpeta estaba (para ubicarlo)
+        lecturas.push({ ...lectura, archivoNombre: archivo.webkitRelativePath || archivo.name });
       }
 
       const conEstudiantes = lecturas.filter((l) => l.estudiantes.length > 0);
@@ -62,18 +83,24 @@ function cablearKuderInterno() {
       kuderInternoEstadoActual = lecturas;
       renderKuderInternoListaArchivos(lecturas);
       panelRevision.style.display = "block";
-      panelRevision.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      panelRevision.scrollIntoView({ block: "nearest" });
     } catch (err) {
       console.error(err);
       alert("No se pudo leer alguno de los archivos.");
       kuderInternoEstadoActual = [];
       panelRevision.style.display = "none";
     } finally {
-      btn.disabled = false;
-      btn.textContent = textoOriginal;
+      botones.forEach((b, i) => {
+        b.disabled = false;
+        b.textContent = textos[i];
+      });
       input.value = "";
+      inputCarpeta.value = "";
     }
-  });
+  }
+
+  input.addEventListener("change", () => procesar(input.files, { desdeCarpeta: false }));
+  inputCarpeta.addEventListener("change", () => procesar(inputCarpeta.files, { desdeCarpeta: true }));
 
   btnCancelar.addEventListener("click", () => {
     kuderInternoEstadoActual = [];
@@ -172,12 +199,10 @@ function renderKuderInternoListaArchivos(lecturas) {
     })
     .join("");
 
-  const avisos = lecturas.flatMap((l) => [
-    ...l.errores.map((texto) => ({ texto: `${l.archivoNombre}: ${texto}`, tipo: "error" })),
-    // un test mal traspasado cuyo error no cambia los resultados ("ℹ️") va en gris; el
-    // que sí podría cambiarlos ("⚠"), en amarillo
-    ...l.advertencias.map((texto) => ({ texto: `${l.archivoNombre}: ${texto}`, tipo: texto.startsWith("ℹ") ? "info" : "advertencia" })),
-  ]);
+  // solo los errores de lectura (filas que no se pudieron usar): los avisos de tests mal
+  // traspasados (que no suman 45) no se muestran, porque para el informe final del año
+  // los informes individuales ya se entregaron
+  const avisos = lecturas.flatMap((l) => l.errores.map((texto) => ({ texto: `${l.archivoNombre}: ${texto}`, tipo: "error" })));
   const contAvisos = document.getElementById("kuder-interno-rev-avisos");
   contAvisos.innerHTML = avisos.length
     ? `<ul class="kuder-avisos-lista">${avisos.map((a) => `<li class="${a.tipo}">${escaparHtmlKuder(a.texto)}</li>`).join("")}</ul>`

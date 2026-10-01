@@ -108,8 +108,13 @@ Paso 2: las pestañas
 5. "Informes para orientadores" (en los dos tests): informe grupal por curso o global
    de varios cursos, subiendo los archivos. Solo en Kuder: "Uso interno" (informe
    consolidado para la unidad de Admisión y Marketing):
-   - Se pueden subir hasta 50 archivos a la vez. Si un mismo curso viene en dos
+   - Se pueden subir todos los archivos que quieras, sin límite: eligiéndolos uno a
+     uno o varios a la vez ("📤 Elegir archivo(s)…"), o subiendo una carpeta completa
+     ("📁 Subir una carpeta completa…"), con sus subcarpetas; lo que no sea CSV o
+     Excel (PDF, imágenes, etc.) se ignora solo. Si un mismo curso viene en dos
      archivos (por ejemplo, de dos computadores), la app avisa para dejar solo uno.
+   - En la revisión de este informe no se marcan los tests mal traspasados (a esa
+     altura los informes individuales ya se entregaron).
    - La app NO guarda los archivos CSV que subes (ni ahí ni en "Ingresar datos"): solo
      los lee. Por eso, "⬇ Descargar todos los CSV (ZIP)" arma de nuevo un CSV por
      curso con los datos actuales de la app (con las correcciones de puntajes y
