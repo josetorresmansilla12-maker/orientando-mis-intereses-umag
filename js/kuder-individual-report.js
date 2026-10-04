@@ -175,13 +175,23 @@ function construirTituloAreasInformativaKuder() {
     <div class="kuder-inf-areas-titulo">Las 10 áreas de interés y sus carreras en la UMAG<span class="kuder-inf-areas-sub">Revisa también las que no destacaron en tus resultados, si te interesan.</span></div>`;
 }
 
-function construirCalloutSiguienteKuder(texto) {
+// pie de la hoja 1: la advertencia («Este resultado es una orientación inicial…»), la
+// Unidad y el contacto; en la última línea, a la derecha, un aviso corto de que los
+// resultados siguen en la página siguiente (en vez de un recuadro grande, para dejar
+// más espacio a la letra del resto de la hoja)
+function construirPieHoja1Kuder(avisoSiguiente) {
   return `
-    <div class="callout-siguiente kuder-inf-callout">
-      <div class="callout-marker">▽</div>
-      <div class="callout-text">${texto}</div>
-      ${puntosDots("callout-dots")}
-    </div>`;
+    <div class="kuder-inf-pie"><div class="informe-footer">
+      <p>Este resultado es una orientación inicial y no reemplaza un proceso de orientación vocacional completo. Los intereses cambian y se van descubriendo con el tiempo — ¡esto es solo el comienzo!</p>
+      <p class="informe-contacto">Unidad de Admisión y Marketing · Ignacio Carrera Pinto 1015, Punta Arenas · Universidad de Magallanes</p>
+      <p class="informe-contacto-extra kuder-inf-pie-ultima"><span>Contáctanos al <b>+56 9 7499 7771</b> · Más información en <b>admision.umag.cl</b></span>${
+        avisoSiguiente ? `<span class="kuder-inf-siguiente">${avisoSiguiente}</span>` : ""
+      }</p>
+    </div></div>`;
+}
+
+function construirAvisoSiguienteKuder(texto) {
+  return `<div class="kuder-inf-siguiente-solo"><span class="kuder-inf-siguiente">${texto}</span></div>`;
 }
 
 // el contenido de la hoja 1 es el mismo para todos los estudiantes (salvo la línea
@@ -194,7 +204,7 @@ function resolverHojaInformativaKuder() {
   const LIMITE_PAGINA_PX = ALTO_PAGINA_PX - PADDING_INFERIOR_PX;
   const lineaMuestra = `<div class="linea-estudiante"><span>N° 1</span><span><b>Nombre:</b> Nombre de Prueba</span><span><b>RUT:</b> 11.111.111-1</span><span><b>Curso:</b> 2do A</span><span class="linea-colegio"><b>Colegio:</b> Colegio de Prueba</span></div>`;
   const banner = construirBanner("Informe de Intereses Vocacionales", "Test de Intereses Vocacionales de Kuder · Enseñanza Media · UMAG");
-  const pie = construirCalloutSiguienteKuder("Conoce tus resultados en la página siguiente") + `<div class="kuder-inf-pie">${construirFooter()}</div>`;
+  const pie = construirPieHoja1Kuder("Tus resultados están en la página siguiente →");
 
   // variantes de más holgada a más compacta; se usa la primera que quepa en una hoja
   // la definición de cada área va siempre (no se sacrifica para que quepa): si no
@@ -211,7 +221,7 @@ function resolverHojaInformativaKuder() {
       ${construirSupuestosPrincipiosKuder()}
       ${construirTituloAreasInformativaKuder()}
       ${construirGrillaAreasInformativaKuder(v.conDescripcion, v.clase)}`;
-    const html = `${banner}${lineaMuestra}<div class="${v.clase}">${cuerpo}</div>${pie}`;
+    const html = `<div class="kuder-hoja1">${banner}${lineaMuestra}<div class="${v.clase}">${cuerpo}</div>${pie}</div>`;
     if (medirAlturaFragmento(html) <= LIMITE_PAGINA_PX) {
       cacheHojaInformativaKuder = { unaHoja: true, banner, cuerpo, clase: v.clase, pie };
       return cacheHojaInformativaKuder;
@@ -224,9 +234,9 @@ function resolverHojaInformativaKuder() {
     unaHoja: false,
     banner,
     cuerpo1: `${construirIntroInformativaKuder()}${construirSupuestosPrincipiosKuder()}`,
-    pie1: construirCalloutSiguienteKuder("Las 10 áreas y sus carreras UMAG<br/>en la página siguiente") + construirFooter(),
+    pie1: construirPieHoja1Kuder("Las 10 áreas y sus carreras UMAG, en la página siguiente →"),
     cuerpo2: `${construirTituloAreasInformativaKuder()}${construirGrillaAreasInformativaKuder(true)}`,
-    pie2: construirCalloutSiguienteKuder("Conoce tus resultados en la página siguiente"),
+    pie2: construirAvisoSiguienteKuder("Tus resultados están en la página siguiente →"),
   };
   return cacheHojaInformativaKuder;
 }
@@ -235,7 +245,7 @@ function construirPaginasInformativasKuder(estudiante) {
   const h = resolverHojaInformativaKuder();
   const crear = (html) => {
     const contenedor = document.createElement("div");
-    contenedor.className = "informe-page";
+    contenedor.className = "informe-page kuder-hoja1";
     contenedor.innerHTML = html;
     return contenedor;
   };

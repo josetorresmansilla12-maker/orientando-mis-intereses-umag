@@ -120,6 +120,7 @@ const AREAS_KUDER = [
       "Ingeniería Comercial",
       "Auditoría",
       "Pedagogía en Matemática",
+      "Pedagogía en Educación Básica",
       "Arquitectura",
       // técnicas que trabajan con números y lógica (cálculo de materiales, contabilidad
       // básica, programación). Musical y Literaria no tienen técnicas: ninguna de las 13
@@ -127,6 +128,7 @@ const AREAS_KUDER = [
       "Técnico de Nivel Superior en Construcción",
       "Técnico de Nivel Superior en Administración",
       "Técnico de Nivel Superior en Análisis de Sistemas Computacionales",
+      "Técnico de Nivel Superior en Instrumentación y Automatización Industrial",
     ],
     carrerasOtras: ["Economía", "Estadística", "Física", "Ingeniería Civil Industrial"],
   },
@@ -157,6 +159,7 @@ const AREAS_KUDER = [
       "Ingeniería en Química y Medio Ambiente",
       "Ingeniería Civil Química",
       "Técnico de Nivel Superior en Acuicultura",
+      "Técnico de Nivel Superior en Procesos Industriales",
     ],
     carrerasOtras: ["Biología", "Química", "Física", "Bioquímica", "Química y Farmacia", "Odontología", "Tecnología Médica"],
   },
@@ -285,6 +288,7 @@ const AREAS_KUDER = [
       "Técnico de Nivel Superior en Enfermería",
       "Técnico de Nivel Superior en Educación Especial",
       "Técnico de Nivel Superior en Educación Parvularia",
+      "Técnico de Nivel Superior en Prevención de Riesgos",
     ],
     carrerasOtras: ["Sociología", "Antropología", "Criminología", "Obstetricia"],
   },

@@ -1074,13 +1074,13 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
    no alterar el informe de 8°.
    ===================================================== */
 .kuder-inf-intro { font-size: 10.5px; line-height: 1.45; margin-top: 8px; }
-.kuder-inf-intro p { margin: 0 0 3px; }
+.kuder-inf-intro p { margin: 0 0 4px; }
 .kuder-inf-intro p:last-child { margin-bottom: 0; }
 .kuder-inf-intro b { color: var(--morado); }
 
 /* supuestos básicos y principios: una línea con su origen (teoría de Holland) y dos
    cuadros lado a lado */
-.kuder-inf-modelo-origen { margin: 8px 30px 0; font-size: 10px; font-style: italic; color: var(--texto-suave); }
+.kuder-inf-modelo-origen { margin: 9px 30px 0; font-size: 10px; font-style: italic; color: var(--texto-suave); }
 .kuder-inf-modelo { display: flex; gap: 12px; margin: 4px 30px 0; }
 .kuder-inf-modelo-caja {
   flex: 1;
@@ -1101,7 +1101,7 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
 
 /* las 10 áreas con sus carreras UMAG: dos columnas independientes */
 .kuder-inf-areas-titulo {
-  margin: 8px 30px 0;
+  margin: 10px 30px 0;
   font-family: "Century Gothic", "Trebuchet MS", Verdana, sans-serif;
   font-size: 14px;
   font-weight: 800;
@@ -1114,8 +1114,8 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
   font-weight: 400;
   color: var(--texto-suave);
 }
-.kuder-inf-areas { display: flex; gap: 12px; margin: 5px 30px 0; align-items: flex-start; }
-.kuder-inf-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.kuder-inf-areas { display: flex; gap: 12px; margin: 6px 30px 0; align-items: flex-start; }
+.kuder-inf-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
 .kuder-inf-area { display: flex; align-items: flex-start; gap: 7px; }
 .kuder-inf-area .icon-circle svg { width: 18px; height: 18px; }
 .kuder-inf-area-caja {
@@ -1131,14 +1131,34 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
 /* definición del área junto a su nombre: en cursiva y sin negrita, para que se lea como
    definición y no compita con el nombre (que ya va en negrita y en color) */
 .kuder-inf-area-desc { margin-left: 6px; font-size: 10px; font-weight: 400; font-style: italic; color: #2b2140; }
-.kuder-inf-area-carreras { margin-top: 2px; font-size: 9.5px; line-height: 1.32; color: #2b2140; }
+.kuder-inf-area-carreras { margin-top: 2px; font-size: 10px; line-height: 1.28; color: #2b2140; }
 .kuder-inf-area-carreras b { color: var(--morado-oscuro); }
 
-/* aviso "Conoce tus resultados..." de la hoja informativa: un poco más separado de
-   las áreas que en 8°, para que su marcador (▽) no toque el último cuadro */
-.callout-siguiente.kuder-inf-callout { margin-top: 14px; padding-top: 7px; padding-bottom: 7px; }
-/* pie de la hoja informativa, un poco más junto que en 8° para dar espacio a las áreas */
-.kuder-inf-pie .informe-footer { margin-top: 12px; padding-top: 8px; }
+/* hoja 1: franja morada del encabezado un poco más baja que en las demás hojas, para dar
+   espacio a la letra */
+.kuder-hoja1 .informe-banner { padding-top: 14px; padding-bottom: 14px; }
+/* pie de la hoja informativa (advertencia, Unidad y contacto), un poco más junto que en 8°;
+   la última línea lleva el contacto a la izquierda y el aviso de la página siguiente a la
+   derecha */
+.kuder-inf-pie .informe-footer { margin-top: 10px; padding-top: 7px; }
+.kuder-inf-pie-ultima { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+/* aviso de la página siguiente: una etiqueta delgada con el mismo fondo de las tarjetas de
+   las áreas, ~1 mm más abajo que la línea para separarlo del texto de arriba; el margen
+   negativo hace que el relleno y el borde no agranden la línea (la hoja mide lo mismo) */
+.kuder-inf-siguiente {
+  position: relative;
+  top: 4px;
+  margin: -2px 0;
+  padding: 1px 9px;
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  background: var(--lila-fondo);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--morado);
+  white-space: nowrap;
+}
+.kuder-inf-siguiente-solo { margin: 14px 30px 0; text-align: right; }
 
 /* variantes más apretadas de la hoja informativa, solo si la normal no cabe en una
    hoja (por ejemplo, con otra fuente del sistema en otro computador): la "ajustada"

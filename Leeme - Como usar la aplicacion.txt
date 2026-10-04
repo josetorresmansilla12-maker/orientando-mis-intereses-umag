@@ -187,7 +187,9 @@ Cómo se ve el informe de Kuder (individual)
 - Hoja 1: qué es el test y por qué existen los test vocacionales, los supuestos y
   principios del Test de Kuder, y las 10 áreas con todas sus carreras UMAG (así el
   estudiante puede revisar también las áreas que le interesen aunque no le hayan
-  salido destacadas).
+  salido destacadas). Al pie lleva la frase de orientación inicial, los datos de la
+  Unidad de Admisión y Marketing y, abajo a la derecha, una etiqueta pequeña que dice
+  "Tus resultados están en la página siguiente →".
 - Hojas siguientes: los datos del estudiante y un recuadro por cada área de interés
   (7 puntos o más), con su descripción, "Tus Carreras UMAG" y "Otras carreras".
 - Aparecen todas sus áreas de interés, sin límite. Si ningún área llega a 7, el
