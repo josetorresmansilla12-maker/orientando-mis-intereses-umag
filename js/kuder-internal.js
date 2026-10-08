@@ -4,7 +4,8 @@
 // en index.html) porque el formato de archivo de entrada es el mismo — un CSV/Excel de
 // puntajes de Kuder por curso — y no tiene sentido duplicar ese lector.
 
-let kuderInternoEstadoActual = []; // [{ archivoNombre, estudiantes, errores, advertencias, colegio, curso }, ...]
+// cursos de la lista: archivos subidos y cursos elegidos de la app (js/selector-cursos.js)
+let kuderInternoEstadoActual = []; // [{ uid, origen, archivoNombre, estudiantes, errores, advertencias, colegio, curso }, ...]
 // sin límite de archivos: es el informe final del año (pueden ser muchos cursos, de
 // varios computadores); son archivos chicos, así que solo demora un poco más en leerlos
 
@@ -19,6 +20,28 @@ function esPlanillaKuder(archivo) {
   return /\.(csv|xlsx|xls)$/i.test(nombre) && !nombre.startsWith(".") && !nombre.startsWith("~$");
 }
 
+function agregarFuentesInterno(nuevas) {
+  if (!nuevas.length) return;
+  kuderInternoEstadoActual.push(...nuevas);
+  renderKuderInternoListaArchivos();
+  const panel = document.getElementById("kuder-interno-revision");
+  panel.style.display = "block";
+  panel.scrollIntoView({ block: "nearest" });
+}
+
+function quitarFuenteInterno(uid) {
+  kuderInternoEstadoActual = kuderInternoEstadoActual.filter((f) => f.uid !== uid);
+  if (!kuderInternoEstadoActual.length) document.getElementById("kuder-interno-revision").style.display = "none";
+  else renderKuderInternoListaArchivos();
+}
+
+// al volver a la pestaña, los cursos elegidos de la app se vuelven a leer
+function refrescarPanelInterno() {
+  if (!kuderInternoEstadoActual.some((f) => f.origen === "app")) return;
+  refrescarFuentesApp(kuderInternoEstadoActual, storeKuder);
+  renderKuderInternoListaArchivos();
+}
+
 function cablearKuderInterno() {
   const input = document.getElementById("kuder-interno-input-planilla");
   if (!input) return; // esta página no incluye el informe interno de Kuder
@@ -26,7 +49,7 @@ function cablearKuderInterno() {
 
   const btn = document.getElementById("kuder-interno-btn-elegir-planilla");
   const btnCarpeta = document.getElementById("kuder-interno-btn-elegir-carpeta");
-  const etiquetaArchivo = document.getElementById("kuder-interno-nombre-archivo");
+  const btnCursosApp = document.getElementById("kuder-interno-btn-elegir-cursos");
   const panelRevision = document.getElementById("kuder-interno-revision");
   const btnGenerar = document.getElementById("kuder-interno-btn-generar");
   const btnCancelar = document.getElementById("kuder-interno-btn-cancelar-revision");
@@ -35,7 +58,7 @@ function cablearKuderInterno() {
   btnCarpeta.addEventListener("click", () => inputCarpeta.click());
 
   // los dos caminos (archivos sueltos o una carpeta completa, con sus subcarpetas)
-  // terminan en la misma pantalla de revisión
+  // terminan en la misma lista; lo nuevo se suma a lo que ya estaba
   async function procesar(listaArchivos, { desdeCarpeta }) {
     const todos = Array.from(listaArchivos || []);
     if (todos.length === 0) return;
@@ -47,19 +70,24 @@ function cablearKuderInterno() {
       alert(desdeCarpeta ? "En esa carpeta no hay archivos CSV ni Excel." : "Elige archivos CSV o Excel.");
       return;
     }
+    if (desdeCarpeta && ignorados) mostrarToast(`Se ignoraron ${ignorados} archivos que no son planillas`);
 
-    etiquetaArchivo.textContent =
-      (archivos.length === 1 ? archivos[0].name : `${archivos.length} archivos`) +
-      (desdeCarpeta && ignorados ? ` (se ignoraron ${ignorados} que no son planillas)` : "");
     const botones = [btn, btnCarpeta];
     const textos = botones.map((b) => b.textContent);
     botones.forEach((b) => (b.disabled = true));
     btn.textContent = "Leyendo…";
 
     try {
-      const lecturas = [];
+      const firmas = new Set(kuderInternoEstadoActual.map((f) => f.firma).filter(Boolean));
+      const nuevas = [];
+      let repetidos = 0;
       for (const [i, archivo] of archivos.entries()) {
         if (archivos.length > 20) btn.textContent = `Leyendo ${i + 1}/${archivos.length}…`;
+        const firma = `${archivo.webkitRelativePath || archivo.name}|${archivo.size}|${archivo.lastModified}`;
+        if (firmas.has(firma)) {
+          repetidos++;
+          continue;
+        }
         let lectura;
         try {
           const arrayBuffer = await archivo.arrayBuffer();
@@ -69,26 +97,16 @@ function cablearKuderInterno() {
           lectura = { estudiantes: [], errores: ["No se pudo leer este archivo. ¿Es un .xlsx/.csv de Kuder válido?"], advertencias: [], colegio: "", curso: "" };
         }
         // de una carpeta se muestra también en qué subcarpeta estaba (para ubicarlo)
-        lecturas.push({ ...lectura, archivoNombre: archivo.webkitRelativePath || archivo.name });
+        const fuente = crearFuenteArchivo({ ...lectura, archivoNombre: archivo.webkitRelativePath || archivo.name }, archivo);
+        fuente.firma = firma;
+        nuevas.push(fuente);
+        firmas.add(firma);
       }
-
-      const conEstudiantes = lecturas.filter((l) => l.estudiantes.length > 0);
-      if (conEstudiantes.length === 0) {
-        alert(lecturas.flatMap((l) => l.errores).join("\n") || "No se encontraron estudiantes válidos en estos archivos.");
-        kuderInternoEstadoActual = [];
-        panelRevision.style.display = "none";
-        return;
-      }
-
-      kuderInternoEstadoActual = lecturas;
-      renderKuderInternoListaArchivos(lecturas);
-      panelRevision.style.display = "block";
-      panelRevision.scrollIntoView({ block: "nearest" });
+      if (repetidos) mostrarToast(`${repetidos === 1 ? "Ese archivo ya estaba" : `${repetidos} archivos ya estaban`} en la lista`);
+      agregarFuentesInterno(nuevas);
     } catch (err) {
       console.error(err);
       alert("No se pudo leer alguno de los archivos.");
-      kuderInternoEstadoActual = [];
-      panelRevision.style.display = "none";
     } finally {
       botones.forEach((b, i) => {
         b.disabled = false;
@@ -102,48 +120,53 @@ function cablearKuderInterno() {
   input.addEventListener("change", () => procesar(input.files, { desdeCarpeta: false }));
   inputCarpeta.addEventListener("change", () => procesar(inputCarpeta.files, { desdeCarpeta: true }));
 
+  if (btnCursosApp) {
+    btnCursosApp.addEventListener("click", () =>
+      abrirSelectorCursos({
+        titulo: "📚 Elige los cursos para el informe interno",
+        ayuda: `Usa "Marcar todos los visibles" para incluir todo lo cargado en la app. Se usan los datos de ahora, con todas sus correcciones (no hace falta descargar los CSV).`,
+        yaAgregados: new Set(kuderInternoEstadoActual.filter((f) => f.origen === "app").map((f) => f.clave)),
+        onAgregar: (cursos) => agregarFuentesInterno(cursos.map(crearFuenteApp)),
+      })
+    );
+  }
+
   btnCancelar.addEventListener("click", () => {
     kuderInternoEstadoActual = [];
     panelRevision.style.display = "none";
-    etiquetaArchivo.textContent = "";
   });
 
   btnGenerar.addEventListener("click", async () => {
-    if (!kuderInternoEstadoActual.length) {
+    refrescarFuentesApp(kuderInternoEstadoActual, storeKuder);
+    const conEstudiantes = kuderInternoEstadoActual.filter((f) => f.estudiantes.length > 0);
+    if (!conEstudiantes.length) {
       alert("No hay estudiantes válidos para generar el informe.");
       return;
     }
 
-    const cont = document.getElementById("kuder-interno-lista-archivos");
-    const inpsColegio = cont.querySelectorAll(".kuder-interno-fila-colegio");
-    const inpsCurso = cont.querySelectorAll(".kuder-interno-fila-curso");
-
-    // todos los archivos con estudiantes válidos entran al informe (a diferencia del
+    // todos los cursos de la lista con estudiantes entran al informe (a diferencia del
     // informe para orientadores, acá no hay casilla de "incluir": el objetivo es un
-    // resumen agregado de todo el lote subido, no elegir un subconjunto).
+    // resumen agregado de todo el lote; lo que sobra se quita con su ✕).
+    const cont = document.getElementById("kuder-interno-lista-archivos");
     let ok = true;
     const archivos = [];
-    inpsColegio.forEach((inpColegio, i) => {
-      const colegio = inpColegio.value.trim();
-      const curso = inpsCurso[i].value.trim();
-      const falta = !colegio || !curso;
-      inpColegio.classList.toggle("invalido", !colegio);
-      inpsCurso[i].classList.toggle("invalido", !curso);
-      if (falta) {
+    conEstudiantes.forEach((f) => {
+      const colegio = (f.colegio || "").trim();
+      const curso = (f.curso || "").trim();
+      const fila = cont.querySelector(`.fila-importar-archivo[data-uid="${f.uid}"]`);
+      if (fila) {
+        fila.querySelector(".kuder-interno-fila-colegio").classList.toggle("invalido", !colegio);
+        fila.querySelector(".kuder-interno-fila-curso").classList.toggle("invalido", !curso);
+      }
+      if (!colegio || !curso) {
         ok = false;
         return;
       }
-      const idxOriginal = Number(inpColegio.dataset.idx);
-      const lectura = kuderInternoEstadoActual[idxOriginal];
-      archivos.push({ nombre: lectura.archivoNombre, colegio, curso, estudiantes: lectura.estudiantes });
+      archivos.push({ nombre: f.archivoNombre, colegio, curso, estudiantes: f.estudiantes });
     });
 
     if (!ok) {
       alert("Completa colegio y curso de cada archivo.");
-      return;
-    }
-    if (archivos.length === 0) {
-      alert("No hay archivos válidos para generar el informe.");
       return;
     }
 
@@ -171,27 +194,32 @@ function cablearKuderInterno() {
   });
 }
 
-function renderKuderInternoListaArchivos(lecturas) {
+function renderKuderInternoListaArchivos() {
+  const lecturas = kuderInternoEstadoActual;
   const cont = document.getElementById("kuder-interno-lista-archivos");
   cont.innerHTML = lecturas
-    .map((lectura, i) => {
-      const n = lectura.estudiantes.length;
-      const nErrores = lectura.errores.length;
-      const info =
-        n > 0
+    .map((f) => {
+      const n = f.estudiantes.length;
+      const nErrores = f.errores.length;
+      const esApp = f.origen === "app";
+      const info = esApp
+        ? infoFuenteApp(f)
+        : n > 0
           ? `${n} ${n === 1 ? "estudiante detectado" : "estudiantes detectados"}${nErrores ? `, ${nErrores} ${nErrores === 1 ? "fila con problemas" : "filas con problemas"}` : ""}`
           : "sin estudiantes válidos — este archivo no se va a incluir";
       return `
-      <div class="fila-importar-archivo">
+      <div class="fila-importar-archivo${esApp ? " fila-fuente-app" : ""}" data-uid="${f.uid}">
         <div class="fila-importar-archivo-nombre">
-          <span>📄 ${escaparHtmlKuder(lectura.archivoNombre)}</span>
+          <span>${esApp ? "📚" : "📄"} ${escaparHtmlKuder(f.archivoNombre)}</span>
           <span class="fila-importar-archivo-info">${info}</span>
+          ${esApp ? `<button type="button" class="chico secundario btn-ver-en-app" title="Abre este curso en Estudiantes e informes para corregir lo que haga falta">✏️ Ver o editar en la app</button>` : ""}
+          <button type="button" class="btn-quitar-archivo" title="Quitar de la lista" aria-label="Quitar ${escaparHtmlKuder(f.archivoNombre)}">✕</button>
         </div>
         ${
           n > 0
             ? `<div class="grid-form" style="grid-template-columns:repeat(2,1fr);">
-                <div><label>Colegio *</label><input type="text" class="kuder-interno-fila-colegio" data-idx="${i}" value="${escaparHtmlKuder(lectura.colegio)}" /></div>
-                <div><label>Curso *</label><input type="text" class="kuder-interno-fila-curso" data-idx="${i}" value="${escaparHtmlKuder(lectura.curso)}" placeholder="Ej: 2do A" /></div>
+                <div><label>Colegio *</label><input type="text" class="kuder-interno-fila-colegio" value="${escaparHtmlKuder(f.colegio)}" /></div>
+                <div><label>Curso *</label><input type="text" class="kuder-interno-fila-curso" value="${escaparHtmlKuder(f.curso)}" placeholder="Ej: 2do A" /></div>
               </div>`
             : ""
         }
@@ -199,34 +227,38 @@ function renderKuderInternoListaArchivos(lecturas) {
     })
     .join("");
 
+  cont.querySelectorAll(".fila-importar-archivo[data-uid]").forEach((fila) => {
+    const f = kuderInternoEstadoActual.find((x) => x.uid === fila.dataset.uid);
+    if (!f) return;
+    fila.querySelector(".btn-quitar-archivo").onclick = () => quitarFuenteInterno(f.uid);
+    const ver = fila.querySelector(".btn-ver-en-app");
+    if (ver) ver.onclick = () => irACursoEnApp(f);
+    const inpColegio = fila.querySelector(".kuder-interno-fila-colegio");
+    if (inpColegio) inpColegio.oninput = () => (f.colegio = inpColegio.value);
+    const inpCurso = fila.querySelector(".kuder-interno-fila-curso");
+    if (inpCurso) inpCurso.oninput = () => (f.curso = inpCurso.value);
+  });
+
   // solo los errores de lectura (filas que no se pudieron usar): los avisos de tests mal
   // traspasados (que no suman 45) no se muestran, porque para el informe final del año
   // los informes individuales ya se entregaron
   const avisos = lecturas.flatMap((l) => l.errores.map((texto) => ({ texto: `${l.archivoNombre}: ${texto}`, tipo: "error" })));
+  // al juntar archivos de varios computadores (o un archivo y el mismo curso elegido de
+  // la app), un mismo curso podría venir dos veces: se compara por RUT o nombre
+  fuentesRepetidas(lecturas.filter((l) => l.estudiantes.length)).forEach(([a, b]) =>
+    avisos.unshift({ texto: `⚠ "${a.archivoNombre}" y "${b.archivoNombre}" traen a los mismos estudiantes (se contarían dos veces). Deja solo uno.`, tipo: "advertencia" })
+  );
   const contAvisos = document.getElementById("kuder-interno-rev-avisos");
   contAvisos.innerHTML = avisos.length
     ? `<ul class="kuder-avisos-lista">${avisos.map((a) => `<li class="${a.tipo}">${escaparHtmlKuder(a.texto)}</li>`).join("")}</ul>`
     : "";
 
-  // al juntar archivos de varios computadores, un mismo curso podría venir dos veces
-  const claveCurso = (l) => `${normalizarTextoKuder(l.colegio)}|${normalizarTextoKuder(l.curso)}`;
-  const vistos = new Map();
-  lecturas.forEach((l) => {
-    if (!l.estudiantes.length || !l.colegio || !l.curso) return;
-    const k = claveCurso(l);
-    vistos.set(k, [...(vistos.get(k) || []), l.archivoNombre]);
-  });
-  const repetidos = [...vistos.values()].filter((nombres) => nombres.length > 1);
-  if (repetidos.length) {
-    contAvisos.innerHTML =
-      `<ul class="kuder-avisos-lista">${repetidos
-        .map((nombres) => `<li class="advertencia">⚠ Este curso viene en más de un archivo (se contaría dos veces): ${nombres.map(escaparHtmlKuder).join(", ")}. Deja solo uno.</li>`)
-        .join("")}</ul>` + contAvisos.innerHTML;
-  }
-
-  const nValidos = lecturas.filter((l) => l.estudiantes.length > 0).length;
+  const validos = lecturas.filter((l) => l.estudiantes.length > 0);
+  const nApp = validos.filter((l) => l.origen === "app").length;
+  const nEst = validos.reduce((acc, l) => acc + l.estudiantes.length, 0);
   document.getElementById("kuder-interno-rev-resumen").textContent =
-    `${nValidos} ${nValidos === 1 ? "archivo válido" : "archivos válidos"} de ${lecturas.length} subido(s).`;
+    `${validos.length} ${validos.length === 1 ? "curso válido" : "cursos válidos"} en la lista (${nEst} estudiantes)` +
+    (nApp ? `: ${nApp} de la app y ${validos.length - nApp} de archivos.` : ".");
 }
 
 // ==================== CSV de los cursos cargados en la app ====================

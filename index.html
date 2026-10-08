@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Orientando mis Intereses — Informes</title>
-<link rel="stylesheet" href="css/styles.css?v=20261004" />
+<link rel="stylesheet" href="css/styles.css?v=20261008" />
 </head>
 <body class="test-octavo">
 
@@ -74,12 +74,28 @@
           <button type="button" id="btn-elegir-planilla">📤 Elegir archivo(s)…</button>
           <span id="nombre-archivo-planilla" class="ayuda" style="margin:0;"></span>
         </div>
+        <p class="ayuda" style="margin:10px 0 0;">¿Muchos cursos a la vez, o planillas que quizás ya están cargadas? Usa la <b>📦 Importación masiva</b>, más abajo.</p>
         <div class="acciones-form">
           <a href="assets/Planilla_de_correccion.xlsx" download="Planilla_de_correccion.xlsx" data-solo-test="octavo">
             <button type="button" class="secundario chico">⬇ Descargar planilla en blanco</button>
           </a>
           <button type="button" id="btn-planilla-kuder" class="secundario chico" data-solo-test="kuder">⬇ Descargar planilla en blanco (Kuder)</button>
         </div>
+      </div>
+
+      <div class="tarjeta" id="tarjeta-masiva">
+        <h2 style="font-size:16px;">📦 Importación masiva: muchos cursos a la vez <span class="badge-test" data-badge-test></span></h2>
+        <div class="aviso-masiva">
+          <b>⚠ Antes de usarla:</b> sirve para juntar en este computador las planillas de muchos cursos de una vez; por ejemplo, el ZIP de CSV que descarga un compañero desde su app (pestaña "Uso interno" → "Descargar todos los CSV"). La app revisa cuáles ya están cargados (por RUT o, si no hay, por nombre), te muestra las diferencias y te recomienda qué versión conservar. <b>Nada se carga hasta que lo confirmes</b>, los estudiantes que ya están no se duplican, y todo se puede deshacer de una vez con "↩ Deshacer".
+        </div>
+        <div class="acciones-form" style="align-items:center; flex-wrap:wrap;">
+          <input type="file" id="masiva-input" accept=".csv,.xlsx,.xls,.zip" multiple style="display:none;" />
+          <input type="file" id="masiva-input-carpeta" webkitdirectory directory multiple style="display:none;" />
+          <button type="button" id="masiva-btn-archivos">📤 Elegir archivos o un ZIP…</button>
+          <button type="button" id="masiva-btn-carpeta" class="secundario">📁 Elegir una carpeta completa…</button>
+        </div>
+        <div id="masiva-aviso-final" class="masiva-aviso-final"></div>
+        <div id="masiva-revision"></div>
       </div>
 
       <div class="tarjeta">
@@ -175,6 +191,17 @@
         </div>
         <div id="resumen-traspaso" data-solo-test="kuder"></div>
         <div id="grupos-estudiantes"></div>
+      </div>
+
+      <div class="tarjeta" id="tarjeta-carpetas">
+        <div class="carpetas-encabezado">
+          <div>
+            <h2 style="font-size:16px; margin:0;">🗂 Editar carpetas: colegios y cursos <span class="badge-test" data-badge-test></span></h2>
+            <p class="ayuda" style="margin:4px 0 0;">Fusiona carpetas duplicadas (por ejemplo, un colegio escrito con y sin tilde), cambia nombres de colegios, cursos y estudiantes, y deja todos los cursos con el mismo formato.</p>
+          </div>
+          <button type="button" id="btn-abrir-carpetas" class="secundario">✏️ Editar carpetas</button>
+        </div>
+        <div id="editor-carpetas" style="display:none;"></div>
       </div>
     </section>
 
@@ -278,18 +305,18 @@
     <section id="panel-kuder" class="panel">
       <div class="tarjeta">
         <h2>Informes para orientadores <span class="badge-test" data-badge-test></span></h2>
-        <p class="ayuda" data-solo-test="kuder">Informe grupal dirigido a los orientadores del colegio (no a los estudiantes): cuántos estudiantes tienen cada área como interés (puntaje 7 o más), la lista del curso y las carreras UMAG y otras carreras asociadas. Sube el archivo Excel/CSV de un curso, o hasta 6 a la vez (uno por curso): con varios cursos puedes generar un informe global que los suma, o un informe separado por cada curso. Si el curso ya está cargado en la app, también puedes generar su informe grupal desde "Estudiantes e informes", sin volver a subir el archivo.</p>
-        <p class="ayuda" data-solo-test="octavo">Informe grupal dirigido a los orientadores del colegio (no a los estudiantes): cuántos estudiantes tienen cada una de las 6 áreas como interés (7 u 8 puntos), la lista del curso y las carreras UMAG y otras carreras asociadas. Sube la planilla de corrección (.xlsx) de un curso, o hasta 6 a la vez (una por curso): con varios cursos puedes generar un informe global que los suma, o un informe separado por cada curso. Si el curso ya está cargado en la app, también puedes generar su informe grupal desde "Estudiantes e informes", sin volver a subir el archivo.</p>
+        <p class="ayuda" data-solo-test="kuder">Informe grupal dirigido a los orientadores del colegio (no a los estudiantes): cuántos estudiantes tienen cada área como interés (puntaje 7 o más), la lista del curso y las carreras UMAG y otras carreras asociadas. Elige cursos que ya están cargados en la app (se usan sus datos de ahora, con todas las correcciones) o sube archivos Excel/CSV; hasta 12 cursos juntos. Con varios cursos puedes generar un informe global que los suma, o un informe separado por cada curso. Cada curso de la lista tiene su ✕ para quitarlo.</p>
+        <p class="ayuda" data-solo-test="octavo">Informe grupal dirigido a los orientadores del colegio (no a los estudiantes): cuántos estudiantes tienen cada una de las 6 áreas como interés (7 u 8 puntos), la lista del curso y las carreras UMAG y otras carreras asociadas. Elige cursos que ya están cargados en la app (se usan sus datos de ahora, con todas las correcciones) o sube planillas de corrección (.xlsx); hasta 12 cursos juntos. Con varios cursos puedes generar un informe global que los suma, o un informe separado por cada curso. Cada curso de la lista tiene su ✕ para quitarlo.</p>
         <div class="acciones-form" style="align-items:center;">
           <input type="file" id="kuder-input-planilla" accept=".xlsx,.xls,.csv" multiple style="display:none;" />
-          <button type="button" id="kuder-btn-elegir-planilla" class="secundario">📤 Elegir archivo(s)…</button>
-          <span id="kuder-nombre-archivo" class="ayuda" style="margin:0;"></span>
+          <button type="button" id="kuder-btn-elegir-cursos">📚 Elegir cursos de la app…</button>
+          <button type="button" id="kuder-btn-elegir-planilla" class="secundario">📤 Subir archivo(s)…</button>
         </div>
       </div>
 
       <div class="tarjeta" id="kuder-revision" style="display:none;">
-        <h2 style="font-size:16px;">Revisar antes de generar el informe</h2>
-        <p class="ayuda">Revisa el colegio y curso detectados de cada archivo (se pueden corregir), y desmarca la casilla junto al nombre del archivo si no quieres incluir ese curso. Con 2 o más cursos marcados, "Generar informe global" los suma en un solo PDF; "Generar por curso" entrega un PDF separado por cada uno, juntos en un ZIP.</p>
+        <h2 style="font-size:16px;">Cursos para el informe</h2>
+        <p class="ayuda">Revisa el colegio y el curso de cada uno (se pueden corregir para el informe), desmarca la casilla de los que no quieras incluir o quítalos con su ✕. Puedes seguir agregando cursos con los botones de arriba. Con 2 o más cursos marcados, "Generar informe global" los suma en un solo PDF; "Generar por curso" entrega un PDF separado por cada uno, juntos en un ZIP.</p>
         <div id="kuder-lista-archivos" class="lista-importar-archivos"></div>
         <div class="grid-form" style="margin-top:12px;">
           <div>
@@ -301,7 +328,7 @@
         <div class="acciones-form">
           <button type="button" id="kuder-btn-generar">📄 Generar informe PDF</button>
           <button type="button" id="kuder-btn-generar-por-curso" class="secundario">📦 Generar por curso (ZIP)</button>
-          <button type="button" id="kuder-btn-cancelar-revision" class="secundario">Cancelar</button>
+          <button type="button" id="kuder-btn-cancelar-revision" class="secundario">✕ Quitar todos</button>
         </div>
       </div>
     </section>
@@ -310,25 +337,25 @@
     <section id="panel-kuder-interno" class="panel">
       <div class="tarjeta">
         <h2>Informe interno — Admisión y Marketing <span class="badge-test" data-badge-test></span></h2>
-        <p class="ayuda">Uso interno de la unidad — no está pensado para orientadores ni estudiantes. Sube los archivos Excel/CSV de las aplicaciones del Test de Kuder (uno por curso), sin límite: elígelos uno a uno o varios a la vez, o sube una carpeta completa (con sus subcarpetas; lo que no sea planilla se ignora). Arma un informe consolidado: estadísticas de aplicaciones, qué colegios y niveles (2°, 4°, etc.) solicitan el test con más frecuencia, qué áreas de interés concentran más demanda, y las carreras UMAG de cada área junto con carreras que la universidad podría incorporar a futuro. Sin límite de páginas — es un documento de uso interno.</p>
+        <p class="ayuda">Uso interno de la unidad — no está pensado para orientadores ni estudiantes. Elige los cursos ya cargados en la app (con sus correcciones, sin descargar sus CSV) y/o sube archivos Excel/CSV de las aplicaciones del Test de Kuder (uno por curso), sin límite: uno a uno, varios a la vez o una carpeta completa (con sus subcarpetas; lo que no sea planilla se ignora). Cada curso de la lista tiene su ✕ para quitarlo. Arma un informe consolidado: estadísticas de aplicaciones, qué colegios y niveles (2°, 4°, etc.) solicitan el test con más frecuencia, qué áreas de interés concentran más demanda, y las carreras UMAG de cada área junto con carreras que la universidad podría incorporar a futuro. Sin límite de páginas — es un documento de uso interno.</p>
         <div class="acciones-form" style="align-items:center;">
           <input type="file" id="kuder-interno-input-planilla" accept=".xlsx,.xls,.csv" multiple style="display:none;" />
           <input type="file" id="kuder-interno-input-carpeta" webkitdirectory directory multiple style="display:none;" />
-          <button type="button" id="kuder-interno-btn-elegir-planilla" class="secundario">📤 Elegir archivo(s)…</button>
+          <button type="button" id="kuder-interno-btn-elegir-cursos">📚 Elegir cursos de la app…</button>
+          <button type="button" id="kuder-interno-btn-elegir-planilla" class="secundario">📤 Subir archivo(s)…</button>
           <button type="button" id="kuder-interno-btn-elegir-carpeta" class="secundario">📁 Subir una carpeta completa…</button>
-          <span id="kuder-interno-nombre-archivo" class="ayuda" style="margin:0;"></span>
         </div>
       </div>
 
       <div class="tarjeta">
         <h2 style="font-size:16px;">📥 CSV de los cursos cargados en la app</h2>
-        <p class="ayuda">La app no guarda los archivos que subes (ni aquí ni en "Ingresar datos"): solo los lee. Este botón arma de nuevo un CSV por curso con los datos que hay ahora en la app —incluidas las correcciones de puntajes y nombres— en el mismo formato del prellenado de Kuder (mismas columnas, en el mismo orden, separadas por punto y coma). Sirven para juntarlos con los de otro computador y subirlos todos aquí, arriba, para el informe final. Las columnas "contacto" y "nacimiento" solo traen datos en los cursos importados desde esta versión.</p>
+        <p class="ayuda">Para pasar los cursos a otro computador. La app no guarda los archivos que subes: solo los lee. Este botón arma de nuevo un CSV por curso con los datos que hay ahora en la app —incluidas las correcciones de puntajes y nombres— en el mismo formato del prellenado de Kuder (mismas columnas, en el mismo orden, separadas por punto y coma). En el otro computador se cargan todos juntos con "📦 Importación masiva" (pestaña "Ingresar datos"). Para el informe de esta pestaña ya no hace falta: usa "📚 Elegir cursos de la app". Las columnas "contacto" y "nacimiento" solo traen datos en los cursos importados desde esta versión.</p>
         <p class="ayuda" id="kuder-interno-csv-resumen" style="margin-top:0;"></p>
         <button type="button" id="kuder-interno-btn-csv">⬇ Descargar todos los CSV (ZIP)</button>
       </div>
 
       <div class="tarjeta" id="kuder-interno-revision" style="display:none;">
-        <h2 style="font-size:16px;">Revisar antes de generar el informe</h2>
+        <h2 style="font-size:16px;">Cursos para el informe interno</h2>
         <p class="ayuda" id="kuder-interno-rev-resumen"></p>
         <div id="kuder-interno-lista-archivos" class="lista-importar-archivos"></div>
 
@@ -368,7 +395,7 @@
         <div id="kuder-interno-rev-avisos"></div>
         <div class="acciones-form">
           <button type="button" id="kuder-interno-btn-generar">📄 Generar informe interno PDF</button>
-          <button type="button" id="kuder-interno-btn-cancelar-revision" class="secundario">Cancelar</button>
+          <button type="button" id="kuder-interno-btn-cancelar-revision" class="secundario">✕ Quitar todos</button>
         </div>
       </div>
     </section>
@@ -494,6 +521,43 @@
     </div>
   </div>
 
+  <!-- ===================== MODAL: ELEGIR CURSOS DE LA APP (informes para orientadores, uso interno) ===================== -->
+  <div id="modal-selector-cursos" class="modal-overlay" style="display:none;">
+    <div class="modal-caja modal-caja--info modal-caja--ancha modal-selector-cursos">
+      <h3 id="sc-titulo">📚 Elige cursos cargados en la app</h3>
+      <p id="sc-ayuda" class="ayuda" style="margin:0 0 10px;"></p>
+      <div class="filtros" style="margin-bottom:8px;">
+        <div><label for="sc-colegio">Colegio</label><select id="sc-colegio"></select></div>
+        <div style="flex:1;"><label for="sc-buscar">Buscar</label><input type="text" id="sc-buscar" placeholder="Colegio o curso…" autocomplete="off" /></div>
+      </div>
+      <div class="sc-rapidas">
+        <button type="button" id="sc-todos" class="chico secundario">☑ Marcar todos los visibles</button>
+        <button type="button" id="sc-ninguno" class="chico secundario">Desmarcar todos</button>
+      </div>
+      <div id="sc-lista" class="sc-lista"></div>
+      <div class="modal-acciones sc-pie">
+        <span id="sc-resumen" class="sc-resumen"></span>
+        <button type="button" id="sc-cancelar" class="secundario">Cancelar</button>
+        <button type="button" id="sc-agregar">Agregar cursos</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== MODAL: FUSIONAR CARPETAS (editar carpetas) ===================== -->
+  <div id="modal-fusionar" class="modal-overlay" style="display:none;">
+    <div class="modal-caja modal-caja--info modal-caja--ancha">
+      <h3 id="mf-titulo">🔗 Fusionar carpetas</h3>
+      <p id="mf-texto" style="margin-bottom:12px;"></p>
+      <label>¿Con qué nombre queda?</label>
+      <div id="mf-opciones" class="mf-opciones"></div>
+      <p class="ayuda" style="margin:10px 0 0;">Se puede deshacer con "↩ Deshacer" arriba.</p>
+      <div class="modal-acciones">
+        <button type="button" id="mf-cancelar" class="secundario">Cancelar</button>
+        <button type="button" id="mf-fusionar">🔗 Fusionar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- librerías locales (sin depender de internet) -->
   <script src="vendor/jszip.min.js"></script>
   <script src="vendor/html2canvas.min.js"></script>
@@ -505,27 +569,32 @@
        cada actualización (si no, puede mezclar archivos nuevos con otros guardados en
        caché y la app deja de funcionar); se cambia cada vez que se publica una versión -->
   <!-- datos de cada test (van primero: js/store.js arma un guardado por test) -->
-  <script src="js/data.js?v=20261004"></script>
-  <script src="js/icons.js?v=20261004"></script>
-  <script src="js/kuder-data.js?v=20261004"></script>
-  <script src="js/kuder-icons.js?v=20261004"></script>
-  <script src="js/logo.js?v=20261004"></script>
-  <script src="js/store.js?v=20261004"></script>
+  <script src="js/data.js?v=20261008"></script>
+  <script src="js/icons.js?v=20261008"></script>
+  <script src="js/kuder-data.js?v=20261008"></script>
+  <script src="js/kuder-icons.js?v=20261008"></script>
+  <script src="js/cursos.js?v=20261008"></script>
+  <script src="js/logo.js?v=20261008"></script>
+  <script src="js/store.js?v=20261008"></script>
 
   <!-- informes: 8° básico (individual) y Kuder (grupal para orientadores e individual) -->
-  <script src="js/report.js?v=20261004"></script>
-  <script src="js/excel.js?v=20261004"></script>
-  <script src="js/kuder.js?v=20261004"></script>
-  <script src="js/kuder-report.js?v=20261004"></script>
-  <script src="js/kuder-individual-report.js?v=20261004"></script>
+  <script src="js/report.js?v=20261008"></script>
+  <script src="js/excel.js?v=20261008"></script>
+  <script src="js/kuder.js?v=20261008"></script>
+  <script src="js/kuder-report.js?v=20261008"></script>
+  <script src="js/kuder-individual-report.js?v=20261008"></script>
 
   <!-- interfaz común (selector de test, pestañas, formularios) -->
-  <script src="js/app.js?v=20261004"></script>
+  <script src="js/app.js?v=20261008"></script>
+  <!-- elegir cursos de la app, editar carpetas e importación masiva -->
+  <script src="js/selector-cursos.js?v=20261008"></script>
+  <script src="js/carpetas.js?v=20261008"></script>
+  <script src="js/importacion-masiva.js?v=20261008"></script>
 
   <!-- informe interno de Kuder (Admisión y Marketing) — reutiliza el lector de
        planillas de js/kuder.js y varias utilidades genéricas de js/kuder-report.js -->
-  <script src="js/kuder-internal-data.js?v=20261004"></script>
-  <script src="js/kuder-internal-report.js?v=20261004"></script>
-  <script src="js/kuder-internal.js?v=20261004"></script>
+  <script src="js/kuder-internal-data.js?v=20261008"></script>
+  <script src="js/kuder-internal-report.js?v=20261008"></script>
+  <script src="js/kuder-internal.js?v=20261008"></script>
 </body>
 </html>

@@ -57,6 +57,7 @@ class Store {
   }
 
   _guardar() {
+    if (this._enLote) return; // dentro de un lote se guarda una sola vez, al terminar
     localStorage.setItem(
       this.claveStorage,
       JSON.stringify({
@@ -79,9 +80,49 @@ class Store {
   }
 
   _antesDeCambiar() {
+    if (this._enLote) return; // el lote ya tomó su foto para "Deshacer"
     this.deshacerPila.push(this._snapshot());
     if (this.deshacerPila.length > MAX_HISTORIAL) this.deshacerPila.shift();
     this.rehacerPila = []; // cualquier cambio nuevo invalida el rehacer pendiente
+  }
+
+  // agrupa varios cambios (importación masiva, fusionar carpetas, formato de cursos...)
+  // en un solo paso de "Deshacer" y un solo guardado: dentro de "fn" se usan los
+  // métodos de siempre (crearVarios, actualizar, renombrarColegios...).
+  lote(fn) {
+    if (this._enLote) return fn();
+    this._antesDeCambiar();
+    this._enLote = true;
+    try {
+      return fn();
+    } finally {
+      this._enLote = false;
+      this._guardar();
+    }
+  }
+
+  // vuelve a escribir el curso de todos los estudiantes con el formato elegido (ver
+  // js/cursos.js: "Formato uniforme de los cursos"); "separarLetra" además saca la letra
+  // que quedó pegada al curso ("8vo A" sin letra → "8vo" + "A") y deja las letras en
+  // mayúscula. Devuelve cuántos estudiantes cambiaron.
+  reescribirCursos({ separarLetra = true } = {}) {
+    let n = 0;
+    const ahora = new Date().toISOString();
+    this.lote(() => {
+      this.estudiantes.forEach((e) => {
+        let curso = (e.curso || "").toString().trim();
+        let letra = (e.letra || "").toString().trim().toUpperCase();
+        if (separarLetra && !letra) ({ curso, letra } = separarCursoLetra(curso));
+        curso = this.normalizarCurso(curso);
+        if (curso !== (e.curso || "") || letra !== (e.letra || "")) {
+          e.curso = curso;
+          e.letra = letra;
+          e.actualizadoEn = ahora;
+          n++;
+        }
+      });
+    });
+    return n;
   }
 
   puedeDeshacer() {
@@ -167,6 +208,9 @@ class Store {
     e.nombre = datos.nombre ?? e.nombre;
     e.rut = datos.rut ?? e.rut;
     e.fecha = datos.fecha ?? e.fecha;
+    // Kuder: columnas que solo se devuelven en los CSV (no se borran si no vienen)
+    if (datos.contacto) e.contacto = datos.contacto;
+    if (datos.nacimiento) e.nacimiento = datos.nacimiento;
     if (datos.puntajes) {
       for (const k of Object.keys(e.puntajes)) {
         if (datos.puntajes[k] !== undefined) e.puntajes[k] = num(datos.puntajes[k]);
@@ -289,6 +333,9 @@ function num(v) {
 }
 
 // "store" = 8° básico (el nombre se mantiene porque js/report.js y js/excel.js lo usan
-// así); "storeKuder" = Test de Kuder. js/kuder-data.js se carga antes que este archivo.
-const store = new Store(STORAGE_KEY, ["ciencias", "humanidades", "artistico", "tecnico", "salud", "administracion"]);
+// así); "storeKuder" = Test de Kuder. js/kuder-data.js y js/cursos.js se cargan antes
+// que este archivo.
+const store = new Store(STORAGE_KEY, ["ciencias", "humanidades", "artistico", "tecnico", "salud", "administracion"], {
+  normalizarCurso: normalizarCursoOctavo, // tal cual, salvo que se elija un formato uniforme (js/cursos.js)
+});
 const storeKuder = new Store(STORAGE_KEY_KUDER, AREAS_KUDER.map((a) => a.id), { normalizarCurso: normalizarCursoKuder });

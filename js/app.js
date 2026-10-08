@@ -131,16 +131,24 @@ function cablearModal() {
   });
 }
 
+// "onCancelar" (opcional): se llama si se cierra sin confirmar
+let alCancelarModal = null;
+
 function cerrarModal() {
   document.getElementById("modal-confirmacion").style.display = "none";
+  const alCancelar = alCancelarModal;
+  alCancelarModal = null;
+  if (alCancelar) alCancelar();
 }
 
-function confirmarAccion({ titulo, texto, textoBoton = "Confirmar", onConfirmar }) {
+function confirmarAccion({ titulo, texto, textoBoton = "Confirmar", onConfirmar, onCancelar = null }) {
   document.getElementById("modal-titulo").textContent = titulo;
   document.getElementById("modal-texto").textContent = texto;
   const btn = document.getElementById("modal-btn-confirmar");
   btn.textContent = textoBoton;
+  alCancelarModal = onCancelar;
   btn.onclick = () => {
+    alCancelarModal = null;
     cerrarModal();
     onConfirmar();
   };
@@ -162,6 +170,12 @@ function render() {
   if (estado.tab === "papelera") renderPapelera();
   if (estado.tab === "estadisticas") renderEstadisticas();
   if (estado.tab === "kuder-interno" && typeof renderCsvInternoKuder === "function") renderCsvInternoKuder();
+  // las pestañas de informes vuelven a leer los cursos elegidos de la app (por si se
+  // corrigió algo en otra pestaña), y el editor de carpetas se pone al día
+  if (estado.tab === "kuder" && typeof refrescarPanelOrientadores === "function") refrescarPanelOrientadores();
+  if (estado.tab === "kuder-interno" && typeof refrescarPanelInterno === "function") refrescarPanelInterno();
+  if (estado.tab === "estudiantes" && typeof renderEditorCarpetas === "function") renderEditorCarpetas();
+  if (estado.tab === "ingresar" && typeof renderResumenMasiva === "function") renderResumenMasiva();
 }
 
 function cablearTabs() {
@@ -227,6 +241,9 @@ function cambiarTest(idTest) {
   estado.filtrosCorreccion = { colegio: "", tipo: "", nombre: "" };
   if (idTest !== "kuder" && TABS_SOLO_KUDER.includes(estado.tab)) estado.tab = "ingresar";
   if (typeof reiniciarPanelOrientadores === "function") reiniciarPanelOrientadores();
+  // la importación masiva y el editor de carpetas no se llevan al otro test
+  if (typeof reiniciarMasiva === "function") reiniciarMasiva();
+  if (typeof carpetasEstado !== "undefined") carpetasEstado.marcados.clear();
   aplicarTestActivo();
   render();
   mostrarToast(`Ahora trabajas con: ${cfg().nombre}`);
@@ -535,6 +552,7 @@ function pedirDatosPorArchivo(lecturas, cursoHeader) {
       .map(({ archivo, lectura }, i) => {
         const n = lectura.estudiantes.length;
         const nombreArchivo = `<span>📄 ${escaparHtml(archivo.name)}</span>`;
+        const quitar = `<button type="button" class="btn-quitar-archivo" title="Quitar este archivo: no se importa" aria-label="Quitar ${escaparHtml(archivo.name)}">✕</button>`;
 
         // archivo sin estudiantes válidos: no se pide colegio/curso (no bloquea la
         // importación de los demás) y se explica por qué, avisando si parece ser una
@@ -545,7 +563,7 @@ function pedirDatosPorArchivo(lecturas, cursoHeader) {
             : escaparHtml(lectura.errores[0] || "No se encontraron estudiantes válidos.");
           return `
           <div class="fila-importar-archivo fila-importar-archivo--vacia">
-            <div class="fila-importar-archivo-nombre">${nombreArchivo}<span class="fila-importar-archivo-info">no se va a importar</span></div>
+            <div class="fila-importar-archivo-nombre">${nombreArchivo}<span class="fila-importar-archivo-info">no se va a importar</span>${quitar}</div>
             <div class="imp-archivo-error">⚠ ${motivo}</div>
           </div>`;
         }
@@ -566,6 +584,7 @@ function pedirDatosPorArchivo(lecturas, cursoHeader) {
           <div class="fila-importar-archivo-nombre">
             ${nombreArchivo}
             <span class="fila-importar-archivo-info">${info}</span>
+            ${quitar}
           </div>
           <div class="grid-form">
             <div>
@@ -587,7 +606,7 @@ function pedirDatosPorArchivo(lecturas, cursoHeader) {
       })
       .join("");
 
-    const filasConEstudiantes = [...cont.querySelectorAll(".fila-importar-archivo[data-idx]")];
+    let filasConEstudiantes = [...cont.querySelectorAll(".fila-importar-archivo[data-idx]")];
     const leerFila = (fila) => ({
       colegio: fila.querySelector(".imp-colegio").value.trim(),
       curso: fila.querySelector(".imp-curso").value.trim(),
@@ -609,7 +628,7 @@ function pedirDatosPorArchivo(lecturas, cursoHeader) {
               ).length
             : 0;
         fila.querySelector(".imp-aviso-existente").textContent = yaCargados
-          ? `⚠ Este curso ya tiene ${yaCargados} ${yaCargados === 1 ? "estudiante cargado" : "estudiantes cargados"}. Si importas este archivo de nuevo, quedarán repetidos.`
+          ? `⚠ Este curso ya tiene ${yaCargados} ${yaCargados === 1 ? "estudiante cargado" : "estudiantes cargados"}. Si importas este archivo aquí, quedarán repetidos: para actualizarlo sin duplicar, usa "📦 Importación masiva", más abajo.`
           : "";
       });
     };
@@ -620,25 +639,44 @@ function pedirDatosPorArchivo(lecturas, cursoHeader) {
     // del curso (los que no suman 45 van marcados con su suma en el nombre del
     // archivo), o (b) solo cargar el curso y dejar a esos estudiantes pendientes por
     // revisar, para corregirlos después con el ícono ⚠ y descargar cuando estén listos.
-    const nPendientes = lecturas.reduce((acc, { lectura }) => acc + (lectura.estudiantes.length ? (lectura.revisionTraspaso || []).length : 0), 0);
-    const nCursos = filasConEstudiantes.length;
+    // Se vuelve a calcular cada vez que se quita un archivo con su ✕.
     const eleccion = document.getElementById("modal-imp-eleccion");
-    if (c.revisarTraspaso) {
-      btnContinuar.textContent = nPendientes ? "📥 Solo cargar (dejar pendientes por revisar)" : "📥 Solo cargar en la plataforma";
-      btnDescargar.textContent = `📦 Cargar y descargar ${nCursos > 1 ? "las carpetas de los cursos" : "la carpeta del curso"}`;
-      eleccion.innerHTML = nPendientes
-        ? `<b>⚠ ${nPendientes} ${nPendientes === 1 ? "estudiante tiene" : "estudiantes tienen"} el test mal traspasado (no suman 45).</b> Elige cómo seguir:
-           <ul>
-             <li><b>Cargar y descargar:</b> se genera ya ${nCursos > 1 ? "la carpeta de cada curso" : "la carpeta del curso"} con todos los informes; los que no suman 45 van marcados con su puntaje en el nombre del archivo, por ejemplo "(44 de 45)", y la carpeta trae una nota con la lista a revisar.</li>
-             <li><b>Solo cargar:</b> el curso queda en la plataforma y esos estudiantes quedan pendientes por revisar. Los corriges después con el ícono ⚠ en "Estudiantes e informes" y descargas los informes cuando estén listos.</li>
-           </ul>`
-        : "";
-    } else {
-      btnContinuar.textContent = "Importar";
-      eleccion.innerHTML = "";
-    }
-    btnContinuar.disabled = filasConEstudiantes.length === 0;
-    btnDescargar.disabled = filasConEstudiantes.length === 0;
+    const actualizarEleccion = () => {
+      const nPendientes = filasConEstudiantes.reduce((acc, fila) => acc + (lecturas[Number(fila.dataset.idx)].lectura.revisionTraspaso || []).length, 0);
+      const nCursos = filasConEstudiantes.length;
+      if (c.revisarTraspaso) {
+        btnContinuar.textContent = nPendientes ? "📥 Solo cargar (dejar pendientes por revisar)" : "📥 Solo cargar en la plataforma";
+        btnDescargar.textContent = `📦 Cargar y descargar ${nCursos > 1 ? "las carpetas de los cursos" : "la carpeta del curso"}`;
+        eleccion.innerHTML = nPendientes
+          ? `<b>⚠ ${nPendientes} ${nPendientes === 1 ? "estudiante tiene" : "estudiantes tienen"} el test mal traspasado (no suman 45).</b> Elige cómo seguir:
+             <ul>
+               <li><b>Cargar y descargar:</b> se genera ya ${nCursos > 1 ? "la carpeta de cada curso" : "la carpeta del curso"} con todos los informes; los que no suman 45 van marcados con su puntaje en el nombre del archivo, por ejemplo "(44 de 45)", y la carpeta trae una nota con la lista a revisar.</li>
+               <li><b>Solo cargar:</b> el curso queda en la plataforma y esos estudiantes quedan pendientes por revisar. Los corriges después con el ícono ⚠ en "Estudiantes e informes" y descargas los informes cuando estén listos.</li>
+             </ul>`
+          : "";
+      } else {
+        btnContinuar.textContent = "Importar";
+        eleccion.innerHTML = "";
+      }
+      btnContinuar.disabled = nCursos === 0;
+      btnDescargar.disabled = nCursos === 0;
+    };
+    actualizarEleccion();
+
+    // ✕ de cada archivo: se quita de la lista y no se importa
+    cont.querySelectorAll(".btn-quitar-archivo").forEach((b) => {
+      b.onclick = () => {
+        const fila = b.closest(".fila-importar-archivo");
+        fila.remove();
+        filasConEstudiantes = filasConEstudiantes.filter((f) => f !== fila);
+        if (!cont.querySelector(".fila-importar-archivo")) {
+          onCancelar();
+          mostrarToast("Se quitaron todos los archivos: no se importó nada");
+          return;
+        }
+        actualizarEleccion();
+      };
+    });
     modal.style.display = "flex";
     const primerCampo = cont.querySelector(".imp-colegio");
     if (primerCampo) primerCampo.focus();
@@ -823,6 +861,8 @@ function cablearImportacion() {
       btn.disabled = false;
       btn.textContent = textoOriginal;
       input.value = "";
+      // el nombre del archivo no queda pegado junto al botón: ya se importó (o se canceló)
+      etiquetaArchivo.textContent = "";
     }
   });
 }

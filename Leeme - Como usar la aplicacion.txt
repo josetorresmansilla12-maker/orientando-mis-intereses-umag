@@ -39,10 +39,27 @@ Paso 2: las pestañas
      muestra cada archivo por su nombre para confirmar o corregir su colegio, curso
      y letra (en Kuder se leen solos del archivo; por ejemplo "2do A" queda como
      curso "2do Medio" y letra "A"). Si ese curso ya tenía estudiantes cargados, te avisa,
-     para que no lo importes dos veces.
+     para que no lo importes dos veces. Cada archivo tiene su ✕ para quitarlo si lo
+     elegiste por error (no se importa), y su nombre ya no queda pegado junto al botón.
+   - "📦 Importación masiva: muchos cursos a la vez": para cargar de una vez las
+     planillas de muchos cursos, por ejemplo el ZIP de CSV que descarga un compañero
+     desde su app ("Uso interno" → "Descargar todos los CSV"). Se pueden elegir
+     archivos sueltos, el ZIP tal cual o una carpeta completa. Antes de cargar nada, la
+     app compara cada archivo con lo que ya hay: busca a cada estudiante por RUT (o
+     por nombre, si falta el RUT) y le pone una etiqueta a cada archivo:
+     * "Nuevo": ningún estudiante coincide; se carga como curso nuevo.
+     * "Ya está cargado, sin cambios": no hace falta subirlo (queda desmarcado).
+     * "Ya cargado + estudiantes nuevos": se agregan solo los que faltan.
+     * "Ya está cargado, con diferencias": muestra qué cambia (puntajes, nombres) y
+       recomienda qué versión conservar: la que tiene menos tests mal traspasados
+       (que no suman 45) y, si empatan, la más reciente. Tú eliges "Usar los datos de
+       este archivo" o "Dejar la versión de la app".
+     * Si dos archivos de la lista traen el mismo curso, lo avisa.
+     Marcas los que quieres y "📥 Importar" los carga todos juntos. Los estudiantes que
+     ya estaban nunca se duplican, y todo se deshace de una vez con "↩ Deshacer".
    - En Kuder todos los cursos son de enseñanza media: "2do", "2°", "Segundo" o
-     "II medio" quedan siempre como "2do Medio" (igual para 1ro, 3ro y 4to), así un
-     mismo curso no aparece dos veces. Los estudiantes ya cargados se ajustaron solos.
+     "II medio" quedan siempre escritos igual (por defecto "2do Medio"; se puede
+     cambiar en "Editar carpetas"), así un mismo curso no aparece dos veces.
    - También puedes ingresar estudiantes a mano: escribes una vez el colegio, curso,
      letra y fecha en "Datos del curso", y luego el nombre y los puntajes de cada
      estudiante (8vos: 0 a 8 por área; Kuder: 0 a 9 por área). Un área queda "de
@@ -93,8 +110,22 @@ Paso 2: las pestañas
      editar a ese estudiante. En Kuder, "Guardar y seguir con el siguiente pendiente" abre al tiro al
      próximo estudiante por revisar.
    - Eliminar estudiantes (lo eliminado queda en la Papelera).
-
-3. "Corrección" (solo Kuder), con dos subpestañas:
+   - "🗂 Editar carpetas" (al final de la pestaña): para ordenar colegios y cursos.
+     * Avisa de carpetas que parecen duplicadas (por ejemplo "Liceo San José" y
+       "Liceo San Jose", o un curso escrito de dos formas) y las fusiona con
+       "🔗 Fusionar…", eligiendo con qué nombre queda.
+     * Arrastrando: un colegio sobre otro los fusiona; un curso sobre otro curso los
+       fusiona; un curso sobre otro colegio lo mueve a ese colegio. Sin arrastrar:
+       marca 2 o más y usa "🔗 Fusionar marcadas".
+     * Cambiar nombres: escribe el nombre nuevo del colegio, o el curso y la letra, y
+       presiona Enter. Si queda igual a otro que ya existe, pregunta si fusionarlos.
+       "▾ Estudiantes y archivos" muestra a los estudiantes del curso: el nombre de
+       cada uno es el nombre del archivo de su informe, y se puede corregir ahí.
+     * "📐 Mismo formato para todos los cursos": eliges cómo se escriben (por
+       ejemplo "8° A", "8vo A", "8° Básico A"; en Kuder "2do Medio A" o "2° Medio
+       A"), ves antes cómo quedaría cada curso y se aplica a todos de una vez, también
+       a los que cargues después.
+     Cada cambio se puede deshacer con "↩ Deshacer". (solo Kuder), con dos subpestañas:
    - "Pendientes": todos los estudiantes cargados cuyo test no suma 45, por colegio y
      curso, para revisarlos de corrido con sus hojas de respuestas. Al lado de la
      pestaña aparece cuántos quedan pendientes. La casilla ☐ junto a cada estudiante
@@ -110,22 +141,35 @@ Paso 2: las pestañas
 4. "Estadísticas": resumen de cuántos estudiantes hay cargados en el test elegido y
    cuántos salieron con interés en cada área.
 
-5. "Informes para orientadores" (en los dos tests): informe grupal por curso o global
-   de varios cursos, subiendo los archivos. Solo en Kuder: "Uso interno" (informe
-   consolidado para la unidad de Admisión y Marketing):
-   - Se pueden subir todos los archivos que quieras, sin límite: eligiéndolos uno a
-     uno o varios a la vez ("📤 Elegir archivo(s)…"), o subiendo una carpeta completa
-     ("📁 Subir una carpeta completa…"), con sus subcarpetas; lo que no sea CSV o
-     Excel (PDF, imágenes, etc.) se ignora solo. Si un mismo curso viene en dos
-     archivos (por ejemplo, de dos computadores), la app avisa para dejar solo uno.
+5. "Informes para orientadores" (en los dos tests): informe grupal por curso, global
+   de varios cursos o uno por curso (ZIP), hasta 12 cursos juntos.
+   - "📚 Elegir cursos de la app…": eliges los cursos que ya están cargados (por
+     colegio, o todos los de un colegio con una casilla), sin descargar ni volver a
+     subir sus CSV. Se usan los datos de ese momento, con todas las correcciones.
+   - "📤 Subir archivo(s)…": como antes, con archivos Excel/CSV.
+   - Todo queda en una misma lista, cada uno con su ✕ para quitarlo y su casilla para
+     incluirlo o no. Los cursos de la app tienen "✏️ Ver o editar en la app", que te
+     lleva a ese curso para corregir algo a última hora; al volver, la lista ya tiene
+     los datos nuevos. Si el mismo curso está dos veces (por ejemplo, como archivo y
+     desde la app), la app avisa.
+   - Con muchos cursos, el informe global agrupa la lista de cursos por colegio y, si
+     hace falta, achica un poco el gráfico para que todo quepa en la hoja.
+   Solo en Kuder: "Uso interno" (informe consolidado para la unidad de Admisión y
+   Marketing):
+   - "📚 Elegir cursos de la app…" ("Marcar todos los visibles" toma todo lo
+     cargado) y/o archivos sin límite: uno a uno, varios a la vez, o una carpeta
+     completa ("📁 Subir una carpeta completa…"), con sus subcarpetas; lo que no sea
+     CSV o Excel (PDF, imágenes, etc.) se ignora solo. Cada uno tiene su ✕. Si un mismo
+     curso viene dos veces (por ejemplo, de dos computadores), la app avisa para dejar
+     solo uno.
    - En la revisión de este informe no se marcan los tests mal traspasados (a esa
      altura los informes individuales ya se entregaron).
    - La app NO guarda los archivos CSV que subes (ni ahí ni en "Ingresar datos"): solo
      los lee. Por eso, "⬇ Descargar todos los CSV (ZIP)" arma de nuevo un CSV por
      curso con los datos actuales de la app (con las correcciones de puntajes y
      nombres), en el mismo formato del prellenado de Kuder: mismas columnas, mismo
-     orden, separados por punto y coma. Sirven para juntarlos con los de otro
-     computador y subirlos todos juntos para el informe final. Los archivos se llaman,
+     orden, separados por punto y coma. Sirven para pasar los cursos a otro
+     computador, donde se cargan con "📦 Importación masiva" (en "Ingresar datos"). Los archivos se llaman,
      por ejemplo, "KUDER_LEUMAG_4to_Medio_A.csv", dentro de
      "KUDER_CSV_34cursos_2026.zip". "contacto" y "nacimiento" solo traen datos en
      los cursos importados desde esta versión (antes la app no los guardaba).

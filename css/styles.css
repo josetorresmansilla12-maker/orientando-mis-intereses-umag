@@ -1517,3 +1517,140 @@ details.grupo-colegio > summary .btn-lapiz-colegio:hover,
 details.grupo-colegio > summary .btn-lapiz-colegio:focus-visible { opacity: 1; color: white; background: rgba(255, 255, 255, 0.2); }
 #modal-renombrar-colegio .modal-caja { max-width: 480px; }
 #modal-renombrar-colegio input { width: 100%; }
+
+/* =====================================================
+   Archivos y cursos en las listas de informes: ✕ para quitar cada uno
+   ===================================================== */
+.btn-quitar-archivo {
+  margin-left: auto;
+  background: white;
+  color: var(--texto-suave);
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1;
+  flex-shrink: 0;
+  align-self: center;
+}
+.btn-quitar-archivo:hover { background: #fdf0ef; color: var(--rojo); border-color: var(--rojo); }
+.fila-importar-archivo-nombre .btn-ver-en-app { align-self: center; font-weight: 600; }
+.fila-fuente-app { background: #f8f6fd; }
+.fuente-app-nota { margin-top: 6px; font-size: 11.5px; color: var(--texto-suave); }
+.fuente-app-vacia { color: var(--rojo); font-weight: 600; }
+.fuente-pendientes { color: #96690a; font-weight: 600; }
+
+/* ---------- ventana "Elegir cursos de la app" ---------- */
+.modal-selector-cursos { max-width: 720px; width: 100%; }
+.sc-rapidas { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.sc-lista { max-height: 48vh; overflow-y: auto; border: 1px solid var(--borde); border-radius: 8px; padding: 6px 10px; }
+.sc-colegio { padding: 6px 0; border-bottom: 1px solid var(--borde); }
+.sc-colegio:last-child { border-bottom: none; }
+.sc-colegio-titulo { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 700; color: var(--morado-oscuro); cursor: pointer; margin: 0; }
+.sc-colegio-titulo input, .sc-curso input { width: auto; cursor: pointer; }
+.sc-colegio-todo { font-weight: 400; font-size: 11.5px; color: var(--texto-suave); margin-left: auto; }
+.sc-cursos { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 2px 12px; padding: 4px 0 2px 24px; }
+.sc-curso { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 400; color: var(--texto); margin: 0; padding: 3px 4px; border-radius: 6px; cursor: pointer; }
+.sc-curso:hover { background: var(--lila-fondo); }
+.sc-curso--ya { opacity: 0.6; cursor: default; }
+.sc-curso-n { color: var(--texto-suave); font-size: 11.5px; }
+.sc-pie { align-items: center; }
+.sc-resumen { margin-right: auto; font-size: 12.5px; color: var(--texto-suave); font-weight: 600; }
+
+/* =====================================================
+   Editar carpetas (pestaña "Estudiantes e informes")
+   ===================================================== */
+.carpetas-encabezado { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+#editor-carpetas { margin-top: 14px; }
+.cp-duplicados { background: #fff8e8; border: 1px solid #f0d9a6; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 12px; }
+.cp-duplicados--ok { background: #eefaf3; border-color: #bfe6d0; color: #1f7a52; font-weight: 600; }
+.cp-duplicados-titulo { font-weight: 700; color: #7a5200; margin-bottom: 4px; }
+.cp-duplicados ul { margin: 0; padding-left: 18px; }
+.cp-duplicados li { margin: 6px 0; line-height: 1.6; }
+.cp-dup-motivo { font-size: 11.5px; color: var(--texto-suave); margin: 0 6px; }
+.cp-barra { display: flex; align-items: center; gap: 14px; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; }
+.cp-barra-ayuda { font-size: 12.5px; color: var(--texto-suave); flex: 1; min-width: 280px; line-height: 1.5; }
+.cp-colegio { border: 1px solid var(--borde); border-radius: 10px; margin-bottom: 10px; background: white; transition: box-shadow 0.15s, border-color 0.15s; }
+.cp-colegio-fila { display: flex; align-items: center; gap: 8px; padding: 9px 12px; background: var(--lila-fondo); border-radius: 10px 10px 0 0; cursor: grab; }
+.cp-cursos { padding: 6px 12px 8px 30px; }
+.cp-curso { border-radius: 8px; transition: background 0.15s, box-shadow 0.15s; }
+.cp-curso-fila { display: flex; align-items: center; gap: 8px; padding: 5px 4px; flex-wrap: wrap; cursor: grab; }
+.cp-asa { color: var(--texto-suave); font-size: 15px; cursor: grab; user-select: none; }
+.cp-chk { width: auto; cursor: pointer; }
+.cp-icono { font-size: 15px; }
+.cp-nombre-colegio { font-weight: 700; color: var(--morado-oscuro); max-width: 420px; flex: 1; min-width: 180px; }
+.cp-mini { display: flex; align-items: center; gap: 5px; margin: 0; font-size: 11.5px; }
+.cp-mini input { width: 150px; padding: 5px 8px; font-size: 13px; }
+.cp-mini-letra input { width: 52px; }
+.cp-arrastrando { opacity: 0.45; }
+.cp-colegio.cp-sobre { border-color: var(--morado); box-shadow: 0 0 0 3px rgba(91, 59, 140, 0.25); }
+.cp-curso.cp-sobre { background: #efe9fa; box-shadow: 0 0 0 2px var(--morado-claro); }
+.cp-estudiantes { margin: 4px 0 8px 26px; padding: 8px 10px; border-left: 3px solid var(--borde); background: #fbfafd; border-radius: 0 8px 8px 0; }
+.cp-estudiantes-ayuda { font-size: 11.5px; color: var(--texto-suave); margin-bottom: 6px; }
+.cp-est-fila { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+.cp-est-n { width: 22px; text-align: right; color: var(--texto-suave); font-size: 12px; }
+.cp-nombre-est { width: 280px; padding: 5px 8px; font-size: 13px; }
+.cp-est-archivo { font-size: 11px; color: var(--texto-suave); word-break: break-all; }
+.cp-formato { margin-top: 16px; border-top: 1px solid var(--borde); padding-top: 14px; }
+.cp-formato-titulo { font-weight: 700; color: var(--morado-oscuro); font-size: 14px; }
+.cp-formato-fila { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.cp-formato-fila select { width: auto; min-width: 280px; }
+.cp-formato-tabla { margin-top: 10px; border-collapse: collapse; font-size: 12.5px; }
+.cp-formato-tabla th { text-align: left; font-size: 11px; color: var(--texto-suave); padding: 3px 10px 3px 0; }
+.cp-formato-tabla td { padding: 3px 10px 3px 0; border-top: 1px solid var(--borde); }
+.cp-formato-ok { margin-top: 10px; font-size: 12.5px; color: #1f7a52; font-weight: 600; }
+.mf-opciones { display: flex; flex-direction: column; gap: 6px; }
+.mf-opcion { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 400; color: var(--texto); border: 1px solid var(--borde); border-radius: 8px; padding: 8px 10px; cursor: pointer; margin: 0; }
+.mf-opcion input[type="radio"] { width: auto; }
+.mf-opcion input[type="text"] { width: 260px; margin-left: 6px; }
+.mf-detalle { color: var(--texto-suave); font-size: 12px; }
+
+/* =====================================================
+   Importación masiva (pestaña "Ingresar datos")
+   ===================================================== */
+.aviso-masiva { background: #fff8e8; border: 1px solid #f0d9a6; border-radius: 8px; padding: 10px 14px; font-size: 12.5px; line-height: 1.55; color: #5f4000; }
+.masiva-aviso-final:not(:empty) { margin-top: 12px; background: #fff4e0; border: 1px solid #f0d9a6; border-radius: 8px; padding: 8px 12px; font-size: 13px; color: #5f4000; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+#masiva-revision:not(:empty) { margin-top: 14px; }
+.mv-resumen { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 13px; background: var(--lila-fondo); border-radius: 8px; padding: 9px 12px; margin-bottom: 10px; }
+.mv-resumen-botones { display: flex; gap: 6px; flex-wrap: wrap; }
+.mv-lista { max-height: 62vh; overflow-y: auto; }
+.mv-item { border: 1px solid var(--borde); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; background: white; }
+.mv-item--marcado { border-color: var(--morado-claro); box-shadow: 0 0 0 1px var(--morado-claro); }
+.mv-item--error { background: #fdf6f5; border-color: #f1d0cb; }
+.mv-item-cab { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mv-chk { display: flex; align-items: center; gap: 7px; margin: 0; cursor: pointer; font-size: 13.5px; font-weight: 700; color: var(--morado-oscuro); }
+.mv-chk input { width: auto; cursor: pointer; }
+.mv-nombre { font-weight: 700; color: var(--morado-oscuro); font-size: 13.5px; word-break: break-all; }
+.mv-tipo { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 9px; border: 1px solid; white-space: nowrap; }
+.mv-tipo--nuevo { background: #eefaf3; color: #1f7a52; border-color: #bfe6d0; }
+.mv-tipo--igual { background: #f4f3f6; color: var(--texto-suave); border-color: var(--borde); }
+.mv-tipo--diferente { background: #fff4e0; color: #7a5200; border-color: #f0d9a6; }
+.mv-tipo--error { background: #fdf0ef; color: var(--rojo); border-color: #f1d0cb; }
+.mv-detalle { font-size: 12.5px; color: var(--texto-suave); margin-top: 5px; line-height: 1.5; }
+.mv-aviso { font-size: 12px; color: #96690a; font-weight: 600; margin-top: 5px; }
+.mv-recomendacion { font-size: 12.5px; color: #2b4f86; background: #eef3fb; border: 1px solid #c9d8ef; border-radius: 7px; padding: 6px 10px; margin-top: 7px; }
+.mv-acciones { display: flex; flex-direction: column; gap: 3px; margin-top: 7px; }
+.mv-acciones label { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 12.5px; font-weight: 600; color: var(--texto); cursor: pointer; }
+.mv-acciones input { width: auto; }
+.mv-difs { margin-top: 6px; font-size: 12px; }
+.mv-difs summary { cursor: pointer; color: var(--morado); font-weight: 600; }
+.mv-difs ul { margin: 5px 0 0; padding-left: 18px; max-height: 180px; overflow-y: auto; }
+.mv-difs li { margin-bottom: 2px; }
+.mv-datos { margin-top: 8px; grid-template-columns: 2fr 1fr 0.6fr; align-items: end; }
+.mv-datos-nota { grid-column: 1 / -1; font-size: 11.5px; color: var(--texto-suave); }
+.mv-pie { align-items: center; flex-wrap: wrap; }
+@media (max-width: 800px) {
+  .mv-datos { grid-template-columns: 1fr; }
+}
+
+/* informe global con muchos cursos: si la lista de cursos incluidos no deja espacio,
+   el gráfico de la página de resultados se achica un poco (ver
+   construirPaginaResultadosGlobalKuder) */
+.kuder-chart-compacto .kuder-chart-bloque-grande .kuder-chart-fila { height: 56px; }
+.kuder-chart-compacto .kuder-chart-bloque-grande .kuder-chart-track { height: 32px; }
+.kuder-chart-compacto .kuder-chart-bloque-grande.kuder-chart-pocas-areas .kuder-chart-fila { height: 90px; }
+.kuder-chart-mini .kuder-chart-bloque-grande .kuder-chart-fila { height: 47px; }
+.kuder-chart-mini .kuder-chart-bloque-grande .kuder-chart-track { height: 28px; }
+.kuder-chart-mini .kuder-chart-bloque-grande.kuder-chart-pocas-areas .kuder-chart-fila { height: 76px; }

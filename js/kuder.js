@@ -6,8 +6,13 @@
 // No depende de funciones del cuestionario de 8° básico; solo reutiliza utilidades
 // genéricas de js/report.js (el motor de PDF/paginación) tal como están.
 
-let kuderEstadoActual = []; // [{ archivoNombre, estudiantes, errores, advertencias, colegio, curso }, ...] — 1 a 6 archivos
-const KUDER_MAX_ARCHIVOS = 6;
+// cursos de la lista: archivos subidos y cursos elegidos de la app (js/selector-cursos.js),
+// cada uno { uid, origen: "archivo" | "app", archivoNombre, estudiantes, errores,
+// advertencias, colegio, curso, incluir }
+let kuderEstadoActual = [];
+// hasta 12 cursos juntos: más que eso no cabe bien en la lista de "cursos incluidos"
+// del informe global
+const KUDER_MAX_ARCHIVOS = 12;
 
 document.addEventListener("DOMContentLoaded", () => {
   cablearKuder();
@@ -193,13 +198,40 @@ function leerPlanillaParaOrientadores(arrayBuffer) {
   return { ...lectura, curso, advertencias: [] };
 }
 
-// al cambiar de test se descartan los archivos que se estaban revisando (eran del otro test)
+// al cambiar de test se descartan los cursos de la lista (eran del otro test)
 function reiniciarPanelOrientadores() {
   kuderEstadoActual = [];
   const panel = document.getElementById("kuder-revision");
   if (panel) panel.style.display = "none";
-  const etiqueta = document.getElementById("kuder-nombre-archivo");
-  if (etiqueta) etiqueta.textContent = "";
+}
+
+// al volver a la pestaña: los cursos elegidos de la app se vuelven a leer (por si se
+// corrigió algo a última hora en "Estudiantes e informes")
+function refrescarPanelOrientadores() {
+  if (!kuderEstadoActual.some((f) => f.origen === "app")) return;
+  refrescarFuentesApp(kuderEstadoActual, cfg().store);
+  renderKuderListaArchivos();
+}
+
+// agrega cursos a la lista (sin pasar del máximo) y la muestra
+function agregarFuentesKuder(nuevas) {
+  const libres = KUDER_MAX_ARCHIVOS - kuderEstadoActual.length;
+  if (nuevas.length > libres) {
+    alert(`La lista admite hasta ${KUDER_MAX_ARCHIVOS} cursos a la vez${libres > 0 ? `: se agregan los primeros ${libres}` : ". Quita alguno con su ✕ para agregar otro"}.`);
+    nuevas = nuevas.slice(0, Math.max(0, libres));
+  }
+  if (!nuevas.length) return;
+  kuderEstadoActual.push(...nuevas);
+  renderKuderListaArchivos();
+  const panel = document.getElementById("kuder-revision");
+  panel.style.display = "block";
+  panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function quitarFuenteKuder(uid) {
+  kuderEstadoActual = kuderEstadoActual.filter((f) => f.uid !== uid);
+  if (!kuderEstadoActual.length) reiniciarPanelOrientadores();
+  else renderKuderListaArchivos();
 }
 
 function cablearKuder() {
@@ -207,31 +239,31 @@ function cablearKuder() {
   if (!input) return; // esta página no incluye el módulo de Kuder
 
   const btn = document.getElementById("kuder-btn-elegir-planilla");
-  const etiquetaArchivo = document.getElementById("kuder-nombre-archivo");
-  const panelRevision = document.getElementById("kuder-revision");
+  const btnCursosApp = document.getElementById("kuder-btn-elegir-cursos");
   const btnGenerar = document.getElementById("kuder-btn-generar");
   const btnGenerarPorCurso = document.getElementById("kuder-btn-generar-por-curso");
   const btnCancelar = document.getElementById("kuder-btn-cancelar-revision");
 
   btn.addEventListener("click", () => input.click());
 
+  // los archivos elegidos se suman a la lista (no reemplazan a los que ya estaban)
   input.addEventListener("change", async () => {
-    let archivos = Array.from(input.files || []);
+    const archivos = Array.from(input.files || []);
     if (archivos.length === 0) return;
-
-    if (archivos.length > KUDER_MAX_ARCHIVOS) {
-      alert(`Puedes subir hasta ${KUDER_MAX_ARCHIVOS} archivos a la vez. Se van a usar los primeros ${KUDER_MAX_ARCHIVOS}.`);
-      archivos = archivos.slice(0, KUDER_MAX_ARCHIVOS);
-    }
-
-    etiquetaArchivo.textContent = archivos.length === 1 ? archivos[0].name : `${archivos.length} archivos seleccionados`;
     const textoOriginal = btn.textContent;
     btn.disabled = true;
     btn.textContent = "Leyendo…";
 
     try {
-      const lecturas = [];
+      const firmas = new Set(kuderEstadoActual.map((f) => f.firma).filter(Boolean));
+      const nuevas = [];
+      let repetidos = 0;
       for (const archivo of archivos) {
+        const firma = `${archivo.name}|${archivo.size}|${archivo.lastModified}`;
+        if (firmas.has(firma)) {
+          repetidos++;
+          continue;
+        }
         let lectura;
         try {
           const arrayBuffer = await archivo.arrayBuffer();
@@ -240,28 +272,14 @@ function cablearKuder() {
           console.error(err);
           lectura = { estudiantes: [], errores: ["No se pudo leer este archivo. ¿Es un .xlsx/.csv válido?"], advertencias: [], colegio: "", curso: "" };
         }
-        lecturas.push({ ...lectura, archivoNombre: archivo.name });
+        nuevas.push(crearFuenteArchivo({ ...lectura, advertencias: lectura.advertencias || [], archivoNombre: archivo.name }, archivo));
+        firmas.add(firma);
       }
-
-      const conEstudiantes = lecturas.filter((l) => l.estudiantes.length > 0);
-      if (conEstudiantes.length === 0) {
-        alert(lecturas.flatMap((l) => l.errores).join("\n") || "No se encontraron estudiantes válidos en estos archivos.");
-        kuderEstadoActual = [];
-        panelRevision.style.display = "none";
-        return;
-      }
-
-      kuderEstadoActual = lecturas;
-      document.getElementById("kuder-rev-fecha").value = "";
-      renderKuderListaArchivos(lecturas);
-
-      panelRevision.style.display = "block";
-      panelRevision.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      if (repetidos) mostrarToast(`${repetidos === 1 ? "Ese archivo ya estaba" : `${repetidos} archivos ya estaban`} en la lista`);
+      agregarFuentesKuder(nuevas);
     } catch (err) {
       console.error(err);
       alert("No se pudo leer alguno de los archivos.");
-      kuderEstadoActual = [];
-      panelRevision.style.display = "none";
     } finally {
       btn.disabled = false;
       btn.textContent = textoOriginal;
@@ -269,11 +287,18 @@ function cablearKuder() {
     }
   });
 
-  btnCancelar.addEventListener("click", () => {
-    kuderEstadoActual = [];
-    panelRevision.style.display = "none";
-    etiquetaArchivo.textContent = "";
-  });
+  if (btnCursosApp) {
+    btnCursosApp.addEventListener("click", () =>
+      abrirSelectorCursos({
+        titulo: "📚 Elige cursos cargados en la app",
+        ayuda: `Con un curso se genera su informe; con 2 o más, el informe global o uno por curso. Se usan los datos que hay ahora en la app, con todas sus correcciones.`,
+        yaAgregados: new Set(kuderEstadoActual.filter((f) => f.origen === "app").map((f) => f.clave)),
+        onAgregar: (cursos) => agregarFuentesKuder(cursos.map(crearFuenteApp)),
+      })
+    );
+  }
+
+  btnCancelar.addEventListener("click", reiniciarPanelOrientadores);
 
   btnGenerar.addEventListener("click", async () => {
     if (!kuderEstadoActual.length) {
@@ -330,38 +355,31 @@ function cablearKuder() {
   }
 }
 
-// junta los cursos marcados con la casilla "incluir" (una por archivo, ver
-// renderKuderListaArchivos), validando que cada uno tenga colegio y curso. Si falta
-// algo, marca los campos en rojo, muestra la alerta correspondiente y devuelve null;
-// si no hay ningún curso marcado, también avisa y devuelve null. La usan tanto el
-// botón de informe único/global como el de informes por curso — la selección de
-// cursos es la misma, solo cambia qué se hace con ella.
+// junta los cursos marcados con la casilla "incluir", validando que cada uno tenga
+// colegio y curso. Si falta algo, marca los campos en rojo, muestra la alerta
+// correspondiente y devuelve null; si no hay ningún curso marcado, también avisa y
+// devuelve null. La usan tanto el botón de informe único/global como el de informes
+// por curso — la selección de cursos es la misma, solo cambia qué se hace con ella.
+// Los cursos elegidos de la app se leen de nuevo aquí, con los datos de este momento.
 function recolectarCursosSeleccionadosKuder() {
   const cont = document.getElementById("kuder-lista-archivos");
-  const inpsColegio = cont.querySelectorAll(".kuder-fila-colegio");
-  const inpsCurso = cont.querySelectorAll(".kuder-fila-curso");
-  const checksIncluir = cont.querySelectorAll(".kuder-fila-incluir");
-
-  // los índices de .kuder-fila-colegio/.kuder-fila-curso/.kuder-fila-incluir solo
-  // existen para archivos con estudiantes válidos (n > 0 en renderKuderListaArchivos),
-  // así que se recorren en paralelo con esos tres NodeList, no con kuderEstadoActual
-  // directo (que puede tener archivos sin filas de formulario, si vinieron vacíos).
+  refrescarFuentesApp(kuderEstadoActual, cfg().store);
   let ok = true;
   const porArchivo = [];
-  inpsColegio.forEach((inpColegio, i) => {
-    if (!checksIncluir[i].checked) return; // curso no marcado: se excluye del informe
-    const colegio = inpColegio.value.trim();
-    const curso = inpsCurso[i].value.trim();
-    const falta = !colegio || !curso;
-    inpColegio.classList.toggle("invalido", !colegio);
-    inpsCurso[i].classList.toggle("invalido", !curso);
-    if (falta) {
+  kuderEstadoActual.forEach((f) => {
+    if (!f.incluir || !f.estudiantes.length) return; // curso no marcado o vacío: no va
+    const fila = cont.querySelector(`.fila-importar-archivo[data-uid="${f.uid}"]`);
+    const colegio = (f.colegio || "").trim();
+    const curso = (f.curso || "").trim();
+    if (fila) {
+      fila.querySelector(".kuder-fila-colegio").classList.toggle("invalido", !colegio);
+      fila.querySelector(".kuder-fila-curso").classList.toggle("invalido", !curso);
+    }
+    if (!colegio || !curso) {
       ok = false;
       return;
     }
-    const idxOriginal = Number(inpColegio.dataset.idx);
-    const estudiantes = kuderEstadoActual[idxOriginal].estudiantes;
-    porArchivo.push({ colegio, curso, estudiantes, total: estudiantes.length });
+    porArchivo.push({ colegio, curso, estudiantes: f.estudiantes, total: f.estudiantes.length });
   });
 
   if (!ok) {
@@ -375,36 +393,61 @@ function recolectarCursosSeleccionadosKuder() {
   return porArchivo;
 }
 
-function renderKuderListaArchivos(lecturas) {
+function renderKuderListaArchivos() {
+  const lecturas = kuderEstadoActual;
   const cont = document.getElementById("kuder-lista-archivos");
   cont.innerHTML = lecturas
-    .map((lectura, i) => {
-      const n = lectura.estudiantes.length;
-      const nErrores = lectura.errores.length;
-      const info =
-        n > 0
+    .map((f) => {
+      const n = f.estudiantes.length;
+      const nErrores = f.errores.length;
+      const esApp = f.origen === "app";
+      const info = esApp
+        ? infoFuenteApp(f)
+        : n > 0
           ? `${n} ${n === 1 ? "estudiante detectado" : "estudiantes detectados"}${nErrores ? `, ${nErrores} ${nErrores === 1 ? "fila con problemas" : "filas con problemas"}` : ""}`
           : "sin estudiantes válidos — este archivo no se va a incluir";
       return `
-      <div class="fila-importar-archivo">
+      <div class="fila-importar-archivo${esApp ? " fila-fuente-app" : ""}" data-uid="${f.uid}">
         <div class="fila-importar-archivo-nombre">
           <label class="kuder-fila-incluir-label">
-            ${n > 0 ? `<input type="checkbox" class="kuder-fila-incluir" data-idx="${i}" checked />` : ""}
-            <span>📄 ${escaparHtmlKuder(lectura.archivoNombre)}</span>
+            ${n > 0 ? `<input type="checkbox" class="kuder-fila-incluir" ${f.incluir ? "checked" : ""} />` : ""}
+            <span>${esApp ? "📚" : "📄"} ${escaparHtmlKuder(f.archivoNombre)}</span>
           </label>
           <span class="fila-importar-archivo-info">${info}</span>
+          ${esApp ? `<button type="button" class="chico secundario btn-ver-en-app" title="Abre este curso en Estudiantes e informes para corregir lo que haga falta">✏️ Ver o editar en la app</button>` : ""}
+          <button type="button" class="btn-quitar-archivo" title="Quitar de la lista" aria-label="Quitar ${escaparHtmlKuder(f.archivoNombre)}">✕</button>
         </div>
         ${
           n > 0
             ? `<div class="grid-form" style="grid-template-columns:repeat(2,1fr);">
-                <div><label>Colegio *</label><input type="text" class="kuder-fila-colegio" data-idx="${i}" value="${escaparHtmlKuder(lectura.colegio)}" /></div>
-                <div><label>Curso *</label><input type="text" class="kuder-fila-curso" data-idx="${i}" value="${escaparHtmlKuder(lectura.curso)}" placeholder="${testActivoEsOctavo() ? "Ej: 8vo A" : "Ej: 2do A"}" /></div>
-              </div>`
+                <div><label>Colegio *</label><input type="text" class="kuder-fila-colegio" value="${escaparHtmlKuder(f.colegio)}" /></div>
+                <div><label>Curso *</label><input type="text" class="kuder-fila-curso" value="${escaparHtmlKuder(f.curso)}" placeholder="${testActivoEsOctavo() ? "Ej: 8vo A" : "Ej: 2do A"}" /></div>
+              </div>
+              ${esApp ? `<div class="fuente-app-nota">Colegio y curso solo cambian en este informe; para cambiarlos en la app usa "✏️ Ver o editar en la app" o "Editar carpetas".</div>` : ""}`
             : ""
         }
       </div>`;
     })
     .join("");
+
+  // lo escrito y las casillas quedan guardados en cada curso de la lista (así no se
+  // pierden al agregar o quitar otro)
+  cont.querySelectorAll(".fila-importar-archivo[data-uid]").forEach((fila) => {
+    const f = kuderEstadoActual.find((x) => x.uid === fila.dataset.uid);
+    if (!f) return;
+    fila.querySelector(".btn-quitar-archivo").onclick = () => quitarFuenteKuder(f.uid);
+    const ver = fila.querySelector(".btn-ver-en-app");
+    if (ver) ver.onclick = () => irACursoEnApp(f);
+    const chk = fila.querySelector(".kuder-fila-incluir");
+    if (chk) chk.onchange = () => {
+      f.incluir = chk.checked;
+      actualizarBotonGenerarKuder();
+    };
+    const inpColegio = fila.querySelector(".kuder-fila-colegio");
+    if (inpColegio) inpColegio.oninput = () => (f.colegio = inpColegio.value);
+    const inpCurso = fila.querySelector(".kuder-fila-curso");
+    if (inpCurso) inpCurso.oninput = () => (f.curso = inpCurso.value);
+  });
 
   const avisos = lecturas.flatMap((l) => [
     ...l.errores.map((texto) => ({ texto: `${l.archivoNombre}: ${texto}`, tipo: "error" })),
@@ -412,26 +455,25 @@ function renderKuderListaArchivos(lecturas) {
     // que sí podría cambiarlos ("⚠"), en amarillo
     ...l.advertencias.map((texto) => ({ texto: `${l.archivoNombre}: ${texto}`, tipo: texto.startsWith("ℹ") ? "info" : "advertencia" })),
   ]);
+  // el mismo curso dos veces (por ejemplo, subido como archivo y elegido de la app): se contaría doble
+  fuentesRepetidas(lecturas.filter((l) => l.estudiantes.length)).forEach(([a, b]) =>
+    avisos.unshift({ texto: `⚠ "${a.archivoNombre}" y "${b.archivoNombre}" traen a los mismos estudiantes: en un informe global se contarían dos veces. Quita uno con su ✕.`, tipo: "advertencia" })
+  );
   const contAvisos = document.getElementById("kuder-rev-avisos");
   contAvisos.innerHTML = avisos.length
     ? `<ul class="kuder-avisos-lista">${avisos.map((a) => `<li class="${a.tipo}">${escaparHtmlKuder(a.texto)}</li>`).join("")}</ul>`
     : "";
 
-  cont.querySelectorAll(".kuder-fila-incluir").forEach((chk) => {
-    chk.addEventListener("change", actualizarBotonGenerarKuder);
-  });
   actualizarBotonGenerarKuder();
 }
 
 // refleja en los botones "Generar" cuántos cursos están marcados con la casilla
 // ahora mismo: 1 solo curso marcado genera el informe de ese curso; 2 o más, el
-// informe global de justo esos cursos (no necesariamente todos los archivos
-// subidos). El botón de "por curso" siempre genera uno por curso marcado, sin
-// sumarlos. 0 marcados deshabilita ambos botones.
+// informe global de justo esos cursos (no necesariamente todos los de la lista). El
+// botón de "por curso" siempre genera uno por curso marcado, sin sumarlos. 0
+// marcados deshabilita ambos botones.
 function actualizarBotonGenerarKuder() {
-  const cont = document.getElementById("kuder-lista-archivos");
-  const checks = [...cont.querySelectorAll(".kuder-fila-incluir")];
-  const nSeleccionados = checks.filter((c) => c.checked).length;
+  const nSeleccionados = kuderEstadoActual.filter((f) => f.incluir && f.estudiantes.length > 0).length;
 
   const btnGenerar = document.getElementById("kuder-btn-generar");
   btnGenerar.disabled = nSeleccionados === 0;

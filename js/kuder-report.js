@@ -516,14 +516,26 @@ function construirPaginasListaEstudiantesKuder(datosCurso, estudiantes) {
 // global — se prioriza que sea angosta en altura, porque la página 1 ya
 // tiene bastante contenido y con una tabla completa se puede pasar de una hoja.
 function construirCursosIncluidosKuder(resumenPorCurso) {
+  // con más de 6 cursos (hasta 12) se agrupan por colegio, para no repetir su nombre en
+  // cada chip y que la lista quepa junto al gráfico
+  let chips;
+  if (resumenPorCurso.length > 6) {
+    const porColegio = new Map();
+    resumenPorCurso.forEach((r) => {
+      const k = r.colegio || "—";
+      if (!porColegio.has(k)) porColegio.set(k, []);
+      porColegio.get(k).push(r);
+    });
+    chips = [...porColegio]
+      .map(([colegio, cursos]) => `<span class="kuder-curso-chip">${colegio} · ${cursos.map((r) => `${r.curso || "—"} <b>(${r.total})</b>`).join(" · ")}</span>`)
+      .join("");
+  } else {
+    chips = resumenPorCurso.map((r) => `<span class="kuder-curso-chip">${r.colegio || "—"} · ${r.curso || "—"} <b>(${r.total})</b></span>`).join("");
+  }
   return `
     <div class="kuder-cursos-incluidos">
       <div class="kuder-resumen-titulo">Cursos incluidos en este informe (${resumenPorCurso.length})</div>
-      <div class="kuder-cursos-chips">
-        ${resumenPorCurso
-          .map((r) => `<span class="kuder-curso-chip">${r.colegio || "—"} · ${r.curso || "—"} <b>(${r.total})</b></span>`)
-          .join("")}
-      </div>
+      <div class="kuder-cursos-chips">${chips}</div>
     </div>`;
 }
 
@@ -582,13 +594,22 @@ function construirIntroResultadosGlobalKuder(nCursos) {
 function construirPaginaResultadosGlobalKuder(datosCursoContinuacion, resumenPorCurso, conteos, total) {
   const contenedor = document.createElement("div");
   contenedor.className = "informe-page";
-  contenedor.innerHTML = `
+  const armar = (claseGrafico) => `
     ${construirLineaCursoKuder(datosCursoContinuacion)}
     ${construirCursosIncluidosKuder(resumenPorCurso)}
     ${construirIntroResultadosGlobalKuder(resumenPorCurso.length)}
-    ${construirBloqueResultadosKuder(conteos, total)}
+    <div class="${claseGrafico}">${construirBloqueResultadosKuder(conteos, total)}</div>
     ${construirFooterKuder()}
   `;
+  // con muchos cursos la lista de "cursos incluidos" ocupa más líneas: si la hoja no
+  // alcanza, las barras del gráfico se hacen un poco más bajas (nunca se corta la hoja)
+  const limite = ALTO_PAGINA_PX - PADDING_INFERIOR_PX;
+  let html = armar("");
+  for (const clase of ["kuder-chart-compacto", "kuder-chart-mini"]) {
+    if (medirAlturaFragmento(html) <= limite) break;
+    html = armar(clase);
+  }
+  contenedor.innerHTML = html;
   return contenedor;
 }
 
