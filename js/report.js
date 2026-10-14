@@ -430,27 +430,29 @@ function construirTarjetaArea(area, textoDiverso = null) {
 // las áreas de interés; en los casos especiales (ninguna área destacó, o
 // destacaron las 6) se cuenta ese resultado en una frase corta y, sin
 // complicarse más, se muestran las 6 áreas igual que si todas hubiesen salido.
-function construirEncabezadoResultados(estudiante, areas, casoEspecial) {
-  let mensaje;
-  if (casoEspecial === "ninguna") {
-    mensaje = mensajeSinAreaDestacada(areas, estudiante.puntajes, { ordenadas: true });
-  } else if (casoEspecial === "todas") {
-    mensaje = "¡Tus respuestas destacaron en las 6 áreas! Esto podría indicar que te interesan muchas cosas a la vez. Aquí tienes la información de todas:";
-  } else {
-    mensaje = `De acuerdo a tus respuestas, ${areas.length === 1 ? "tu área de interés es" : "tus áreas de interés son"}:`;
+function mensajeResultados(estudiante, areas, casoEspecial) {
+  if (casoEspecial === "ninguna") return mensajeSinAreaDestacada(areas, estudiante.puntajes, { ordenadas: true });
+  if (casoEspecial === "todas") {
+    return "¡Tus respuestas destacaron en las 6 áreas! Esto podría indicar que te interesan muchas cosas a la vez. Aquí tienes la información de todas:";
   }
+  return `De acuerdo a tus respuestas, ${areas.length === 1 ? "tu área de interés es" : "tus áreas de interés son"}:`;
+}
+
+function construirEncabezadoResultados(estudiante, areas, casoEspecial) {
   return `
     ${construirCajaEstudiante(estudiante)}
-    <div class="informe-intro"><p>${mensaje}</p></div>
+    <div class="informe-intro"><p>${mensajeResultados(estudiante, areas, casoEspecial)}</p></div>
   `;
 }
 
-// encabezado liviano para páginas de continuación (3ra hoja en adelante): solo la
-// línea de nombre/RUT, sin la credencial completa — así, si una hoja se suelta del
-// resto, igual se sabe de quién es, sin ocupar tanto espacio como la credencial.
-function construirEncabezadoContinuacion(estudiante) {
+// encabezado de las páginas de continuación (3ra hoja en adelante): la línea de
+// nombre/RUT (sin la credencial completa, que ocupa más) y la MISMA frase con que
+// empiezan los resultados, para que cada hoja se lea como parte de los mismos
+// resultados; si una hoja se suelta del resto, igual se sabe de quién es.
+function construirEncabezadoContinuacion(estudiante, areas, casoEspecial) {
   return `
     ${construirLineaEstudiante(estudiante, { inicioPagina: true })}
+    <div class="informe-intro"><p>${mensajeResultados(estudiante, areas, casoEspecial)}</p></div>
   `;
 }
 
@@ -552,6 +554,136 @@ function cortarEnOrden(alturas, disponiblePrimera, disponibleCont) {
   return grupos;
 }
 
+// Reparte las tarjetas de área en hojas probando TODOS los repartos posibles (son
+// pocas tarjetas: hasta 7 se revisan todas las combinaciones; con más, ver abajo).
+// Se elige, en este orden:
+// 1. la menor cantidad de hojas;
+// 2. que ninguna hoja que no sea la última quede medio vacía (se minimiza el mayor
+//    espacio en blanco de esas hojas): así no queda una hoja con una sola tarjeta y
+//    media hoja en blanco seguida de otra llena — si una tarjeta tiene que ir sola, va
+//    en la última hoja;
+// 3. a igualdad, el reparto que más respeta el orden original (de mayor a menor puntaje).
+// La primera hoja de resultados tiene menos espacio (lleva la credencial), y la última
+// no lleva el aviso "Continúa en la página siguiente"; cada hoja se calcula con lo suyo.
+// "altos": { primera, cont, aviso } = alto del encabezado de la primera hoja, del de
+// las siguientes y del aviso del final.
+const MARGEN_SEGURIDAD_TARJETAS_PX = 20;
+const TRAMO_BLANCO_PX = 60; // dos repartos con blancos parecidos (±60 px) se consideran iguales
+
+function repartirTarjetasEnHojas(alturas, altos, { enOrden = false } = {}) {
+  const n = alturas.length;
+  if (!n) return [];
+  const capacidad = (esPrimera, esUltima) =>
+    ALTO_PAGINA_PX - PADDING_INFERIOR_PX - (esPrimera ? altos.primera : altos.cont) - (esUltima ? 0 : altos.aviso) - MARGEN_SEGURIDAD_TARJETAS_PX;
+  const costo = (grupo) => grupo.reduce((acc, i) => acc + alturas[i], 0) + COSTE_CONTENEDOR_TOP_PX + COSTE_GAP_PX * (grupo.length - 1);
+  // sin cambiar el orden, cuando importa (8° básico sin área destacada: la frase dice
+  // que van de mayor a menor puntaje)
+  if (enOrden) return cortarEnOrden(alturas, capacidad(true, false), capacidad(false, false));
+  // con más de 7 tarjetas (Kuder sin área destacada: las 10 áreas) hay demasiadas
+  // combinaciones para revisarlas todas; se usa un cálculo equivalente por grupos
+  if (n > 7) return repartirMuchasTarjetas(alturas, capacidad, costo);
+
+  const capMax = Math.max(capacidad(true, true), capacidad(false, true));
+  let mejor = null;
+  const compara = (a, b) => {
+    for (let k = 0; k < a.length; k++) if (a[k] !== b[k]) return a[k] - b[k];
+    return 0;
+  };
+  const evaluarOrden = (hojas) => {
+    let peorBlanco = 0;
+    for (let p = 0; p < hojas.length; p++) {
+      const esUltima = p === hojas.length - 1;
+      const cap = capacidad(p === 0, esUltima);
+      const c = costo(hojas[p]);
+      if (hojas[p].length > 1 && c > cap) return; // no cabe (una tarjeta sola siempre se acepta)
+      if (!esUltima) peorBlanco = Math.max(peorBlanco, cap - c);
+    }
+    const lectura = hojas.flat();
+    let inversiones = 0;
+    for (let i = 0; i < lectura.length; i++) for (let j = i + 1; j < lectura.length; j++) if (lectura[i] > lectura[j]) inversiones++;
+    const puntaje = [hojas.length, Math.round(peorBlanco / TRAMO_BLANCO_PX), inversiones, peorBlanco];
+    if (!mejor || compara(puntaje, mejor.puntaje) < 0) mejor = { puntaje, hojas: hojas.map((h) => [...h]) };
+  };
+  // todas las formas de ordenar las hojas de un reparto
+  const permutar = (bloques, k = 0) => {
+    if (k === bloques.length) return evaluarOrden(bloques);
+    for (let i = k; i < bloques.length; i++) {
+      [bloques[k], bloques[i]] = [bloques[i], bloques[k]];
+      permutar(bloques, k + 1);
+      [bloques[k], bloques[i]] = [bloques[i], bloques[k]];
+    }
+  };
+  // todos los repartos de las tarjetas en grupos (cada grupo, en el orden original)
+  const asignacion = new Array(n).fill(0);
+  const visitar = (i, maxBloque) => {
+    if (i === n) {
+      const bloques = Array.from({ length: maxBloque + 1 }, () => []);
+      asignacion.forEach((b, idx) => bloques[b].push(idx));
+      if (bloques.some((b) => b.length > 1 && costo(b) > capMax)) return;
+      if (mejor && bloques.length > mejor.puntaje[0]) return;
+      permutar(bloques);
+      return;
+    }
+    for (let b = 0; b <= maxBloque + 1; b++) {
+      asignacion[i] = b;
+      visitar(i + 1, Math.max(maxBloque, b));
+    }
+  };
+  asignacion[0] = 0;
+  visitar(1, 0);
+  return mejor ? mejor.hojas : alturas.map((_, i) => [i]);
+}
+
+// lo mismo que repartirTarjetasEnHojas, para muchas tarjetas: se calcula hoja por hoja
+// qué grupo de las tarjetas que faltan conviene poner (menos hojas, sin hojas medio
+// vacías al medio y, a igualdad, respetando el orden), recordando lo ya calculado.
+function repartirMuchasTarjetas(alturas, capacidad, costo) {
+  const n = alturas.length;
+  const todas = (1 << n) - 1;
+  const indices = (mask) => {
+    const r = [];
+    for (let i = 0; i < n; i++) if (mask & (1 << i)) r.push(i);
+    return r;
+  };
+  const costoMask = new Map();
+  const costoDe = (mask) => {
+    if (!costoMask.has(mask)) costoMask.set(mask, costo(indices(mask)));
+    return costoMask.get(mask);
+  };
+  const compara = (a, b) => {
+    for (let k = 0; k < a.length; k++) if (a[k] !== b[k]) return a[k] - b[k];
+    return 0;
+  };
+  const memo = new Map();
+  const mejorDesde = (resto, esPrimera) => {
+    if (resto === 0) return { puntaje: [0, 0, 0, 0], hojas: [] };
+    const clave = resto * 2 + (esPrimera ? 1 : 0);
+    if (memo.has(clave)) return memo.get(clave);
+    let mejor = null;
+    // cada grupo posible de las tarjetas que faltan, como la hoja que sigue
+    for (let sub = resto; sub > 0; sub = (sub - 1) & resto) {
+      const esUltima = sub === resto;
+      const cap = capacidad(esPrimera, esUltima);
+      const c = costoDe(sub);
+      const sola = (sub & (sub - 1)) === 0;
+      if (!sola && c > cap) continue;
+      const despues = mejorDesde(resto & ~sub, false);
+      const blanco = esUltima ? 0 : Math.max(0, cap - c);
+      let inversiones = 0;
+      for (let i = 0; i < n; i++) {
+        if (!(sub & (1 << i))) continue;
+        for (let j = 0; j < i; j++) if (resto & ~sub & (1 << j)) inversiones++;
+      }
+      const peor = Math.max(blanco, despues.puntaje[3]);
+      const puntaje = [despues.puntaje[0] + 1, Math.round(peor / TRAMO_BLANCO_PX), despues.puntaje[2] + inversiones, peor];
+      if (!mejor || compara(puntaje, mejor.puntaje) < 0) mejor = { puntaje, hojas: [indices(sub), ...despues.hojas] };
+    }
+    memo.set(clave, mejor);
+    return mejor;
+  };
+  return mejorDesde(todas, true).hojas;
+}
+
 function construirPaginasResultados(estudiante) {
   const areasInteres = calcularAreasDeInteres(estudiante.puntajes);
   // caso especial: ninguna área destacó, o destacaron absolutamente todas — en ambos
@@ -574,7 +706,7 @@ function construirPaginasResultados(estudiante) {
         : areasInteres;
 
   const htmlEncabezado = construirEncabezadoResultados(estudiante, areas, casoEspecial);
-  const htmlEncabezadoCont = construirEncabezadoContinuacion(estudiante);
+  const htmlEncabezadoCont = construirEncabezadoContinuacion(estudiante, areas, casoEspecial);
   const htmlAviso = construirAvisoContinua();
   const textosDiversos = casoEspecial === "ninguna" ? descripcionesAreasDiversas(areas, estudiante.puntajes) : [];
   const htmlTarjetas = areas.map((a, i) => construirTarjetaArea(a, textosDiversos[i] || null));
@@ -585,21 +717,17 @@ function construirPaginasResultados(estudiante) {
   // páginas intermedias necesitan espacio reservado para el aviso de "continúa".
   const altoReservaInferior = medirAlturaFragmento(htmlAviso);
   const alturasTarjetas = htmlTarjetas.map((html) =>
-    medirAlturaFragmento(`<div class="informe-areas" style="margin:0;">${html}</div>`)
+    medirAlturaFragmento(`<div class="informe-areas" style="margin-top:0;">${html}</div>`)
   );
 
-  // margen de seguridad: las alturas se miden por partes por separado (encabezado,
-  // tarjetas, pie) y luego se suman, así que pequeñas diferencias de redondeo entre
-  // esa medición y el armado final pueden acumularse — este margen evita que eso
-  // empuje el contenido a una hoja extra casi vacía.
-  const MARGEN_SEGURIDAD_PX = 20;
-  const disponiblePrimera = ALTO_PAGINA_PX - PADDING_INFERIOR_PX - altoEncabezado - altoReservaInferior - MARGEN_SEGURIDAD_PX;
-  const disponibleCont = ALTO_PAGINA_PX - PADDING_INFERIOR_PX - altoEncabezadoCont - altoReservaInferior - MARGEN_SEGURIDAD_PX;
-
-  const grupos =
-    casoEspecial === "ninguna"
-      ? cortarEnOrden(alturasTarjetas, disponiblePrimera, disponibleCont)
-      : empaquetarTarjetas(alturasTarjetas, Math.min(disponiblePrimera, disponibleCont));
+  // reparto de las tarjetas en hojas (ver repartirTarjetasEnHojas): sin área destacada,
+  // las 6 áreas van de mayor a menor puntaje (así lo dice la frase de arriba), así que
+  // se reparten sin cambiar ese orden
+  const grupos = repartirTarjetasEnHojas(
+    alturasTarjetas,
+    { primera: altoEncabezado, cont: altoEncabezadoCont, aviso: altoReservaInferior },
+    { enOrden: casoEspecial === "ninguna" }
+  );
 
   // el presupuesto de arriba es una estimación (suma de fragmentos medidos por
   // separado); antes de armar las páginas de verdad, se arma cada grupo tal cual
@@ -687,17 +815,6 @@ async function paginasAPdfBlob(paginas) {
         restante -= trozoAlto;
       }
     }
-  }
-
-  // número de página abajo a la derecha, chico y en gris claro, en el margen inferior
-  // que dejan libre todas las hojas (PADDING_INFERIOR_PX)
-  const totalHojas = pdf.getNumberOfPages();
-  for (let i = 1; i <= totalHojas; i++) {
-    pdf.setPage(i);
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(7);
-    pdf.setTextColor(165, 158, 178);
-    pdf.text(`Página ${i} de ${totalHojas}`, pageW - 24, pageH - 10, { align: "right" });
   }
 
   host.innerHTML = "";

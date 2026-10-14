@@ -318,16 +318,25 @@ function seleccionarAreasInformeKuder(puntajes) {
   return { areas: [...AREAS_KUDER].sort(porPuntaje), caso: "ninguna" };
 }
 
+function mensajeResultadosKuder(estudiante, areas, caso) {
+  if (caso === "ninguna") return mensajeSinAreaDestacada(areas, estudiante.puntajes);
+  return `De acuerdo a tus respuestas, ${areas.length === 1 ? "tu área de interés es" : "tus áreas de interés son"}:`;
+}
+
 function construirEncabezadoResultadosKuder(estudiante, areas, caso) {
-  let mensaje;
-  if (caso === "ninguna") {
-    mensaje = mensajeSinAreaDestacada(areas, estudiante.puntajes);
-  } else {
-    mensaje = `De acuerdo a tus respuestas, ${areas.length === 1 ? "tu área de interés es" : "tus áreas de interés son"}:`;
-  }
   return `
     ${construirCajaEstudianteKuder(estudiante)}
-    <div class="informe-intro"><p>${mensaje}</p></div>
+    <div class="informe-intro"><p>${mensajeResultadosKuder(estudiante, areas, caso)}</p></div>
+  `;
+}
+
+// hojas de resultados siguientes: la línea con N°, nombre, RUT, curso y colegio, y la
+// MISMA frase con que empiezan los resultados (así cada hoja se lee como parte de los
+// mismos resultados)
+function construirEncabezadoContinuacionKuder(estudiante, areas, caso) {
+  return `
+    ${construirLineaEstudianteKuder(estudiante, { inicioPagina: true })}
+    <div class="informe-intro"><p>${mensajeResultadosKuder(estudiante, areas, caso)}</p></div>
   `;
 }
 
@@ -341,7 +350,7 @@ function construirPaginasResultadosKuder(estudiante) {
   const { areas, caso } = seleccionarAreasInformeKuder(estudiante.puntajes);
 
   const htmlEncabezado = construirEncabezadoResultadosKuder(estudiante, areas, caso);
-  const htmlEncabezadoCont = construirLineaEstudianteKuder(estudiante, { inicioPagina: true });
+  const htmlEncabezadoCont = construirEncabezadoContinuacionKuder(estudiante, areas, caso);
   const htmlAviso = construirAvisoContinua();
   const textosDiversos = caso === "ninguna" ? descripcionesAreasDiversas(areas, estudiante.puntajes) : [];
   const htmlTarjetas = areas.map((a, i) => construirTarjetaAreaIndividualKuder(a, false, textosDiversos[i] || null));
@@ -350,13 +359,16 @@ function construirPaginasResultadosKuder(estudiante) {
   const altoEncabezado = medirAlturaFragmento(htmlEncabezado);
   const altoEncabezadoCont = medirAlturaFragmento(htmlEncabezadoCont);
   const altoReservaInferior = medirAlturaFragmento(htmlAviso);
-  const alturasTarjetas = htmlTarjetas.map((html) => medirAlturaFragmento(`<div class="informe-areas" style="margin:0;">${html}</div>`));
+  const alturasTarjetas = htmlTarjetas.map((html) => medirAlturaFragmento(`<div class="informe-areas" style="margin-top:0;">${html}</div>`));
 
-  const MARGEN_SEGURIDAD_PX = 20;
-  const disponiblePrimera = ALTO_PAGINA_PX - PADDING_INFERIOR_PX - altoEncabezado - altoReservaInferior - MARGEN_SEGURIDAD_PX;
-  const disponibleCont = ALTO_PAGINA_PX - PADDING_INFERIOR_PX - altoEncabezadoCont - altoReservaInferior - MARGEN_SEGURIDAD_PX;
-  const grupos = empaquetarTarjetas(alturasTarjetas, Math.min(disponiblePrimera, disponibleCont));
+  // reparto de las tarjetas en hojas: se prueban todos los repartos posibles y se elige
+  // el de menos hojas y sin hojas medio vacías al medio (ver repartirTarjetasEnHojas,
+  // js/report.js)
+  const grupos = repartirTarjetasEnHojas(alturasTarjetas, { primera: altoEncabezado, cont: altoEncabezadoCont, aviso: altoReservaInferior });
 
+  // el reparto se calcula con altos medidos por partes; antes de armar las hojas se
+  // mide cada una tal cual va a quedar y, si alguna igual no cabe, su última tarjeta
+  // pasa a la hoja siguiente
   const LIMITE_PAGINA_PX = ALTO_PAGINA_PX - PADDING_INFERIOR_PX;
   function armarHtmlPagina(indices, esPrimera, esUltima, tarjetas = htmlTarjetas) {
     return `
@@ -364,18 +376,6 @@ function construirPaginasResultadosKuder(estudiante) {
       <div class="informe-areas">${indices.map((i) => tarjetas[i]).join("")}</div>
       ${esUltima ? "" : htmlAviso}
     `;
-  }
-
-  // la primera hoja de resultados tiene menos espacio (lleva la credencial), así que
-  // antes de ajustar se elige para ella el primer grupo de tarjetas que de verdad cabe
-  // ahí (medido tal cual va a quedar); si ninguno cabe, sigue el ajuste de abajo. Así
-  // se evita que la primera hoja termine con una sola tarjeta y mucho espacio libre
-  // cuando otra pareja de tarjetas sí cabía en ella.
-  if (grupos.length > 1) {
-    const idxQueCabe = grupos.findIndex(
-      (g) => medirAlturaFragmento(armarHtmlPagina(g, true, false)) <= LIMITE_PAGINA_PX
-    );
-    if (idxQueCabe > 0) grupos.unshift(grupos.splice(idxQueCabe, 1)[0]);
   }
 
   for (let i = 0; i < grupos.length; i++) {
