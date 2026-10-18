@@ -251,14 +251,12 @@ function mejorProporcionCarreras(clave, armarCuadros) {
   return mejor;
 }
 
-// barra morada de la primera hoja de todos los informes (de los dos tests, individuales,
-// grupales, globales e interno), con los logos 2027 en blanco: UMAG a la izquierda y el
-// eslogan "Quédate para llegar más lejos" en el espacio libre de la derecha
+// barra morada (pareja, sin degradado) de la primera hoja de todos los informes (de los
+// dos tests, individuales, grupales, globales e interno), con los logos 2027 en blanco:
+// UMAG a la izquierda y el eslogan "Quédate para llegar más lejos" a la derecha
 function construirBanner(titulo, subtitulo) {
   return `
     <div class="informe-banner">
-      <div class="banner-wave banner-wave-1"></div>
-      <div class="banner-wave banner-wave-2"></div>
       <img src="${LOGO_UMAG_2027_BLANCO}" alt="UMAG · Universidad de Magallanes" class="informe-logo-blanco" />
       <div class="informe-banner-sep"></div>
       <div class="informe-banner-text">
@@ -425,7 +423,7 @@ function construirCajaEstudiante(estudiante) {
         <div class="id-card-avatar">${ICONO_AVATAR_ANONIMO}</div>
         <div class="id-card-datos">
           <div class="id-card-nombre">${numero ? `<span class="id-card-num">N° ${numero}</span>` : ""}${capitalizarNombre(estudiante.nombre) || "—"}</div>
-          <div class="id-card-sub">${(estudiante.curso || "—") + (estudiante.letra || "")} · ${estudiante.colegio || "—"}</div>
+          <div class="id-card-sub">${[estudiante.curso, estudiante.letra].filter(Boolean).join(" ") || "—"} · ${estudiante.colegio || "—"}</div>
           <div class="id-card-sub">RUT: ${estudiante.rut || "—"}</div>
         </div>
         <div class="id-card-logo"><img src="${LOGO_UMAG_DATAURI}" alt="UMAG" /></div>

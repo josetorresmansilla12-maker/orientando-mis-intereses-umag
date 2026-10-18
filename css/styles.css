@@ -579,7 +579,9 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
 .informe-banner {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(100deg, #5b3b8c 0%, #8a6bc0 100%);
+  /* morado parejo (sin degradado ni círculos decorativos): se imprime en blanco y
+     negro, y así queda un gris uniforme donde los logos blancos resaltan */
+  background: var(--morado);
   border-radius: 14px;
   margin: 24px 30px 0;
   padding: 20px 26px;
@@ -587,23 +589,6 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
   align-items: center;
   gap: 14px;
 }
-.banner-wave {
-  position: absolute;
-  border-radius: 46% 54% 61% 39% / 51% 44% 56% 49%;
-  background: rgba(255, 255, 255, 0.1);
-}
-.banner-wave-1 { width: 260px; height: 260px; right: -70px; top: -90px; transform: rotate(-12deg); }
-.banner-wave-2 { width: 170px; height: 170px; right: 40px; bottom: -110px; transform: rotate(20deg); background: rgba(255,255,255,0.08); }
-.informe-logo-badge {
-  background: white;
-  border-radius: 8px;
-  padding: 6px 10px;
-  display: flex;
-  align-items: center;
-  position: relative;
-  z-index: 1;
-}
-.informe-logo { height: 34px; display: block; }
 .informe-banner-sep {
   width: 1px;
   align-self: stretch;
@@ -757,7 +742,7 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
 /* ---------- credencial institucional del estudiante (resultados) ---------- */
 .id-card-wrap { margin: 24px 30px 0; }
 .id-card {
-  background: linear-gradient(100deg, var(--morado) 0%, var(--morado-claro) 100%);
+  background: var(--morado); /* parejo, igual que la barra de la primera hoja */
   border-radius: 12px;
   padding: 12px 16px;
   display: flex;
@@ -796,15 +781,14 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
   font-weight: 600;
   color: rgba(255, 255, 255, 0.9);
 }
+/* logo UMAG 2027 en blanco directo sobre el morado, igual que en la barra de la
+   primera hoja (ancho y alto fijos, por si la imagen no terminó de cargar al medir) */
 .id-card-logo {
-  background: white;
-  border-radius: 8px;
-  padding: 8px 12px;
   display: flex;
   align-items: center;
   flex-shrink: 0;
 }
-.id-card-logo img { height: 34px; display: block; }
+.id-card-logo img { width: 102px; height: 40px; display: block; }
 
 .informe-intro {
   margin: 18px 30px 0;
