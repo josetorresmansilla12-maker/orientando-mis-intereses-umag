@@ -106,19 +106,16 @@ function construirSupuestosPrincipiosKuder() {
 
 // carreras UMAG de un área en formato compacto para la hoja 1, en dos grupos con su
 // rótulo: "Carreras profesionales:" y "Técnico de Nivel Superior en:" (este último
-// escrito una sola vez en vez de repetirlo en cada carrera). Las pedagogías se juntan
-// en una sola frase ("Pedagogías en A, B y C"), sin omitir ninguna, para que las 10
-// áreas quepan en la misma hoja.
+// escrito una sola vez en vez de repetirlo en cada carrera). Las carreras de una misma
+// familia van juntas ("Ingenierías (Construcción, Electricidad)", "Pedagogías (Inglés,
+// Matemática)"; ver agruparCarreras en js/report.js), sin omitir ninguna, para que las
+// 10 áreas quepan en la misma hoja.
 function textoCarrerasUmagCompactoKuder(area) {
   const { profesionales, tecnicas } = clasificarCarreras(area.carrerasUMAG);
   const PREFIJO_TNS = /^T[eé]cnico de Nivel Superior en\s+/i;
-  const PREFIJO_PED = /^Pedagog[ií]a en\s+/i;
-  const pedagogias = profesionales.filter((c) => PREFIJO_PED.test(c)).map((c) => c.replace(PREFIJO_PED, ""));
-  const otras = profesionales.filter((c) => !PREFIJO_PED.test(c));
-  if (pedagogias.length === 1) otras.push(`Pedagogía en ${pedagogias[0]}`);
-  else if (pedagogias.length > 1) otras.push(`Pedagogías en ${unirListaKuder(pedagogias, "y")}`);
   const partes = [];
-  if (otras.length) partes.push(`<div><b>Carreras profesionales:</b> ${otras.join(", ")}.</div>`);
+  // las de una misma familia van juntas: "Ingenierías (Construcción, Electricidad)"
+  if (profesionales.length) partes.push(`<div><b>Carreras profesionales:</b> ${textoCarrerasEnLinea(profesionales)}.</div>`);
   if (tecnicas.length) {
     partes.push(`<div><b>Técnico de Nivel Superior en:</b> ${tecnicas.map((c) => c.replace(PREFIJO_TNS, "")).join(", ")}.</div>`);
   }
@@ -288,7 +285,6 @@ function construirCajaEstudianteKuder(estudiante) {
 // sin área destacada (ninguna llegó a 7), la descripción armada para ese caso
 // (descripcionesAreasDiversas, js/report.js).
 function construirTarjetaAreaIndividualKuder(area, espaciosa, textoDiverso = null) {
-  const umagAncho = area.carrerasUMAG.length >= 9;
   return `
     <div class="area-card${espaciosa ? " kuder-area-card-espaciosa" : ""}" style="border-left-color:${area.color};">
       <div class="area-card-header">
@@ -296,9 +292,8 @@ function construirTarjetaAreaIndividualKuder(area, espaciosa, textoDiverso = nul
         <h3 style="color:${area.color};">${area.nombre}</h3>
       </div>
       <p class="area-card-desc">${textoDiverso || area.descripcionEstudiante}</p>
-      <div class="area-card-carreras-split${umagAncho ? " kuder-split-umag-ancho" : ""}">
-        ${construirListaCarreras("Tus Carreras UMAG", area.carrerasUMAG, "umag")}
-        ${construirListaCarreras("Otras carreras", area.carrerasOtras)}
+      <div class="area-card-carreras-split">
+        ${construirCuadrosCarrerasResultados(`kuder|${area.id}`, area)}
       </div>
     </div>`;
 }
@@ -330,14 +325,11 @@ function construirEncabezadoResultadosKuder(estudiante, areas, caso) {
   `;
 }
 
-// hojas de resultados siguientes: la línea con N°, nombre, RUT, curso y colegio, y la
-// MISMA frase con que empiezan los resultados (así cada hoja se lee como parte de los
-// mismos resultados)
-function construirEncabezadoContinuacionKuder(estudiante, areas, caso) {
-  return `
-    ${construirLineaEstudianteKuder(estudiante, { inicioPagina: true })}
-    <div class="informe-intro"><p>${mensajeResultadosKuder(estudiante, areas, caso)}</p></div>
-  `;
+// hojas de resultados siguientes: solo la línea con N°, nombre, RUT, curso y colegio
+// (la frase de los resultados va solo en la primera: el informe se imprime a doble
+// cara y repetida en cada hoja se vería demasiado)
+function construirEncabezadoContinuacionKuder(estudiante) {
+  return construirLineaEstudianteKuder(estudiante, { inicioPagina: true });
 }
 
 // mismo reparto de tarjetas en hojas que el informe de 8° (js/report.js:
@@ -350,7 +342,7 @@ function construirPaginasResultadosKuder(estudiante) {
   const { areas, caso } = seleccionarAreasInformeKuder(estudiante.puntajes);
 
   const htmlEncabezado = construirEncabezadoResultadosKuder(estudiante, areas, caso);
-  const htmlEncabezadoCont = construirEncabezadoContinuacionKuder(estudiante, areas, caso);
+  const htmlEncabezadoCont = construirEncabezadoContinuacionKuder(estudiante);
   const htmlAviso = construirAvisoContinua();
   const textosDiversos = caso === "ninguna" ? descripcionesAreasDiversas(areas, estudiante.puntajes) : [];
   const htmlTarjetas = areas.map((a, i) => construirTarjetaAreaIndividualKuder(a, false, textosDiversos[i] || null));
@@ -393,11 +385,11 @@ function construirPaginasResultadosKuder(estudiante) {
   return grupos.map((indices, idx) => {
     const esPrimera = idx === 0;
     const esUltima = idx === grupos.length - 1;
+    // en una hoja con espacio de sobra, las tarjetas van en la versión "espaciosa" (más
+    // aire interno), para no dejar un espacio en blanco al final; solo si de verdad cabe
     let html = armarHtmlPagina(indices, esPrimera, esUltima);
-    if (indices.length === 1) {
-      const htmlEspacioso = armarHtmlPagina(indices, esPrimera, esUltima, htmlTarjetasEspaciosas);
-      if (medirAlturaFragmento(htmlEspacioso) <= LIMITE_PAGINA_PX) html = htmlEspacioso;
-    }
+    const htmlEspacioso = armarHtmlPagina(indices, esPrimera, esUltima, htmlTarjetasEspaciosas);
+    if (medirAlturaFragmento(htmlEspacioso) <= LIMITE_PAGINA_PX) html = htmlEspacioso;
     const contenedor = document.createElement("div");
     contenedor.className = "informe-page";
     contenedor.innerHTML = html;

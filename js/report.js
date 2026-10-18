@@ -144,33 +144,129 @@ function clasificarCarreras(lista) {
   return { profesionales, tecnicas };
 }
 
-function construirListaBulletsCarreras(lista) {
-  const { profesionales, tecnicas } = clasificarCarreras(lista);
-  return `
-    ${
-      profesionales.length
-        ? `<div class="carreras-subtitulo">Carreras profesionales</div><ul class="carreras-lista-bullets">${profesionales.map((c) => `<li>${c}</li>`).join("")}</ul>`
-        : ""
+// ==================== carreras agrupadas por familia ====================
+// Cuando una lista trae varias carreras de una misma familia, van juntas bajo un solo
+// encabezado en vez de repetir la palabra: "Ingenierías: Construcción, Electricidad,
+// Mecánica" en vez de "Ingeniería en Construcción, Ingeniería en Electricidad,
+// Ingeniería Mecánica". Ahorra mucho espacio (y hojas). Una carrera sola de su familia
+// queda con su nombre completo. El grupo va donde aparece su primera carrera.
+// "enLinea": cómo se nombra el grupo dentro de una frase (hoja 1 de Kuder):
+// "Ingenierías (Construcción, Electricidad)".
+const FAMILIAS_CARRERAS = [
+  { re: /^T[eé]cnico de Nivel Superior en\s+/i, etiqueta: "Técnico de Nivel Superior en", enLinea: "Técnico de Nivel Superior" },
+  { re: /^T[eé]cnico en\s+/i, etiqueta: "Técnico en", enLinea: "Técnico" },
+  { re: /^Ingenier[ií]a Civil(?:\s+en)?\s+/i, etiqueta: "Ingenierías Civiles", enLinea: "Ingenierías Civiles" },
+  { re: /^Ingenier[ií]a(?:\s+en)?\s+/i, etiqueta: "Ingenierías", enLinea: "Ingenierías" },
+  { re: /^Pedagog[ií]a en\s+/i, etiqueta: "Pedagogías en", enLinea: "Pedagogías" },
+  { re: /^Licenciatura en\s+/i, etiqueta: "Licenciaturas en", enLinea: "Licenciaturas" },
+  { re: /^Diseño\s+/i, etiqueta: "Diseño", enLinea: "Diseño" },
+];
+
+// [{ texto } | { familia, items: [...] }], en el orden de la lista
+function agruparCarreras(lista) {
+  const familiaDe = (c) => FAMILIAS_CARRERAS.find((f) => f.re.test(c)) || null;
+  const cuantas = new Map();
+  lista.forEach((c) => {
+    const f = familiaDe(c);
+    if (f) cuantas.set(f, (cuantas.get(f) || 0) + 1);
+  });
+  const segmentos = [];
+  const grupos = new Map();
+  lista.forEach((c) => {
+    const f = familiaDe(c);
+    if (f && cuantas.get(f) >= 2) {
+      if (!grupos.has(f)) {
+        const g = { familia: f, items: [] };
+        grupos.set(f, g);
+        segmentos.push(g);
+      }
+      grupos.get(f).items.push(c.replace(f.re, ""));
+    } else {
+      segmentos.push({ texto: c });
     }
-    ${
-      tecnicas.length
-        ? `<div class="carreras-subtitulo">Carreras técnico profesional</div><ul class="carreras-lista-bullets">${tecnicas.map((c) => `<li>${c}</li>`).join("")}</ul>`
-        : ""
-    }`;
+  });
+  return segmentos;
 }
 
+// cada carrera (o grupo) como un punto de la lista
+function itemsCarrerasHtml(lista) {
+  return agruparCarreras(lista)
+    .map((s) => (s.items ? `<li><span class="carrera-familia">${s.familia.etiqueta}:</span> ${s.items.join(", ")}</li>` : `<li>${s.texto}</li>`))
+    .join("");
+}
+
+// la lista dentro de una frase: "Agronomía, Ingenierías (Construcción, Electricidad), Arquitectura"
+function textoCarrerasEnLinea(lista) {
+  return agruparCarreras(lista)
+    .map((s) => (s.items ? `<span class="carrera-familia">${s.familia.enLinea}</span> (${s.items.join(", ")})` : s.texto))
+    .join(", ");
+}
+
+// "columnas": la lista va en dos columnas (cuando el cuadro es ancho y trae muchos puntos)
+function construirListaBulletsCarreras(lista, { columnas = false } = {}) {
+  const { profesionales, tecnicas } = clasificarCarreras(lista);
+  const ul = (items) => {
+    const n = agruparCarreras(items).length;
+    return `<ul class="carreras-lista-bullets${columnas && n >= 6 ? " carreras-lista-2col" : ""}">${itemsCarrerasHtml(items)}</ul>`;
+  };
+  return `
+    ${profesionales.length ? `<div class="carreras-subtitulo">Carreras profesionales</div>${ul(profesionales)}` : ""}
+    ${tecnicas.length ? `<div class="carreras-subtitulo">Carreras técnico profesional</div>${ul(tecnicas)}` : ""}`;
+}
+
+// ==================== proporción de los dos cuadros de carreras ====================
+// En cada tarjeta de área van dos cuadros lado a lado ("Tus Carreras UMAG" y "Otras
+// carreras", o en el informe interno "Carreras que UMAG podría incorporar"). Para que
+// la tarjeta quede pareja y sin espacio en blanco dentro de los cuadros, el ancho de
+// cada uno se elige midiendo: se prueban varias proporciones (y, para listas largas,
+// dos columnas) y se usa la que deja la tarjeta más baja y los dos cuadros de alto más
+// parecido. Se calcula una sola vez por área y tipo de tarjeta.
+const cacheProporcionCarreras = new Map();
+const PROPORCIONES_CARRERAS = [1, 1.25, 1.5, 1.75, 2, 2.3, 2.7, 3.2];
+
+// "armarCuadros(flex, columnas)" devuelve el HTML de los dos cuadros (.carreras-mini)
+function mejorProporcionCarreras(clave, armarCuadros) {
+  if (cacheProporcionCarreras.has(clave)) return cacheProporcionCarreras.get(clave);
+  const host = document.getElementById("render-offscreen");
+  let mejor = { flex: 1, columnas: false };
+  if (host) {
+    let mejorPuntaje = null;
+    for (const flex of PROPORCIONES_CARRERAS) {
+      for (const columnas of flex >= 1.5 ? [false, true] : [false]) {
+        host.innerHTML = `<div class="informe-page"><div class="informe-areas" style="margin-top:0;"><div class="area-card"><div class="area-card-carreras-split" style="align-items:flex-start;">${armarCuadros(flex, columnas)}</div></div></div></div>`;
+        const cajas = [...host.querySelectorAll(".carreras-mini")].map((c) => c.getBoundingClientRect().height);
+        const alto = Math.max(...cajas);
+        const diferencia = Math.max(...cajas) - Math.min(...cajas);
+        // primero la tarjeta más baja (de a 6 px), después los cuadros más parejos
+        const puntaje = [Math.round(alto / 6), diferencia];
+        if (!mejorPuntaje || puntaje[0] < mejorPuntaje[0] || (puntaje[0] === mejorPuntaje[0] && puntaje[1] < mejorPuntaje[1])) {
+          mejorPuntaje = puntaje;
+          mejor = { flex, columnas };
+        }
+      }
+    }
+    host.innerHTML = "";
+  }
+  cacheProporcionCarreras.set(clave, mejor);
+  return mejor;
+}
+
+// barra morada de la primera hoja de todos los informes (de los dos tests, individuales,
+// grupales, globales e interno), con los logos 2027 en blanco: UMAG a la izquierda y el
+// eslogan "Quédate para llegar más lejos" en el espacio libre de la derecha
 function construirBanner(titulo, subtitulo) {
   return `
     <div class="informe-banner">
       <div class="banner-wave banner-wave-1"></div>
       <div class="banner-wave banner-wave-2"></div>
-      <div class="informe-logo-badge"><img src="${LOGO_UMAG_DATAURI}" alt="UMAG" class="informe-logo" /></div>
+      <img src="${LOGO_UMAG_2027_BLANCO}" alt="UMAG · Universidad de Magallanes" class="informe-logo-blanco" />
       <div class="informe-banner-sep"></div>
       <div class="informe-banner-text">
         <div class="informe-banner-sub">Unidad de Admisión y Marketing</div>
-        <div class="informe-banner-title">${titulo}</div>
+        <div class="informe-banner-title${titulo.length > 34 ? " informe-banner-title--largo" : ""}">${titulo}</div>
         ${subtitulo ? `<div class="informe-banner-sub2">${subtitulo}</div>` : ""}
       </div>
+      <img src="${LOGO_ESLOGAN_2027_BLANCO}" alt="Quédate para llegar más lejos" class="informe-banner-eslogan" />
     </div>`;
 }
 
@@ -262,7 +358,7 @@ function construirFilaAreaPortadaCompacta(area) {
       <div class="area-fila-caja" style="border-left-color:${area.color};">
         <h4 style="color:${area.color};">${area.nombre}</h4>
         <p>${area.descripcionCorta}</p>
-        <div class="area-fila-carreras"><b>Tus Carreras UMAG:</b> ${area.carrerasUMAG.join(", ")}.</div>
+        <div class="area-fila-carreras"><b>Tus Carreras UMAG:</b> ${textoCarrerasEnLinea(area.carrerasUMAG)}.</div>
       </div>
     </div>`;
 }
@@ -337,16 +433,27 @@ function construirCajaEstudiante(estudiante) {
     </div>`;
 }
 
-function construirListaCarreras(titulo, carreras, clase) {
+// "flex": cuánto ancho toma el cuadro respecto del otro; "columnas": lista en dos columnas
+function construirListaCarreras(titulo, carreras, clase, { flex = 1, columnas = false } = {}) {
   const esUmag = clase === "umag";
-  const estiloFondo = esUmag
-    ? `style="${ESTILO_MARCA_AGUA_SELLO} background-position:center; background-size:110px;"`
-    : "";
+  const estilo = [
+    esUmag ? `${ESTILO_MARCA_AGUA_SELLO} background-position:center; background-size:110px;` : "",
+    flex !== 1 ? `flex:${flex};` : "",
+  ].join(" ").trim();
   return `
-    <div class="carreras-mini ${clase || ""}" ${estiloFondo}>
+    <div class="carreras-mini ${clase || ""}" ${estilo ? `style="${estilo}"` : ""}>
       <h5>${titulo}</h5>
-      ${construirListaBulletsCarreras(carreras)}
+      ${construirListaBulletsCarreras(carreras, { columnas })}
     </div>`;
+}
+
+// los dos cuadros de carreras de una tarjeta de resultados (los dos tests), con la
+// proporción que mejor los empareja
+function construirCuadrosCarrerasResultados(clave, area) {
+  const armar = (flex, columnas) =>
+    construirListaCarreras("Tus Carreras UMAG", area.carrerasUMAG, "umag", { flex, columnas }) + construirListaCarreras("Otras carreras", area.carrerasOtras);
+  const { flex, columnas } = mejorProporcionCarreras(clave, armar);
+  return armar(flex, columnas);
 }
 
 // ==================== informes sin un área destacada (ninguna llegó a 7) ====================
@@ -411,17 +518,17 @@ function mensajeSinAreaDestacada(areas, puntajes, { ordenadas = false } = {}) {
 }
 
 // "textoDiverso": sin área destacada, la descripción armada para ese caso
-function construirTarjetaArea(area, textoDiverso = null) {
+// "espaciosa": más aire interno (misma clase que en Kuder), para las hojas con espacio de sobra
+function construirTarjetaArea(area, textoDiverso = null, espaciosa = false) {
   return `
-    <div class="area-card" style="border-left-color:${area.color};">
+    <div class="area-card${espaciosa ? " kuder-area-card-espaciosa" : ""}" style="border-left-color:${area.color};">
       <div class="area-card-header">
         ${iconoCirculo(area, 42)}
         <h3 style="color:${area.color};">${area.nombre}</h3>
       </div>
       <p class="area-card-desc">${textoDiverso || area.descripcion}</p>
       <div class="area-card-carreras-split">
-        ${construirListaCarreras("Tus Carreras UMAG", area.carrerasUMAG, "umag")}
-        ${construirListaCarreras("Otras carreras", area.carrerasOtras)}
+        ${construirCuadrosCarrerasResultados(`octavo|${area.id}`, area)}
       </div>
     </div>`;
 }
@@ -445,14 +552,13 @@ function construirEncabezadoResultados(estudiante, areas, casoEspecial) {
   `;
 }
 
-// encabezado de las páginas de continuación (3ra hoja en adelante): la línea de
-// nombre/RUT (sin la credencial completa, que ocupa más) y la MISMA frase con que
-// empiezan los resultados, para que cada hoja se lea como parte de los mismos
-// resultados; si una hoja se suelta del resto, igual se sabe de quién es.
-function construirEncabezadoContinuacion(estudiante, areas, casoEspecial) {
+// encabezado de las páginas de continuación (3ra hoja en adelante): solo la línea de
+// nombre/RUT, sin la credencial completa — así, si una hoja se suelta del resto, igual
+// se sabe de quién es. La frase de los resultados va solo en la primera hoja de
+// resultados (el informe se imprime a doble cara y repetida se vería demasiado).
+function construirEncabezadoContinuacion(estudiante) {
   return `
     ${construirLineaEstudiante(estudiante, { inicioPagina: true })}
-    <div class="informe-intro"><p>${mensajeResultados(estudiante, areas, casoEspecial)}</p></div>
   `;
 }
 
@@ -706,10 +812,11 @@ function construirPaginasResultados(estudiante) {
         : areasInteres;
 
   const htmlEncabezado = construirEncabezadoResultados(estudiante, areas, casoEspecial);
-  const htmlEncabezadoCont = construirEncabezadoContinuacion(estudiante, areas, casoEspecial);
+  const htmlEncabezadoCont = construirEncabezadoContinuacion(estudiante);
   const htmlAviso = construirAvisoContinua();
   const textosDiversos = casoEspecial === "ninguna" ? descripcionesAreasDiversas(areas, estudiante.puntajes) : [];
   const htmlTarjetas = areas.map((a, i) => construirTarjetaArea(a, textosDiversos[i] || null));
+  const htmlTarjetasEspaciosas = areas.map((a, i) => construirTarjetaArea(a, textosDiversos[i] || null, true));
 
   const altoEncabezado = medirAlturaFragmento(htmlEncabezado);
   const altoEncabezadoCont = medirAlturaFragmento(htmlEncabezadoCont);
@@ -736,10 +843,10 @@ function construirPaginasResultados(estudiante) {
   // a la página siguiente, repitiendo hasta que todas las páginas quepan de
   // verdad — así no depende de que la estimación sea perfecta.
   const LIMITE_PAGINA_PX = ALTO_PAGINA_PX - PADDING_INFERIOR_PX;
-  function armarHtmlPagina(indices, esPrimera, esUltima) {
+  function armarHtmlPagina(indices, esPrimera, esUltima, tarjetas = htmlTarjetas) {
     return `
       ${esPrimera ? htmlEncabezado : htmlEncabezadoCont}
-      <div class="informe-areas">${indices.map((i) => htmlTarjetas[i]).join("")}</div>
+      <div class="informe-areas">${indices.map((i) => tarjetas[i]).join("")}</div>
       ${esUltima ? "" : htmlAviso}
     `;
   }
@@ -763,9 +870,14 @@ function construirPaginasResultados(estudiante) {
   return grupos.map((indices, idx) => {
     const esPrimera = idx === 0;
     const esUltima = idx === grupos.length - 1;
+    // en una hoja con espacio de sobra, las tarjetas van en la versión "espaciosa" (más
+    // aire interno), para no dejar un espacio en blanco al final; solo si de verdad cabe
+    let html = armarHtmlPagina(indices, esPrimera, esUltima);
+    const htmlEspacioso = armarHtmlPagina(indices, esPrimera, esUltima, htmlTarjetasEspaciosas);
+    if (medirAlturaFragmento(htmlEspacioso) <= LIMITE_PAGINA_PX) html = htmlEspacioso;
     const contenedor = document.createElement("div");
     contenedor.className = "informe-page";
-    contenedor.innerHTML = armarHtmlPagina(indices, esPrimera, esUltima);
+    contenedor.innerHTML = html;
     return contenedor;
   });
 }

@@ -10,20 +10,11 @@ const ICONOS_SVG_KUDER = {
       <path d="M6 38h36" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
     </svg>`,
 
+  // dos engranajes que encajan entre sí (antes era un engranaje solo, que se veía como un sol)
   mecanica: `
     <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="24" cy="24" r="10" stroke="white" stroke-width="2.4"/>
-      <circle cx="24" cy="24" r="3.2" fill="white"/>
-      <g fill="white">
-        <rect x="21.4" y="3.5" width="5.2" height="7.5" rx="1.3"/>
-        <rect x="21.4" y="37" width="5.2" height="7.5" rx="1.3"/>
-        <rect x="3.5" y="21.4" width="7.5" height="5.2" rx="1.3"/>
-        <rect x="37" y="21.4" width="7.5" height="5.2" rx="1.3"/>
-        <rect x="21.4" y="3.5" width="5.2" height="7.5" rx="1.3" transform="rotate(45 24 24)"/>
-        <rect x="21.4" y="37" width="5.2" height="7.5" rx="1.3" transform="rotate(45 24 24)"/>
-        <rect x="3.5" y="21.4" width="7.5" height="5.2" rx="1.3" transform="rotate(45 24 24)"/>
-        <rect x="37" y="21.4" width="7.5" height="5.2" rx="1.3" transform="rotate(45 24 24)"/>
-      </g>
+      <path fill="white" fill-rule="evenodd" d="M26.32 23.60 L29.37 22.80 L30.78 26.19 L28.05 27.78 L28.19 29.05 L28.17 30.33 L31.02 31.68 L29.92 35.18 L26.81 34.64 L26.09 35.71 L25.25 36.67 L26.57 39.54 L23.48 41.51 L21.44 39.10 L20.21 39.46 L18.94 39.66 L18.12 42.70 L14.47 42.22 L14.46 39.07 L13.29 38.55 L12.19 37.89 L9.61 39.69 L7.12 36.98 L9.14 34.56 L8.58 33.41 L8.16 32.19 L5.02 31.91 L4.86 28.24 L7.96 27.68 L8.27 26.43 L8.73 25.24 L6.51 23.00 L8.75 20.09 L11.48 21.65 L12.52 20.90 L13.64 20.28 L13.38 17.14 L16.96 16.34 L18.05 19.30 L19.33 19.39 L20.59 19.63 L22.40 17.06 L25.66 18.75 L24.60 21.72 L25.52 22.61 Z M14.40 29.50 a3.6 3.6 0 1 0 7.2 0 a3.6 3.6 0 1 0 -7.2 0 Z"/>
+      <path fill="white" fill-rule="evenodd" d="M29.99 21.20 L27.80 22.85 L25.48 20.32 L27.31 18.27 L26.90 17.22 L26.66 16.12 L24.00 15.43 L24.53 12.04 L27.28 12.20 L27.84 11.22 L28.56 10.35 L27.44 7.84 L30.42 6.14 L32.00 8.38 L33.12 8.22 L34.25 8.23 L35.51 5.79 L38.70 7.06 L37.93 9.70 L38.76 10.47 L39.45 11.36 L42.15 10.83 L43.14 14.11 L40.60 15.16 L40.52 16.29 L40.25 17.38 L42.35 19.16 L40.40 21.98 L38.00 20.65 L37.06 21.28 L36.04 21.76 L35.96 24.51 L32.54 24.74 L32.08 22.03 L31.00 21.70 Z M30.80 15.20 a2.8 2.8 0 1 0 5.6 0 a2.8 2.8 0 1 0 -5.6 0 Z"/>
     </svg>`,
 
   calculo: `

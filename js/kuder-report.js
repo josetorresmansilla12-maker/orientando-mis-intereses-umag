@@ -658,14 +658,24 @@ async function generarInformeGlobalKuderPdf(resumenPorCurso, estudiantes, fecha,
 
 // ==================== PÁGINA(S) 2+: una tarjeta por área ====================
 
-function construirListaCarrerasKuder(titulo, carreras, clase) {
+// las carreras de una misma familia van juntas ("Ingenierías: ...", ver agruparCarreras
+// en js/report.js); "flex" y "columnas": proporción del cuadro (mejorProporcionCarreras)
+function construirListaCarrerasKuder(titulo, carreras, clase, { flex = 1, columnas = false } = {}) {
   const esUmag = clase === "umag";
-  const estiloFondo = esUmag ? `style="${ESTILO_MARCA_AGUA_SELLO} background-position:center; background-size:110px;"` : "";
+  const estilo = [esUmag ? `${ESTILO_MARCA_AGUA_SELLO} background-position:center; background-size:110px;` : "", flex !== 1 ? `flex:${flex};` : ""].join(" ").trim();
+  const n = agruparCarreras(carreras).length;
   return `
-    <div class="carreras-mini ${clase || ""}" ${estiloFondo}>
+    <div class="carreras-mini ${clase || ""}" ${estilo ? `style="${estilo}"` : ""}>
       <h5>${titulo}</h5>
-      <ul class="carreras-lista-bullets">${carreras.map((c) => `<li>${c}</li>`).join("")}</ul>
+      <ul class="carreras-lista-bullets${columnas && n >= 6 ? " carreras-lista-2col" : ""}">${itemsCarrerasHtml(carreras)}</ul>
     </div>`;
+}
+
+function construirCuadrosCarrerasGrupal(area) {
+  const armar = (flex, columnas) =>
+    construirListaCarrerasKuder("Carreras UMAG", area.carrerasUMAG, "umag", { flex, columnas }) + construirListaCarrerasKuder("Otras carreras", area.carrerasOtras);
+  const { flex, columnas } = mejorProporcionCarreras(`grupal|${G().id}|${area.id}`, armar);
+  return armar(flex, columnas);
 }
 
 // "espaciosa" (opcional): agrega la clase "kuder-area-card-espaciosa", que en
@@ -686,8 +696,7 @@ function construirTarjetaAreaKuder(area, conteo, total, espaciosa) {
       </div>
       <p class="area-card-desc">${G().descripcionArea(area)}</p>
       <div class="area-card-carreras-split">
-        ${construirListaCarrerasKuder("Carreras UMAG", area.carrerasUMAG, "umag")}
-        ${construirListaCarrerasKuder("Otras carreras", area.carrerasOtras)}
+        ${construirCuadrosCarrerasGrupal(area)}
       </div>
     </div>`;
 }
@@ -720,9 +729,8 @@ function empaquetarTarjetasEnOrdenKuder(alturas, disponible) {
 // / ALTO_PAGINA_PX / PADDING_INFERIOR_PX / COSTE_CONTENEDOR_TOP_PX / COSTE_GAP_PX),
 // reutilizado tal cual por ser genérico — así ninguna tarjeta de área queda cortada a la
 // mitad entre páginas. Las áreas se muestran de mayor a menor según cuántos estudiantes
-// las tienen como interés, igual que el resumen de la página 1 — por eso el empaquetado
-// usa empaquetarTarjetasEnOrdenKuder() y no empaquetarTarjetas() de report.js: esa última
-// reordena las tarjetas para aprovechar mejor el espacio, lo que rompería el orden.
+// las tienen como interés, igual que el resumen de la página 1 — por eso el reparto usa
+// cortarEnOrden() de report.js (que nunca cambia el orden) y no un reparto que reordene.
 //
 // El pie de página (construirFooterKuder) va en TODAS estas páginas, no solo en la
 // última — se reserva su altura completa (más el aviso de continuación) al calcular
@@ -737,12 +745,16 @@ function construirPaginasAreasKuder(datosCurso, conteos, total) {
 
   const altoEncabezadoCont = medirAlturaFragmento(htmlEncabezadoCont);
   const altoReservaInferior = medirAlturaFragmento(htmlAviso + htmlFooter);
-  const alturasTarjetas = htmlTarjetas.map((html) => medirAlturaFragmento(`<div class="informe-areas" style="margin:0;">${html}</div>`));
+  // cada tarjeta se mide con su ancho real en la hoja (con los márgenes de los lados):
+  // medida más ancha, sale más baja de lo que es y el reparto queda corto
+  const alturasTarjetas = htmlTarjetas.map((html) => medirAlturaFragmento(`<div class="informe-areas" style="margin-top:0;">${html}</div>`));
 
   const MARGEN_SEGURIDAD_PX = 20;
   const disponible = ALTO_PAGINA_PX - PADDING_INFERIOR_PX - altoEncabezadoCont - altoReservaInferior - MARGEN_SEGURIDAD_PX;
 
-  const grupos = empaquetarTarjetasEnOrdenKuder(alturasTarjetas, disponible);
+  // en orden (de mayor a menor), con la menor cantidad de hojas y sin hojas medio
+  // vacías al medio (cortarEnOrden, js/report.js)
+  const grupos = cortarEnOrden(alturasTarjetas, disponible, disponible);
 
   const LIMITE_PAGINA_PX = ALTO_PAGINA_PX - PADDING_INFERIOR_PX;
   // arma la página siempre con las tarjetas compactas: el cálculo de cuáles caben
@@ -769,24 +781,20 @@ function construirPaginasAreasKuder(datosCurso, conteos, total) {
     }
   }
 
-  // recién con los grupos ya definitivos: a la tarjeta que quedó sola en su
-  // página (sin pareja, por orden y por espacio) se le da la versión "espaciosa"
-  // — más aire interno — para que la página no se vea tan vacía debajo del pie.
-  // Las tarjetas que comparten página con otra se dejan compactas, tal como se
-  // calculó que cabían. Se verifica igual que la versión espaciosa quepa bajo el
-  // límite antes de usarla; si por algún motivo no cupiera, se deja la compacta.
+  // recién con los grupos ya definitivos: en cada hoja que tenga espacio de sobra, sus
+  // tarjetas van en la versión "espaciosa" — más aire interno — para que la hoja no
+  // quede con un espacio en blanco al final. Se usa solo si de verdad cabe (medida
+  // tal cual va a quedar); si no, la hoja queda con las tarjetas compactas.
   return grupos.map((indices, idx) => {
     const esUltima = idx === grupos.length - 1;
     let html = armarHtmlPagina(indices, esUltima);
-    if (indices.length === 1) {
-      const htmlEspacioso = `
-        ${htmlEncabezadoCont}
-        <div class="informe-areas">${htmlTarjetasEspaciosas[indices[0]]}</div>
-        ${esUltima ? "" : htmlAviso}
-        ${htmlFooter}
-      `;
-      if (medirAlturaFragmento(htmlEspacioso) <= LIMITE_PAGINA_PX) html = htmlEspacioso;
-    }
+    const htmlEspacioso = `
+      ${htmlEncabezadoCont}
+      <div class="informe-areas">${indices.map((i) => htmlTarjetasEspaciosas[i]).join("")}</div>
+      ${esUltima ? "" : htmlAviso}
+      ${htmlFooter}
+    `;
+    if (medirAlturaFragmento(htmlEspacioso) <= LIMITE_PAGINA_PX) html = htmlEspacioso;
     const contenedor = document.createElement("div");
     contenedor.className = "informe-page";
     contenedor.innerHTML = html;

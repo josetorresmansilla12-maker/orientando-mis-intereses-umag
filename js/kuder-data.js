@@ -61,7 +61,7 @@ const AREAS_KUDER = [
   {
     id: "mecanica",
     nombre: "Mecánica",
-    icono: "🔧",
+    icono: "⚙️",
     color: "#B98A2E",
     descripcion:
       "Las personas con este interés destacan por el pensamiento práctico y la acción manual. Son hábiles en el uso de herramientas especializadas, y disfrutan reparar, mantener y crear equipos mecánicos, eléctricos y electrónicos, trabajando con eficacia y satisfacción en este tipo de tareas.",

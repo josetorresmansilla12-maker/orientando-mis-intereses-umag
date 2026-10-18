@@ -249,8 +249,32 @@ Cómo se ve el informe de Kuder (individual)
 - Las descripciones de las áreas (en los dos tests) están escritas en tono de
   posibilidad ("podría indicar que...", "es posible que..."): explican qué representa
   cada área y qué podría abrirle al estudiante, sin dar por hecho sus gustos ni rasgos.
-- Todos los informes llevan el número de página abajo a la derecha, en letra chica
-  ("Página 1 de 3").
+- Los informes no llevan número de página. Cada hoja de resultados muestra arriba
+  los datos del estudiante (N°, nombre, RUT, curso y colegio); la frase "De acuerdo
+  a tus respuestas, tus áreas de interés son:" va solo en la primera hoja de
+  resultados (el informe se imprime a doble cara).
+- Reparto de los cuadros en las hojas: la app prueba todos los repartos posibles y
+  elige el de menos hojas, sin hojas medio vacías al medio (si un cuadro tiene que ir
+  solo, va en la última) y respetando el orden por puntaje. Si a una hoja le sobra
+  espacio, sus cuadros se arman con un poco más de aire para llenarla.
+
+Logos y carreras en todos los informes (2027)
+---------------------------------------------
+- La barra morada de la primera hoja de todos los informes (individual de los dos
+  tests, grupal por curso, global e interno) lleva los logos 2027 en blanco: UMAG a
+  la izquierda y "Quédate para llegar más lejos" a la derecha. La credencial del
+  estudiante o del curso lleva el logo UMAG 2027 a color. Los archivos originales del
+  diseñador están en assets/logos-2027/.
+- El ícono de Mecánica son dos engranajes que encajan entre sí.
+- Las carreras de una misma familia van juntas bajo un solo nombre, para ahorrar
+  espacio: "Ingenierías: Construcción, Electricidad, Mecánica...", "Ingenierías
+  Civiles: ...", "Pedagogías en: ...", "Técnico de Nivel Superior en: ...",
+  "Licenciaturas en: ..." y "Diseño: ...". Una carrera sola de su familia queda con su
+  nombre completo. En la hoja 1 de Kuder van así: "Ingenierías (Construcción,
+  Electricidad)".
+- En cada cuadro de área, los dos recuadros de carreras ("Tus Carreras UMAG" y "Otras
+  carreras") se reparten el ancho según lo que trae cada uno, para que queden del
+  mismo alto y sin espacio en blanco; las listas largas van en dos columnas.
 
 Deshacer, rehacer y respaldo en Excel
 ---------------------------------------

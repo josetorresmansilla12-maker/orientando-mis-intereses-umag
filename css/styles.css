@@ -585,7 +585,7 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
   padding: 20px 26px;
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 14px;
 }
 .banner-wave {
   position: absolute;
@@ -1178,16 +1178,17 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
 .kuder-inf-mini .kuder-inf-area-carreras { font-size: 8.7px; }
 .kuder-inf-mini .kuder-inf-area-desc { font-size: 9px; }
 
-/* tarjeta de resultados con una lista UMAG larga: ese cuadro toma dos tercios del
-   ancho y reparte sus carreras en dos columnas (de arriba a abajo, sin alinear filas,
-   para que una carrera de dos líneas no deje un hueco al lado), así la tarjeta no
-   queda tan alta */
-.kuder-split-umag-ancho .carreras-mini.umag { flex: 2; }
-.kuder-split-umag-ancho .carreras-mini.umag .carreras-lista-bullets {
+/* cuadro de carreras ancho con muchos puntos: la lista va en dos columnas (de arriba a
+   abajo, sin alinear filas, para que una carrera de dos líneas no deje un hueco al
+   lado), así la tarjeta no queda tan alta. El ancho de cada cuadro lo elige
+   mejorProporcionCarreras (js/report.js) midiendo. */
+.carreras-lista-bullets.carreras-lista-2col {
   column-count: 2;
   column-gap: 18px;
 }
-.kuder-split-umag-ancho .carreras-mini.umag .carreras-lista-bullets li { break-inside: avoid; }
+.carreras-lista-2col li { break-inside: avoid; }
+/* nombre de la familia de carreras agrupadas: "Ingenierías:", "Pedagogías en:" */
+.carrera-familia { font-weight: 800; color: var(--morado); }
 
 /* =====================================================
    Revisión de traspaso del Test de Kuder (las 10 áreas deben sumar 45).
@@ -1654,3 +1655,12 @@ details.grupo-colegio > summary .btn-lapiz-colegio:focus-visible { opacity: 1; c
 .kuder-chart-mini .kuder-chart-bloque-grande .kuder-chart-fila { height: 47px; }
 .kuder-chart-mini .kuder-chart-bloque-grande .kuder-chart-track { height: 28px; }
 .kuder-chart-mini .kuder-chart-bloque-grande.kuder-chart-pocas-areas .kuder-chart-fila { height: 76px; }
+
+/* ---------- logos 2027 en la barra morada de los informes ---------- */
+/* con ancho y alto fijos (la proporción de cada imagen): así la barra mide lo mismo
+   aunque la imagen todavía no haya terminado de cargar al medir la hoja */
+.informe-logo-blanco { width: 102px; height: 40px; display: block; flex-shrink: 0; position: relative; z-index: 1; }
+.informe-banner-eslogan { width: 117px; height: 42px; display: block; flex-shrink: 0; margin-left: auto; position: relative; z-index: 1; }
+/* títulos largos (informes grupal, global e interno): un poco más chicos, para que
+   quepan en una línea entre los dos logos */
+.informe-banner-title.informe-banner-title--largo { font-size: 20px; }

@@ -305,14 +305,10 @@ function construirBloqueGraficoAreasInterno(stats) {
 // primera página y para las de continuación.
 // ==================== carreras UMAG vs. carreras potenciales por área ====================
 
-function construirListaCarrerasInternaKuder(titulo, carreras, clase) {
-  const esUmag = clase === "umag";
-  const estiloFondo = esUmag ? `style="${ESTILO_MARCA_AGUA_SELLO} background-position:center; background-size:110px;"` : "";
-  return `
-    <div class="carreras-mini ${clase || ""}" ${estiloFondo}>
-      <h5>${titulo}</h5>
-      <ul class="carreras-lista-bullets">${carreras.map((c) => `<li>${c}</li>`).join("")}</ul>
-    </div>`;
+// mismas listas agrupadas por familia y misma proporción medida que el informe grupal
+// (construirListaCarrerasKuder, js/kuder-report.js)
+function construirListaCarrerasInternaKuder(titulo, carreras, clase, opciones = {}) {
+  return construirListaCarrerasKuder(titulo, carreras, clase, opciones);
 }
 
 function construirTarjetaAreaInternaKuder(area, conteo, total) {
@@ -326,8 +322,13 @@ function construirTarjetaAreaInternaKuder(area, conteo, total) {
         <span class="area-card-conteo" style="background:${area.color};">${conteo} de ${total} (${pct}%)</span>
       </div>
       <div class="area-card-carreras-split">
-        ${construirListaCarrerasInternaKuder("Carreras UMAG", area.carrerasUMAG, "umag")}
-        ${construirListaCarrerasInternaKuder("Carreras que UMAG podría incorporar", potenciales)}
+        ${(() => {
+          const armar = (flex, columnas) =>
+            construirListaCarrerasInternaKuder("Carreras UMAG", area.carrerasUMAG, "umag", { flex, columnas }) +
+            construirListaCarrerasInternaKuder("Carreras que UMAG podría incorporar", potenciales);
+          const { flex, columnas } = mejorProporcionCarreras(`interno|${area.id}`, armar);
+          return armar(flex, columnas);
+        })()}
       </div>
     </div>`;
 }
