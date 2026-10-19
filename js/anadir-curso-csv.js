@@ -2,10 +2,12 @@
 // crea en ESE colegio un curso a partir de su CSV o Excel, sin pasar por "Ingresar datos".
 // - El colegio es el de la carpeta; el curso y la letra se leen del archivo (si no los
 //   trae, quedan vacíos para escribirlos) y se pueden corregir antes de cargar.
-// - Nadie se duplica: cada estudiante del archivo se busca en la app por RUT o, si no
-//   hay, por nombre (emparejarConApp, js/importacion-masiva.js). Los que ya están se
-//   dejan donde están (y, si se marca, se actualizan con los datos del archivo); solo
-//   los que no están se agregan al curso.
+// - Nadie se duplica: cada estudiante del archivo se busca en la app por su RUT
+//   (emparejarConApp, js/importacion-masiva.js). Solo el RUT dice que es la misma
+//   persona: los que ya están se dejan donde están (y, si se marca, se actualizan con
+//   los datos del archivo); los demás se agregan al curso. Si alguno tiene el mismo
+//   nombre que alguien ya cargado pero falta el RUT para confirmarlo, se avisa (con el
+//   curso donde está el otro) y se carga como nuevo.
 // - Al terminar, si hay tests mal traspasados (no suman 45), ofrece ir a "Corrección";
 //   las filas que no se pudieron leer se avisan en la misma ventana.
 
@@ -102,9 +104,18 @@ function datosCursoCsv() {
 function analisisCursoCsv() {
   const c = cfg();
   const lectura = cursoCsv.lectura;
-  const emp = emparejarConApp(lectura.estudiantes, c.store.listar(), cursoCsv.colegio);
+  const emp = emparejarConApp(lectura.estudiantes, c.store.listar());
   const conDif = emp.pares.filter((p) => diferenciasPar(p, c).length);
   return { emp, conDif, iguales: emp.pares.length - conDif.length };
+}
+
+// "Benjamín Cari (RUT 21.234.567-8, en Colegio Luterano · 2do Medio A); ..." (hasta 6)
+function listaQuienes(estudiantes) {
+  const n = estudiantes.length;
+  return `<span class="csv-curso-quienes">${estudiantes
+    .slice(0, 6)
+    .map((e) => escaparHtml(quienEsEnApp(e)))
+    .join("; ")}${n > 6 ? ` y ${n - 6} más` : ""}.</span>`;
 }
 
 function pintarCursoDesdeCsv() {
@@ -129,12 +140,14 @@ function pintarCursoDesdeCsv() {
         ? `<li>📘 Se crea el curso <b>${escaparHtml(etiquetaCursoGuardado(d))}</b> en este colegio.</li>`
         : `<li>✏️ El archivo no dice el curso: escríbelo arriba.</li>`,
     emp.nuevos.length ? `<li>➕ <b>${pluralCurso(emp.nuevos.length, "estudiante nuevo", "estudiantes nuevos")}</b>: se ${emp.nuevos.length === 1 ? "agrega" : "agregan"} al curso.</li>` : `<li>✓ No hay estudiantes nuevos: todos ya están en la app.</li>`,
-    iguales ? `<li>✓ ${pluralCurso(iguales, "ya estaba", "ya estaban")} en la app con los mismos datos: no se ${iguales === 1 ? "duplica" : "duplican"} (se ${iguales === 1 ? "queda" : "quedan"} en su curso).</li>` : "",
+    iguales
+      ? `<li>✓ ${pluralCurso(iguales, "ya estaba", "ya estaban")} en la app <b>con el mismo RUT</b> y los mismos datos: no se ${iguales === 1 ? "duplica" : "duplican"} y se ${iguales === 1 ? "queda" : "quedan"} en su curso. ${listaQuienes(emp.pares.filter((p) => !conDif.includes(p)).map((p) => p.app))}</li>`
+      : "",
     conDif.length
-      ? `<li>✏️ ${pluralCurso(conDif.length, "ya estaba", "ya estaban")} en la app con datos distintos (${conDif
-          .slice(0, 5)
-          .map((p) => escaparHtml(p.app.nombre))
-          .join(", ")}${conDif.length > 5 ? ` y ${conDif.length - 5} más` : ""}): no se ${conDif.length === 1 ? "duplica" : "duplican"}.</li>`
+      ? `<li>✏️ ${pluralCurso(conDif.length, "ya estaba", "ya estaban")} en la app <b>con el mismo RUT</b> pero con otros datos (puntajes o nombre): no se ${conDif.length === 1 ? "duplica" : "duplican"}. ${listaQuienes(conDif.map((p) => p.app))}</li>`
+      : "",
+    emp.mismoNombre.length
+      ? `<li class="csv-curso-ojo">⚠ ${pluralCurso(emp.mismoNombre.length, "tiene", "tienen")} el mismo nombre que alguien ya cargado, pero falta el RUT para confirmar que es la misma persona: se ${emp.mismoNombre.length === 1 ? "carga" : "cargan"} como ${emp.mismoNombre.length === 1 ? "estudiante nuevo" : "estudiantes nuevos"}. Revisa si corresponde: ${listaQuienes(emp.mismoNombre.map((m) => m.app))}</li>`
       : "",
     errores.length ? `<li>⚠ ${pluralCurso(errores.length, "fila no se pudo leer", "filas no se pudieron leer")} (no se cargan): ${escaparHtml(errores.slice(0, 3).join(" · "))}</li>` : "",
     malArchivo && c.revisarTraspaso ? `<li>🔎 ${pluralCurso(malArchivo, "test no suma", "tests no suman")} 45: al terminar puedes revisarlos en "Corrección".</li>` : "",

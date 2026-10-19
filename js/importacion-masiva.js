@@ -4,9 +4,9 @@
 //
 // 1. Se eligen los archivos (CSV, Excel, un ZIP con ellos o una carpeta completa).
 // 2. Cada archivo se compara con lo que ya hay en la app: cada estudiante se busca por
-//    RUT (en todos los colegios) y, si alguno no tiene RUT, por nombre (en su curso o en
-//    un colegio con el mismo nombre). Así se sabe si el archivo es nuevo, si ya estaba
-//    cargado tal cual o si trae diferencias (puntajes o nombres distintos).
+//    RUT (en todos los colegios). Solo el RUT dice que es la misma persona; si coincide
+//    el nombre pero falta el RUT, se avisa para revisarlo y se carga como nuevo. Así se
+//    sabe si el archivo es nuevo, si ya estaba cargado tal cual o si trae diferencias.
 // 3. Si hay diferencias, se recomienda qué versión conservar: la que tiene menos tests
 //    mal traspasados (que no suman 45) y, si empatan, la más reciente.
 // 4. Se marcan los archivos a subir y se importan todos juntos, en un solo paso de
@@ -141,10 +141,14 @@ function cursoMayoritario(estudiantes) {
   return mejor ? { colegio: mejor.e.colegio || "", curso: mejor.e.curso || "", letra: mejor.e.letra || "" } : null;
 }
 
-// empareja a los estudiantes de un archivo con los de la app (activos): por RUT y, si
-// uno de los dos no tiene RUT, por nombre dentro de su curso o de un colegio con el
-// mismo nombre. Devuelve { pares: [{ archivo, app, por }], nuevos: [...], curso }.
-function emparejarConApp(estudiantesArchivo, activos, colegioArchivo) {
+// empareja a los estudiantes de un archivo con los de la app (activos). Un estudiante del
+// archivo es el MISMO de la app solo si tienen el mismo RUT: el nombre no basta (puede
+// haber dos personas con el mismo nombre y apellidos). Si el nombre coincide pero falta
+// el RUT en el archivo o en la app, no se puede confirmar: se trata como un estudiante
+// distinto (nuevo) y queda en "mismoNombre" para avisar y que se revise a mano. Si los
+// dos tienen RUT y es distinto, son personas distintas (no se avisa).
+// Devuelve { pares: [{ archivo, app }], nuevos: [...], mismoNombre: [{ archivo, app }], curso }.
+function emparejarConApp(estudiantesArchivo, activos) {
   const porRut = new Map();
   const porNombre = new Map();
   activos.forEach((e) => {
@@ -156,30 +160,27 @@ function emparejarConApp(estudiantesArchivo, activos, colegioArchivo) {
   });
   const usados = new Set();
   const pares = [];
-  const pendientes = [];
+  const nuevos = [];
+  const mismoNombre = [];
   estudiantesArchivo.forEach((fe) => {
-    const app = porRut.get(claveRut(fe.rut));
+    const kr = claveRut(fe.rut);
+    const app = kr ? porRut.get(kr) : null;
     if (app && !usados.has(app.id)) {
       usados.add(app.id);
-      pares.push({ archivo: fe, app, por: "rut" });
-    } else pendientes.push(fe);
+      pares.push({ archivo: fe, app });
+      return;
+    }
+    nuevos.push(fe);
+    const homonimo = (porNombre.get(claveNombre(fe.nombre)) || []).find((e) => !kr || !claveRut(e.rut));
+    if (homonimo) mismoNombre.push({ archivo: fe, app: homonimo });
   });
-  const curso = cursoMayoritario(pares.map((p) => p.app));
-  const nuevos = [];
-  pendientes.forEach((fe) => {
-    const kr = claveRut(fe.rut);
-    const candidatos = (porNombre.get(claveNombre(fe.nombre)) || []).filter(
-      (e) =>
-        !usados.has(e.id) &&
-        (!kr || !claveRut(e.rut)) && // si los dos tienen RUT y no coincide, son personas distintas
-        ((curso && claveCursoGuardado(e) === claveCursoGuardado(curso)) || (colegioArchivo && parecidoColegios(e.colegio, colegioArchivo)))
-    );
-    if (candidatos.length === 1) {
-      usados.add(candidatos[0].id);
-      pares.push({ archivo: fe, app: candidatos[0], por: "nombre" });
-    } else nuevos.push(fe);
-  });
-  return { pares, nuevos, curso: curso || cursoMayoritario(pares.map((p) => p.app)) };
+  return { pares, nuevos, mismoNombre, curso: cursoMayoritario(pares.map((p) => p.app)) };
+}
+
+// "Nombre (RUT 12.345.678-5, en Colegio · 2do Medio A)": para mostrar a quién se encontró
+function quienEsEnApp(e) {
+  const rut = claveRut(e.rut) ? `RUT ${typeof formatearRutKuder === "function" ? formatearRutKuder(e.rut) : e.rut}` : "sin RUT";
+  return `${e.nombre} (${rut}, en ${e.colegio || "Sin colegio"} · ${etiquetaCursoGuardado(e)})`;
 }
 
 function puntajesIguales(a, b, areas) {
@@ -217,7 +218,7 @@ function analizarItemMasiva(item, anteriores) {
     if (!item.tocado) item.marcado = false;
     return;
   }
-  const emp = emparejarConApp(ests, c.store.listar(), item.lectura.colegio);
+  const emp = emparejarConApp(ests, c.store.listar());
   const conDif = emp.pares.map((p) => ({ ...p, difs: diferenciasPar(p, c) })).filter((p) => p.difs.length);
   const penApp = conDif.filter((p) => pendienteTraspaso(p.app)).length;
   const penArchivo = conDif.filter((p) => archivoMalTraspasado(p.archivo)).length;
@@ -260,6 +261,9 @@ function analizarItemMasiva(item, anteriores) {
     }
   }
   if (repiteA) marcar = false;
+  // muchos con el mismo nombre que alguien ya cargado y sin RUT para confirmarlo: puede
+  // ser el mismo curso subido de nuevo (sin RUT); no se marca solo, para revisarlo
+  if (emp.mismoNombre.length && emp.mismoNombre.length * 2 >= emp.nuevos.length) marcar = false;
 
   // colegio/curso/letra para los estudiantes nuevos: el curso de la app donde ya están
   // los demás; si no, el del archivo (con el nombre de colegio que ya usa la app, si
@@ -289,7 +293,7 @@ function analizarItemMasiva(item, anteriores) {
     penArchivo,
     recomendacion,
     repiteA,
-    porNombre: emp.pares.filter((p) => p.por === "nombre").length,
+    mismoNombre: emp.mismoNombre,
     malArchivo: ests.filter(archivoMalTraspasado).length,
   };
 }
@@ -334,7 +338,7 @@ function renderResumenMasiva() {
       }
       const d = it.datos;
       const detalle = [];
-      if (a.pares.length) detalle.push(`<b>${a.pares.length}</b> de ${ests.length} ya ${a.pares.length === 1 ? "está" : "están"} en la app${a.porNombre ? ` (${a.porNombre} por nombre, sin RUT)` : ""}`);
+      if (a.pares.length) detalle.push(`<b>${a.pares.length}</b> de ${ests.length} ya ${a.pares.length === 1 ? "está" : "están"} en la app (mismo RUT)`);
       if (a.nuevos.length) detalle.push(`<b>${a.nuevos.length}</b> ${a.nuevos.length === 1 ? "estudiante nuevo" : "estudiantes nuevos"}`);
       if (a.conDif.length) detalle.push(`<b>${a.conDif.length}</b> con datos distintos`);
       if (a.malArchivo) detalle.push(`⚠ ${a.malArchivo} no ${a.malArchivo === 1 ? "suma" : "suman"} 45 en el archivo`);
@@ -348,7 +352,7 @@ function renderResumenMasiva() {
       const listaDifs = a.conDif.length
         ? `<details class="mv-difs"><summary>Ver las diferencias (${a.conDif.length})</summary><ul>${a.conDif
             .slice(0, 60)
-            .map((p) => `<li><b>${escaparHtml(p.app.nombre)}</b>: ${escaparHtml(p.difs.join(" · "))}</li>`)
+            .map((p) => `<li><b>${escaparHtml(quienEsEnApp(p.app))}</b>: ${escaparHtml(p.difs.join(" · "))}</li>`)
             .join("")}</ul></details>`
         : "";
       const necesitaCurso = a.nuevos.length > 0;
@@ -360,9 +364,17 @@ function renderResumenMasiva() {
           <button type="button" class="btn-quitar-archivo" title="Quitar de la lista">✕</button>
         </div>
         <div class="mv-detalle">${ests.length} ${ests.length === 1 ? "estudiante" : "estudiantes"} en el archivo${detalle.length ? ": " + detalle.join(" · ") : ""}.${
-          a.tipo === "nuevo" ? " Ningún RUT ni nombre coincide con la app: se carga como curso nuevo." : ""
+          a.tipo === "nuevo" ? " Ningún RUT coincide con la app: se carga como curso nuevo." : ""
         }${a.tipo === "igual" ? " No hace falta subirlo." : ""}</div>
         ${a.repiteA ? `<div class="mv-aviso">⚠ Trae a los mismos estudiantes que "${escaparHtml(a.repiteA.nombre)}", más arriba en esta lista. Si lo marcas, no se duplican: se comparan con ese.</div>` : ""}
+        ${
+          a.mismoNombre.length
+            ? `<div class="mv-aviso">⚠ ${a.mismoNombre.length === 1 ? "1 estudiante tiene" : `${a.mismoNombre.length} estudiantes tienen`} el mismo nombre que alguien ya cargado, pero sin RUT para confirmar que es la misma persona: se ${a.mismoNombre.length === 1 ? "carga" : "cargan"} como ${a.mismoNombre.length === 1 ? "estudiante nuevo" : "estudiantes nuevos"}. Revisa: ${a.mismoNombre
+                .slice(0, 5)
+                .map((m) => escaparHtml(quienEsEnApp(m.app)))
+                .join("; ")}${a.mismoNombre.length > 5 ? ` y ${a.mismoNombre.length - 5} más` : ""}.</div>`
+            : ""
+        }
         ${a.recomendacion ? `<div class="mv-recomendacion">${escaparHtml(a.recomendacion)}</div>` : ""}
         ${opciones}
         ${listaDifs}
@@ -480,7 +492,7 @@ function importarMarcadosMasiva() {
     // de a un archivo, comparando siempre con lo que ya hay (incluido lo que trajeron
     // los archivos anteriores de esta misma lista): así nada se duplica
     marcados.forEach((it) => {
-      const emp = emparejarConApp(it.lectura.estudiantes, c.store.listar(), it.lectura.colegio);
+      const emp = emparejarConApp(it.lectura.estudiantes, c.store.listar());
       if (it.accion === "actualizar") {
         emp.pares.forEach((p) => {
           if (!diferenciasPar(p, c).length) return;

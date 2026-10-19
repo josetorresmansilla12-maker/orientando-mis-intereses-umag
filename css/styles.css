@@ -1663,3 +1663,5 @@ details.grupo-colegio > summary .btn-lapiz-colegio:focus-visible { opacity: 1; c
 .mcc-campos input:disabled { background: var(--lila-fondo); color: var(--texto); }
 .mcc-actualizar { display: flex; align-items: center; gap: 7px; margin-top: 8px; font-size: 12.5px; font-weight: 600; color: var(--texto); cursor: pointer; }
 .mcc-actualizar input { width: auto; }
+.csv-curso-quienes { display: block; font-size: 11.5px; color: var(--texto-suave); margin-top: 1px; }
+.csv-curso-resumen li.csv-curso-ojo { color: #7a5200; }

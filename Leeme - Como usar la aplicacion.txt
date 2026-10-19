@@ -55,9 +55,10 @@ Paso 2: las pestañas
      planillas de muchos cursos, por ejemplo el ZIP de CSV que descarga un compañero
      desde su app ("Uso interno" → "Descargar todos los CSV"). Se pueden elegir
      archivos sueltos, el ZIP tal cual o una carpeta completa. Antes de cargar nada, la
-     app compara cada archivo con lo que ya hay: busca a cada estudiante por RUT (o
-     por nombre, si falta el RUT) y le pone una etiqueta a cada archivo:
-     * "Nuevo": ningún estudiante coincide; se carga como curso nuevo.
+     app compara cada archivo con lo que ya hay: busca a cada estudiante por su RUT
+     (solo el RUT dice que es la misma persona; un nombre igual no basta, porque puede
+     haber dos estudiantes que se llamen igual) y le pone una etiqueta a cada archivo:
+     * "Nuevo": ningún RUT coincide; se carga como curso nuevo.
      * "Ya está cargado, sin cambios": no hace falta subirlo (queda desmarcado).
      * "Ya cargado + estudiantes nuevos": se agregan solo los que faltan.
      * "Ya está cargado, con diferencias": muestra qué cambia (puntajes, nombres) y
@@ -65,6 +66,9 @@ Paso 2: las pestañas
        (que no suman 45) y, si empatan, la más reciente. Tú eliges "Usar los datos de
        este archivo" o "Dejar la versión de la app".
      * Si dos archivos de la lista traen el mismo curso, lo avisa.
+     * Si alguien tiene el mismo nombre que un estudiante ya cargado pero falta el RUT
+       (en el archivo o en la app) para confirmar que es la misma persona, se carga
+       como nuevo y la app lo avisa, mostrando dónde está el otro, para revisarlo.
      Marcas los que quieres y "📥 Importar" los carga todos juntos. Los estudiantes que
      ya estaban nunca se duplican, y todo se deshace de una vez con "↩ Deshacer".
    - En Kuder todos los cursos son de enseñanza media: "2do", "2°", "Segundo" o
@@ -104,8 +108,11 @@ Paso 2: las pestañas
    - "📥 Añadir un curso desde CSV" (dentro de cada colegio): crea en ese colegio un
      curso a partir de su CSV o Excel. El curso y la letra se leen del archivo (si no
      los trae, se escriben) y se pueden corregir antes de cargar. Nadie se duplica: los
-     estudiantes que ya están en la app se quedan donde están (y, si se marca la
-     casilla, se actualizan con los datos del archivo); solo se agregan los nuevos. Si
+     estudiantes que ya están en la app (mismo RUT) se quedan donde están (y, si se
+     marca la casilla, se actualizan con los datos del archivo); solo se agregan los
+     nuevos. La ventana muestra a quién encontró, con su RUT y su curso. Si alguien
+     tiene el mismo nombre que otro ya cargado pero sin RUT para confirmarlo, se carga
+     como nuevo y se avisa para revisarlo. Si
      ese curso ya existe en el colegio, los nuevos se suman a él. Si el archivo dice que
      es de otro colegio, lo avisa. Al terminar, si hay tests mal traspasados (no suman
      45), ofrece ir a la pestaña "Corrección". Se puede deshacer con "↩ Deshacer".
