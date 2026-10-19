@@ -1648,3 +1648,13 @@ details.grupo-colegio > summary .btn-lapiz-colegio:focus-visible { opacity: 1; c
 /* títulos largos (informes grupal, global e interno): un poco más chicos, para que
    quepan en una línea entre los dos logos */
 .informe-banner-title.informe-banner-title--largo { font-size: 20px; }
+
+/* ---------- importar: enlazar el archivo a una carpeta que ya existe ---------- */
+.imp-carpeta { margin-top: 8px; }
+.imp-carpeta select { width: 100%; font-size: 13px; }
+/* "📥 Añadir CSV a este curso": resumen en la ventana */
+.csv-curso-resumen { margin: 6px 0 0; padding-left: 4px; list-style: none; font-size: 13px; line-height: 1.55; }
+.csv-curso-resumen li { margin-bottom: 3px; }
+.csv-curso-aviso { margin-top: 8px; font-size: 12.5px; color: #7a5200; background: #fff4e0; border: 1px solid #f0d9a6; border-radius: 7px; padding: 6px 10px; }
+/* nombres de archivo largos en las ventanas de opciones: que no se salgan del recuadro */
+#mo-texto { overflow-wrap: anywhere; }

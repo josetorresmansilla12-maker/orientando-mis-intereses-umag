@@ -568,10 +568,13 @@ function medirAlturaFragmento(html) {
   host.innerHTML = "";
   const envoltura = document.createElement("div");
   envoltura.className = "informe-page";
-  envoltura.style.paddingBottom = "0";
+  // 1 px de relleno abajo (que después se descuenta): con 0, el margen inferior del
+  // último elemento "se escapa" de la medida y la hoja real quedaba unos px más alta
+  // de lo calculado
+  envoltura.style.paddingBottom = "1px";
   envoltura.innerHTML = html;
   host.appendChild(envoltura);
-  const alto = envoltura.getBoundingClientRect().height;
+  const alto = envoltura.getBoundingClientRect().height - 1;
   host.innerHTML = "";
   return alto;
 }
@@ -878,6 +881,10 @@ function construirPaginasResultados(estudiante) {
 
 // ==================== exportación a PDF ====================
 
+// hasta 6% más alta que la hoja: se achica para que quepa (no se nota); más que eso,
+// se reparte en varias hojas (no debería pasar: el reparto de contenido lo evita)
+const TOLERANCIA_AJUSTE_HOJA = 1.06;
+
 async function paginasAPdfBlob(paginas) {
   // se monta cada página temporalmente fuera de la vista, se captura, y se agrega al PDF;
   // si una página igual queda más larga que una hoja carta (caso extremo), se reparte en
@@ -901,6 +908,14 @@ async function paginasAPdfBlob(paginas) {
     if (imgH <= pageH) {
       if (!esPrimeraHoja) pdf.addPage();
       pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgW, imgH);
+      esPrimeraHoja = false;
+    } else if (imgH <= pageH * TOLERANCIA_AJUSTE_HOJA) {
+      // apenas más alta que la hoja (unos pocos px, por redondeos al medir): se achica
+      // un poco para que quepa entera. Si se partiera, el sobrante quedaría solo en una
+      // hoja nueva, casi en blanco.
+      const factor = pageH / imgH;
+      if (!esPrimeraHoja) pdf.addPage();
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", (pageW - imgW * factor) / 2, 0, imgW * factor, pageH);
       esPrimeraHoja = false;
     } else {
       let restante = canvas.height;

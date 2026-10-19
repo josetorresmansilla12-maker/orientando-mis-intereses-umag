@@ -411,10 +411,13 @@ function construirTodasLasPaginasInternoKuder(stats, periodo) {
   // se mide de verdad; si se pasa del límite, se saca su último bloque y pasa a la
   // página siguiente (o abre una nueva si era la última), repitiendo hasta que todas
   // quepan de verdad.
+  // la última hoja lleva el pie de página institucional; se cuenta al armarla (antes se
+  // agregaba después, y si esa hoja venía llena, el pie la hacía pasarse de la hoja)
+  const htmlPie = construirFooterInternoKuder();
   function armarHtmlPagina(indices, esPrimeraPagina, esUltimaPagina) {
     const encabezado = esPrimeraPagina ? htmlEncabezadoPrimera : htmlEncabezadoCont;
     const contenido = indices.map((idx) => bloques[idx]).join("");
-    return `${encabezado}${contenido}${esUltimaPagina ? "" : htmlAviso}`;
+    return `${encabezado}${contenido}${esUltimaPagina ? htmlPie : htmlAviso}`;
   }
   for (let pIdx = 0; pIdx < paginasArmadas.length; pIdx++) {
     let intentos = 0;
@@ -481,9 +484,7 @@ function nombreArchivoInternoKuder() {
 async function generarInformeInternoKuderPdf(archivos, periodo) {
   const stats = calcularEstadisticasInternasKuder(archivos);
 
-  const paginas = construirTodasLasPaginasInternoKuder(stats, periodo);
-  // el pie de página institucional va en la última hoja de todo el informe.
-  paginas[paginas.length - 1].insertAdjacentHTML("beforeend", construirFooterInternoKuder());
+  const paginas = construirTodasLasPaginasInternoKuder(stats, periodo); // (la última ya trae el pie de página)
 
   const blob = await paginasAPdfBlob(paginas);
   const url = URL.createObjectURL(blob);

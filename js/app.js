@@ -421,8 +421,9 @@ function botonDejarAsiHtml(estudiante) {
   return `<button type="button" class="chico exito btn-dejar-asi" title="Ya lo revisé: dejar sus puntajes como están, aunque no sumen ${SUMA_ESPERADA_KUDER}. Deja de aparecer como pendiente" onclick="accionDejarAsi('${estudiante.id}')">✓ Dejar así</button>`;
 }
 
-// ventana con varias opciones (además de "Cancelar"): [{ texto, clase, accion }]
-function elegirOpcion({ titulo, texto, opciones }) {
+// ventana con varias opciones (además de "Cancelar"): [{ texto, clase, accion }];
+// "textoCancelar" cambia ese botón (por ejemplo "Entendido" en un aviso sin opciones)
+function elegirOpcion({ titulo, texto, opciones, textoCancelar = "Cancelar" }) {
   const modal = document.getElementById("modal-opciones");
   document.getElementById("mo-titulo").textContent = titulo;
   document.getElementById("mo-texto").innerHTML = texto;
@@ -432,7 +433,7 @@ function elegirOpcion({ titulo, texto, opciones }) {
   const cancelar = document.createElement("button");
   cancelar.type = "button";
   cancelar.className = "secundario";
-  cancelar.textContent = "Cancelar";
+  cancelar.textContent = textoCancelar;
   cancelar.onclick = cerrar;
   cont.appendChild(cancelar);
   opciones.forEach((op) => {
@@ -547,6 +548,24 @@ function pedirDatosPorArchivo(lecturas, cursoHeader) {
     const btnDescargar = document.getElementById("modal-imp-btn-descargar");
     const btnCancelar = document.getElementById("modal-imp-btn-cancelar");
     const c = cfg();
+    // carpetas (cursos) que ya están cargadas: cada archivo se puede enlazar a una
+    const carpetas = cursosDelStore(c.store);
+    // la carpeta que corresponde a un colegio/curso/letra (sin importar tildes ni mayúsculas)
+    const carpetaQueCalza = (d) =>
+      carpetas.findIndex(
+        (cu) =>
+          d.colegio &&
+          d.curso &&
+          parecidoColegios(cu.colegio, d.colegio) === "igual" &&
+          normalizarTexto(cu.curso) === normalizarTexto(c.store.normalizarCurso(d.curso)) &&
+          (cu.letra || "").toUpperCase() === (d.letra || "").toUpperCase()
+      );
+    const htmlSelectorCarpeta = carpetas.length
+      ? `<div class="imp-carpeta"><label>📁 ¿Va en una carpeta que ya existe?</label><select class="imp-carpeta-sel">
+          <option value="">No: carpeta nueva (escribe colegio, curso y letra abajo)</option>
+          ${carpetas.map((cu, k) => `<option value="${k}">${escaparHtml(cu.colegio || "Sin colegio")} · ${escaparHtml(etiquetaCursoGuardado(cu))} (${cu.estudiantes.length} est.)</option>`).join("")}
+        </select></div>`
+      : "";
 
     cont.innerHTML = lecturas
       .map(({ archivo, lectura }, i) => {
@@ -586,6 +605,7 @@ function pedirDatosPorArchivo(lecturas, cursoHeader) {
             <span class="fila-importar-archivo-info">${info}</span>
             ${quitar}
           </div>
+          ${htmlSelectorCarpeta}
           <div class="grid-form">
             <div>
               <label>Colegio *</label>
@@ -613,11 +633,17 @@ function pedirDatosPorArchivo(lecturas, cursoHeader) {
       letra: fila.querySelector(".imp-letra").value.trim().toUpperCase(),
     });
 
-    // aviso en vivo si el colegio/curso/letra escritos ya tienen estudiantes cargados
+    // aviso en vivo si el colegio/curso/letra escritos ya tienen estudiantes cargados (y
+    // la lista de carpetas muestra cuál es, si coincide con una)
     const actualizarAvisosExistentes = () => {
       const activos = c.store.listar();
       filasConEstudiantes.forEach((fila) => {
         const d = leerFila(fila);
+        const sel = fila.querySelector(".imp-carpeta-sel");
+        if (sel) {
+          const k = carpetaQueCalza(d);
+          sel.value = k === -1 ? "" : String(k);
+        }
         const yaCargados =
           d.colegio && d.curso
             ? activos.filter(
@@ -628,10 +654,30 @@ function pedirDatosPorArchivo(lecturas, cursoHeader) {
               ).length
             : 0;
         fila.querySelector(".imp-aviso-existente").textContent = yaCargados
-          ? `⚠ Este curso ya tiene ${yaCargados} ${yaCargados === 1 ? "estudiante cargado" : "estudiantes cargados"}. Si importas este archivo aquí, quedarán repetidos: para actualizarlo sin duplicar, usa "📦 Importación masiva", más abajo.`
+          ? `⚠ Esta carpeta ya tiene ${yaCargados} ${yaCargados === 1 ? "estudiante" : "estudiantes"}. Si importas el archivo aquí, todos sus estudiantes se agregan (los que ya estaban quedan repetidos). Para agregar solo los que faltan, usa "📥 Añadir CSV a este curso" dentro de la carpeta (Estudiantes e informes) o la "📦 Importación masiva".`
           : "";
       });
     };
+    // elegir una carpeta existente completa colegio, curso y letra tal como están en la app;
+    // y si lo que trae el archivo ya calza con una carpeta, queda elegida de entrada (con
+    // el nombre como está en la app, así no se crea una carpeta repetida con otra tilde)
+    const llenarDesdeCarpeta = (fila, k) => {
+      const cu = carpetas[k];
+      if (!cu) return;
+      fila.querySelector(".imp-colegio").value = cu.colegio;
+      fila.querySelector(".imp-curso").value = cu.curso;
+      fila.querySelector(".imp-letra").value = cu.letra;
+    };
+    filasConEstudiantes.forEach((fila) => {
+      const sel = fila.querySelector(".imp-carpeta-sel");
+      if (!sel) return;
+      const k = carpetaQueCalza(leerFila(fila));
+      if (k !== -1) llenarDesdeCarpeta(fila, k);
+      sel.addEventListener("change", () => {
+        if (sel.value !== "") llenarDesdeCarpeta(fila, Number(sel.value));
+        actualizarAvisosExistentes();
+      });
+    });
     cont.querySelectorAll("input").forEach((inp) => inp.addEventListener("input", actualizarAvisosExistentes));
     actualizarAvisosExistentes();
 
@@ -1245,6 +1291,7 @@ function renderEstudiantes() {
         <div class="grupo-curso-cont">
           <div style="margin-bottom:10px; display:flex; gap:8px; flex-wrap:wrap;">
             <button class="chico" id="${idSeguro("grp", clave)}">⬇ Descargar informes de este curso (ZIP)</button>
+            <button class="chico secundario" id="${idSeguro("addcsv", clave)}" title="Carga el CSV o Excel de este curso directo en esta carpeta, sin duplicar a los que ya están">📥 Añadir CSV a este curso</button>
             ${c.configGrupal ? `<button class="chico secundario" id="${idSeguro("grpori", clave)}">📊 Informe grupal para el orientador (PDF)</button>` : ""}
             <button class="chico peligro" id="${idSeguro("delcurso", clave)}">🗑 Eliminar curso completo</button>
           </div>
@@ -1329,6 +1376,9 @@ function renderEstudiantes() {
       const cursoCompleto = todos.filter((e) => e.colegio === colegio && etiquetaCurso(e) === claveCurso);
       const btnOri = document.getElementById(idSeguro("grpori", clave));
       if (btnOri) btnOri.onclick = () => antesDeGenerarInformes(cursoCompleto, () => accionInformeGrupal(cursoCompleto, btnOri));
+
+      const btnCsv = document.getElementById(idSeguro("addcsv", clave));
+      if (btnCsv) btnCsv.onclick = () => abrirAnadirCsvACurso(estudiantesCurso[0]);
 
       const btnDel = document.getElementById(idSeguro("delcurso", clave));
       if (btnDel) {

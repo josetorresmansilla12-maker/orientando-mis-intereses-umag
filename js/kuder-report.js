@@ -446,8 +446,8 @@ function medirAnchoFragmentoKuder(html) {
 // (ancho de 794px): si una combinación de columnas/letra no cabe en cualquiera de
 // los dos sentidos, se descarta igual, prefiriendo menos columnas (nombres con más
 // espacio) o letra más chica antes que aceptar un desborde horizontal.
-function empaquetarListaEstudiantesKuder(filas, htmlEncabezado, disponible) {
-  const TAMANOS_FUENTE_PX = [15, 14, 13, 12, 11, 10, 9.5, 9, 8.5];
+function empaquetarListaEstudiantesKuder(filas, htmlEncabezado, disponible, { tamanoMinimo = 0 } = {}) {
+  const TAMANOS_FUENTE_PX = [15, 14, 13, 12, 11, 10, 9.5, 9, 8.5].filter((t) => t >= tamanoMinimo);
   const ANCHO_PAGINA_PX = 794;
   const armar = (cols, tamano) => {
     const porColumna = Math.ceil(filas.length / cols);
@@ -735,7 +735,9 @@ function empaquetarTarjetasEnOrdenKuder(alturas, disponible) {
 // El pie de página (construirFooterKuder) va en TODAS estas páginas, no solo en la
 // última — se reserva su altura completa (más el aviso de continuación) al calcular
 // cuántas tarjetas caben, así ninguna tarjeta termina empujando al pie fuera de la hoja.
-function construirPaginasAreasKuder(datosCurso, conteos, total) {
+// "htmlAntes" (opcional): un bloque que va arriba de la primera hoja de áreas (la lista
+// de estudiantes de un curso chico); se reparte junto con las tarjetas, como el primero.
+function construirPaginasAreasKuder(datosCurso, conteos, total, { htmlAntes = null } = {}) {
   const areasOrdenadas = [...G().areas].sort((a, b) => (conteos[b.id] || 0) - (conteos[a.id] || 0));
   const htmlTarjetas = areasOrdenadas.map((area) => construirTarjetaAreaKuder(area, conteos[area.id] || 0, total, false));
   const htmlTarjetasEspaciosas = areasOrdenadas.map((area) => construirTarjetaAreaKuder(area, conteos[area.id] || 0, total, true));
@@ -748,22 +750,28 @@ function construirPaginasAreasKuder(datosCurso, conteos, total) {
   // cada tarjeta se mide con su ancho real en la hoja (con los márgenes de los lados):
   // medida más ancha, sale más baja de lo que es y el reparto queda corto
   const alturasTarjetas = htmlTarjetas.map((html) => medirAlturaFragmento(`<div class="informe-areas" style="margin-top:0;">${html}</div>`));
+  // con un bloque antes, ese es el índice 0 y las tarjetas van del 1 en adelante
+  const alturas = htmlAntes ? [medirAlturaFragmento(htmlAntes), ...alturasTarjetas] : alturasTarjetas;
 
   const MARGEN_SEGURIDAD_PX = 20;
   const disponible = ALTO_PAGINA_PX - PADDING_INFERIOR_PX - altoEncabezadoCont - altoReservaInferior - MARGEN_SEGURIDAD_PX;
 
   // en orden (de mayor a menor), con la menor cantidad de hojas y sin hojas medio
   // vacías al medio (cortarEnOrden, js/report.js)
-  const grupos = cortarEnOrden(alturasTarjetas, disponible, disponible);
+  const grupos = cortarEnOrden(alturas, disponible, disponible);
 
   const LIMITE_PAGINA_PX = ALTO_PAGINA_PX - PADDING_INFERIOR_PX;
   // arma la página siempre con las tarjetas compactas: el cálculo de cuáles caben
   // juntas (arriba y en el ciclo de abajo) se hizo midiendo esas alturas, así que
   // usar acá la versión espaciosa podría invalidarlo.
-  function armarHtmlPagina(indices, esUltima) {
+  function armarHtmlPagina(indices, esUltima, espaciosa = false) {
+    const tarjetas = espaciosa ? htmlTarjetasEspaciosas : htmlTarjetas;
+    const antes = htmlAntes && indices.includes(0) ? htmlAntes : "";
+    const deTarjetas = indices.filter((i) => !(htmlAntes && i === 0)).map((i) => tarjetas[htmlAntes ? i - 1 : i]);
     return `
       ${htmlEncabezadoCont}
-      <div class="informe-areas">${indices.map((i) => htmlTarjetas[i]).join("")}</div>
+      ${antes}
+      ${deTarjetas.length ? `<div class="informe-areas">${deTarjetas.join("")}</div>` : ""}
       ${esUltima ? "" : htmlAviso}
       ${htmlFooter}
     `;
@@ -788,12 +796,7 @@ function construirPaginasAreasKuder(datosCurso, conteos, total) {
   return grupos.map((indices, idx) => {
     const esUltima = idx === grupos.length - 1;
     let html = armarHtmlPagina(indices, esUltima);
-    const htmlEspacioso = `
-      ${htmlEncabezadoCont}
-      <div class="informe-areas">${indices.map((i) => htmlTarjetasEspaciosas[i]).join("")}</div>
-      ${esUltima ? "" : htmlAviso}
-      ${htmlFooter}
-    `;
+    const htmlEspacioso = armarHtmlPagina(indices, esUltima, true);
     if (medirAlturaFragmento(htmlEspacioso) <= LIMITE_PAGINA_PX) html = htmlEspacioso;
     const contenedor = document.createElement("div");
     contenedor.className = "informe-page";
@@ -827,18 +830,32 @@ function calcularConteosPorAreaKuder(estudiantes) {
   return conteos;
 }
 
+// curso chico: si la lista de estudiantes cabe en menos de media hoja (con letra de
+// 12 px o más), va arriba de la primera hoja de áreas en vez de ocupar una hoja propia
+// casi vacía (con 1 estudiante, la hoja quedaba prácticamente en blanco). Devuelve su
+// HTML, o null si la lista es más larga (entonces va en su propia hoja, como siempre).
+function bloqueListaEstudiantesCortaKuder(estudiantes) {
+  const ordenados = [...estudiantes].sort((a, b) => capitalizarNombreKuder(a.nombre).localeCompare(capitalizarNombreKuder(b.nombre), "es"));
+  const filas = ordenados.map((e, i) => construirFilaEstudianteKuder(i + 1, e));
+  const htmlTitulo = `<div class="kuder-lista-estudiantes-titulo">Lista de estudiantes evaluados (${estudiantes.length})</div>`;
+  const intento = empaquetarListaEstudiantesKuder(filas, htmlTitulo, (ALTO_PAGINA_PX - PADDING_INFERIOR_PX) * 0.45, { tamanoMinimo: 12 });
+  return intento.cabe ? intento.html : null;
+}
+
 // orden del PDF: 1) estadísticas del curso, 2) resultados (gráfico de áreas),
-// 3) lista de estudiantes (1 o 2 páginas, sin pie de página), 4) en adelante, una
-// tarjeta por área con sus carreras (igual que antes).
+// 3) lista de estudiantes (1 o 2 páginas, sin pie de página; si el curso es chico, va
+// arriba de la primera hoja de áreas), 4) en adelante, una tarjeta por área con sus
+// carreras.
 async function construirBlobInformeGrupalKuder(datosCurso, estudiantes, config) {
   const paginas = conConfigGrupal(config, () => {
     const total = estudiantes.length;
     const conteos = calcularConteosPorAreaKuder(estudiantes);
+    const listaCorta = bloqueListaEstudiantesCortaKuder(estudiantes);
     return [
       construirPaginaStatsKuder(datosCurso, estudiantes, conteos, total),
       construirPaginaResultadosKuder(datosCurso, conteos, total),
-      ...construirPaginasListaEstudiantesKuder(datosCurso, estudiantes),
-      ...construirPaginasAreasKuder(datosCurso, conteos, total),
+      ...(listaCorta ? [] : construirPaginasListaEstudiantesKuder(datosCurso, estudiantes)),
+      ...construirPaginasAreasKuder(datosCurso, conteos, total, { htmlAntes: listaCorta }),
     ];
   });
   return paginasAPdfBlob(paginas);
