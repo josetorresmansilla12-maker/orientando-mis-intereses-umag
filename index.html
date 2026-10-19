@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Orientando mis Intereses — Informes</title>
-<link rel="stylesheet" href="css/styles.css?v=20261020" />
+<link rel="stylesheet" href="css/styles.css?v=20261021" />
 </head>
 <body class="test-octavo">
 
@@ -193,7 +193,7 @@
         <div id="grupos-estudiantes"></div>
       </div>
 
-      <!-- archivo para "📥 Añadir CSV a este curso" (botón dentro de cada curso) -->
+      <!-- archivo para "📥 Añadir un curso desde CSV" (botón dentro de cada colegio) -->
       <input type="file" id="input-csv-curso" accept=".csv,.xlsx,.xls" style="display:none;" />
 
       <div class="tarjeta" id="tarjeta-carpetas">
@@ -546,6 +546,26 @@
     </div>
   </div>
 
+  <!-- ===================== MODAL: AÑADIR UN CURSO DESDE CSV (dentro de un colegio) ===================== -->
+  <div id="modal-curso-csv" class="modal-overlay" style="display:none;">
+    <div class="modal-caja modal-caja--info modal-caja--ancha">
+      <h3 id="mcc-titulo">📥 Añadir un curso desde CSV</h3>
+      <p id="mcc-archivo" class="ayuda" style="margin:0 0 10px;"></p>
+      <div class="grid-form mcc-campos">
+        <div><label for="mcc-colegio">Colegio</label><input type="text" id="mcc-colegio" disabled /></div>
+        <div><label for="mcc-curso">Curso *</label><input type="text" id="mcc-curso" autocomplete="off" /></div>
+        <div><label for="mcc-letra">Letra</label><input type="text" id="mcc-letra" maxlength="2" autocomplete="off" placeholder="Ej: A" /></div>
+      </div>
+      <div id="mcc-detalle"></div>
+      <label class="mcc-actualizar" id="mcc-actualizar-wrap"><input type="checkbox" id="mcc-actualizar" /> <span></span></label>
+      <p class="ayuda" style="margin:10px 0 0;">Se puede deshacer con "↩ Deshacer" arriba.</p>
+      <div class="modal-acciones">
+        <button type="button" id="mcc-cancelar" class="secundario">Cancelar</button>
+        <button type="button" id="mcc-aceptar">📥 Crear el curso</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===================== MODAL: FUSIONAR CARPETAS (editar carpetas) ===================== -->
   <div id="modal-fusionar" class="modal-overlay" style="display:none;">
     <div class="modal-caja modal-caja--info modal-caja--ancha">
@@ -572,33 +592,33 @@
        cada actualización (si no, puede mezclar archivos nuevos con otros guardados en
        caché y la app deja de funcionar); se cambia cada vez que se publica una versión -->
   <!-- datos de cada test (van primero: js/store.js arma un guardado por test) -->
-  <script src="js/data.js?v=20261020"></script>
-  <script src="js/icons.js?v=20261020"></script>
-  <script src="js/kuder-data.js?v=20261020"></script>
-  <script src="js/kuder-icons.js?v=20261020"></script>
-  <script src="js/cursos.js?v=20261020"></script>
-  <script src="js/logo.js?v=20261020"></script>
-  <script src="js/store.js?v=20261020"></script>
+  <script src="js/data.js?v=20261021"></script>
+  <script src="js/icons.js?v=20261021"></script>
+  <script src="js/kuder-data.js?v=20261021"></script>
+  <script src="js/kuder-icons.js?v=20261021"></script>
+  <script src="js/cursos.js?v=20261021"></script>
+  <script src="js/logo.js?v=20261021"></script>
+  <script src="js/store.js?v=20261021"></script>
 
   <!-- informes: 8° básico (individual) y Kuder (grupal para orientadores e individual) -->
-  <script src="js/report.js?v=20261020"></script>
-  <script src="js/excel.js?v=20261020"></script>
-  <script src="js/kuder.js?v=20261020"></script>
-  <script src="js/kuder-report.js?v=20261020"></script>
-  <script src="js/kuder-individual-report.js?v=20261020"></script>
+  <script src="js/report.js?v=20261021"></script>
+  <script src="js/excel.js?v=20261021"></script>
+  <script src="js/kuder.js?v=20261021"></script>
+  <script src="js/kuder-report.js?v=20261021"></script>
+  <script src="js/kuder-individual-report.js?v=20261021"></script>
 
   <!-- interfaz común (selector de test, pestañas, formularios) -->
-  <script src="js/app.js?v=20261020"></script>
+  <script src="js/app.js?v=20261021"></script>
   <!-- elegir cursos de la app, editar carpetas e importación masiva -->
-  <script src="js/selector-cursos.js?v=20261020"></script>
-  <script src="js/carpetas.js?v=20261020"></script>
-  <script src="js/importacion-masiva.js?v=20261020"></script>
-  <script src="js/anadir-csv-curso.js?v=20261020"></script>
+  <script src="js/selector-cursos.js?v=20261021"></script>
+  <script src="js/carpetas.js?v=20261021"></script>
+  <script src="js/importacion-masiva.js?v=20261021"></script>
+  <script src="js/anadir-curso-csv.js?v=20261021"></script>
 
   <!-- informe interno de Kuder (Admisión y Marketing) — reutiliza el lector de
        planillas de js/kuder.js y varias utilidades genéricas de js/kuder-report.js -->
-  <script src="js/kuder-internal-data.js?v=20261020"></script>
-  <script src="js/kuder-internal-report.js?v=20261020"></script>
-  <script src="js/kuder-internal.js?v=20261020"></script>
+  <script src="js/kuder-internal-data.js?v=20261021"></script>
+  <script src="js/kuder-internal-report.js?v=20261021"></script>
+  <script src="js/kuder-internal.js?v=20261021"></script>
 </body>
 </html>

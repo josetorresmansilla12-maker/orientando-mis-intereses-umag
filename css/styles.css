@@ -1658,3 +1658,8 @@ details.grupo-colegio > summary .btn-lapiz-colegio:focus-visible { opacity: 1; c
 .csv-curso-aviso { margin-top: 8px; font-size: 12.5px; color: #7a5200; background: #fff4e0; border: 1px solid #f0d9a6; border-radius: 7px; padding: 6px 10px; }
 /* nombres de archivo largos en las ventanas de opciones: que no se salgan del recuadro */
 #mo-texto { overflow-wrap: anywhere; }
+/* "📥 Añadir un curso desde CSV" */
+.mcc-campos { grid-template-columns: 2fr 1.2fr 0.6fr; margin-bottom: 6px; }
+.mcc-campos input:disabled { background: var(--lila-fondo); color: var(--texto); }
+.mcc-actualizar { display: flex; align-items: center; gap: 7px; margin-top: 8px; font-size: 12.5px; font-weight: 600; color: var(--texto); cursor: pointer; }
+.mcc-actualizar input { width: auto; }

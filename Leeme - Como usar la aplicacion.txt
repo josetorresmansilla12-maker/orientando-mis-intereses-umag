@@ -41,15 +41,16 @@ Paso 2: las pestañas
      curso "2do Medio" y letra "A"). Si ese curso ya tenía estudiantes cargados, te avisa,
      para que no lo importes dos veces. Cada archivo tiene su ✕ para quitarlo si lo
      elegiste por error (no se importa), y su nombre ya no queda pegado junto al botón.
-     * "📁 ¿Va en una carpeta que ya existe?": en cada archivo se puede elegir una
-       carpeta (colegio · curso) ya cargada, y se completan solos el colegio, curso y
-       letra tal como están en la app. Si lo que trae el archivo calza con una carpeta
-       (aunque cambien tildes o mayúsculas), queda elegida de entrada, así no se crea
-       una carpeta repetida. Sirve con uno o con varios archivos.
+     * Colegio, curso y letra vienen solo con lo que dice el archivo; si no lo trae,
+       quedan vacíos para escribirlos (ya no se rellenan con el último curso cargado).
+     * "📁 ¿Va en una carpeta que ya existe?": en cada archivo se puede elegir a mano
+       una carpeta (colegio · curso) ya cargada, y se completan el colegio, curso y
+       letra tal como están en la app. Nunca se elige sola. Sirve con uno o con varios
+       archivos.
      * Ojo: si el curso ya tiene estudiantes, esta importación agrega TODOS los del
        archivo (los que ya estaban quedan repetidos; la app lo avisa en amarillo).
-       Para agregar solo los que faltan, usa "📥 Añadir CSV a este curso" o la
-       Importación masiva.
+       Para agregar solo los que faltan, usa "📥 Añadir un curso desde CSV" (dentro del
+       colegio) o la Importación masiva.
    - "📦 Importación masiva: muchos cursos a la vez": para cargar de una vez las
      planillas de muchos cursos, por ejemplo el ZIP de CSV que descarga un compañero
      desde su app ("Uso interno" → "Descargar todos los CSV"). Se pueden elegir
@@ -100,13 +101,14 @@ Paso 2: las pestañas
      vista mientras genera, y si el navegador pregunta por descargar varios
      archivos, elegir "Permitir".
    - Descargar todos los informes de un curso en un ZIP.
-   - "📥 Añadir CSV a este curso" (dentro de cada curso): carga el CSV o Excel de ese
-     curso directo en esa carpeta, sin duplicar a nadie. Antes muestra qué va a pasar:
-     cuántos son nuevos (se agregan), cuántos ya estaban iguales (no se duplican) y
-     cuántos ya estaban con datos distintos (eliges si usar los del archivo o dejar los
-     de la app). Si el archivo dice que es de otro curso, lo avisa. Al terminar, si hay
-     tests mal traspasados (no suman 45), ofrece ir a la pestaña "Corrección". Se puede
-     deshacer con "↩ Deshacer".
+   - "📥 Añadir un curso desde CSV" (dentro de cada colegio): crea en ese colegio un
+     curso a partir de su CSV o Excel. El curso y la letra se leen del archivo (si no
+     los trae, se escriben) y se pueden corregir antes de cargar. Nadie se duplica: los
+     estudiantes que ya están en la app se quedan donde están (y, si se marca la
+     casilla, se actualizan con los datos del archivo); solo se agregan los nuevos. Si
+     ese curso ya existe en el colegio, los nuevos se suman a él. Si el archivo dice que
+     es de otro colegio, lo avisa. Al terminar, si hay tests mal traspasados (no suman
+     45), ofrece ir a la pestaña "Corrección". Se puede deshacer con "↩ Deshacer".
    - Nombres de carpetas y archivos:
      * Carpeta (o ZIP) de un curso: "KUDER_Colegio_Alfa_2do_Medio_C_2026" (en
        8° básico empieza con "8VO"). Lleva el año, no la fecha completa.
