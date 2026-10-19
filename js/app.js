@@ -1268,6 +1268,7 @@ function renderEstudiantes() {
       <summary>🏫 ${escaparHtml(colegio)}<button type="button" class="btn-lapiz btn-lapiz-colegio" data-colegio="${escaparHtml(colegio)}" title="Cambiar el nombre del colegio" aria-label="Cambiar el nombre del colegio">✎</button> <span class="chip">${porCurso.size} ${porCurso.size === 1 ? "curso" : "cursos"}</span><span class="chip">${totalColegio} ${totalColegio === 1 ? "estudiante" : "estudiantes"}</span>${chipTraspasoHtml([...porCurso.values()].flat())}</summary>
       <div class="grupo-colegio-cont">
         <div class="grupo-colegio-acciones">
+          <button type="button" class="chico" id="${idSeguro("zipcol", colegio)}" title="Un ZIP con todos los informes de este colegio, con una carpeta por curso (curso y letra)">⬇ Descargar todos los informes del colegio (ZIP por curso)</button>
           <button type="button" class="chico secundario btn-minimizar-alumnos" ${atributosBotonMinimizar(cursosAbiertos > 0)}>${textoBotonMinimizar(cursosAbiertos > 0)}</button>
           <button type="button" class="chico btn-curso-csv" data-colegio="${escaparHtml(colegio)}" title="Crea en este colegio un curso nuevo a partir de su CSV o Excel">📥 Añadir un curso desde CSV</button>
           <button class="chico peligro" id="${idSeguro("delcol", colegio)}">🗑 Eliminar colegio completo</button>
@@ -1354,6 +1355,12 @@ function renderEstudiantes() {
   // botones de descarga y de eliminación grupal (se cablean después de insertar el HTML)
   for (const [colegio, porCurso] of porColegio) {
     const idsColegio = [...porCurso.values()].flat().map((e) => e.id);
+    // todos los informes del colegio: un ZIP con una carpeta por curso (con su letra y el
+    // nombre del colegio), con la misma vista previa de "Descargar todos los cursos". Va
+    // el colegio completo, aunque arriba haya un filtro de curso o de nombre.
+    const btnZipColegio = document.getElementById(idSeguro("zipcol", colegio));
+    if (btnZipColegio) btnZipColegio.onclick = () => accionDescargarTodosLosCursos(todos.filter((e) => e.colegio === colegio), btnZipColegio);
+
     const btnDelColegio = document.getElementById(idSeguro("delcol", colegio));
     if (btnDelColegio) {
       btnDelColegio.onclick = () => accionEliminarGrupo(`el colegio "${colegio}" completo`, idsColegio);

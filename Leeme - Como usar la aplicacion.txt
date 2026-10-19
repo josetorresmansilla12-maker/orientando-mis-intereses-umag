@@ -104,6 +104,11 @@ Paso 2: las pestañas
      archivos lleva. Solo exporta cuando confirmas. Conviene dejar la pestaña a la
      vista mientras genera, y si el navegador pregunta por descargar varios
      archivos, elegir "Permitir".
+   - "⬇ Descargar todos los informes del colegio (ZIP por curso)" (dentro de cada
+     colegio): un solo ZIP con todos los informes de ese colegio, con una carpeta por
+     curso (por ejemplo "KUDER_Colegio_Luterano_2do_Medio_A_2026"). Antes muestra la
+     misma vista previa de "Descargar todos los cursos" (cursos, nombre de cada carpeta
+     y cuántos informes lleva), y se puede corregir ahí.
    - Descargar todos los informes de un curso en un ZIP.
    - "📥 Añadir un curso desde CSV" (dentro de cada colegio): crea en ese colegio un
      curso a partir de su CSV o Excel. El curso y la letra se leen del archivo (si no
