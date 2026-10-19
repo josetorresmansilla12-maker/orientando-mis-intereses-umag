@@ -237,12 +237,14 @@ Cómo se ve el informe de Kuder (individual)
 - Hojas siguientes: los datos del estudiante y un recuadro por cada área de interés
   (7 puntos o más), con su descripción, "Tus Carreras UMAG" y "Otras carreras".
 - Aparecen todas sus áreas de interés, sin límite. Si ningún área llega a 7, el
-  informe se lo dice (intereses amplios y variados) y le muestra las 10 áreas (igual
-  que en 8° básico, donde se muestran las 6), cada una con una descripción propia
-  para ese caso, que no habla de un interés alto. En esa descripción, la frase sobre
-  el puntaje se calcula con el puntaje real del área comparado con las demás: "entre
-  las de más puntaje", "parecido a otras áreas" o "menos puntaje que otras áreas"
-  (solo dice "de forma pareja" si de verdad los puntajes fueron parejos).
+  informe se lo explica en positivo: "Tus puntajes fueron diversos, lo que indica que
+  tienes múltiples áreas de interés. Por eso, en tu informe personal te mostramos en
+  detalle las 10 áreas con las carreras que imparte la UMAG y las que imparten otras
+  universidades. Tómalo como una oportunidad para seguir explorando tus intereses"
+  (en 8° básico, las 6 áreas). Cada área lleva una descripción propia para ese caso,
+  que no habla de un interés alto; la frase sobre su puntaje se calcula con el puntaje
+  real del área comparado con las demás: "entre las de más puntaje", "parecido a
+  otras áreas" o "menos puntaje que otras áreas".
 - En 8° básico, en ese caso las 6 áreas van ordenadas de mayor a menor puntaje (y el
   informe lo dice). En Kuder no se ordenan: con 10 áreas, ordenarlas dejaba más
   espacios en blanco y a veces una hoja más.

@@ -466,8 +466,8 @@ function construirCuadrosCarrerasResultados(clave, area) {
 // ni al revés. Los sirve a los dos tests (también js/kuder-individual-report.js).
 const FRASES_NIVEL_DIVERSO = {
   alta: [
-    "En tus respuestas fue una de las áreas con más puntaje, aunque sin llegar a 7, así que podría ser una de las direcciones que más te llaman la atención.",
-    "Estuvo entre tus puntajes más altos, aunque no llegó a 7, por lo que podría ser uno de los caminos que más te interesa explorar.",
+    "En tus respuestas fue una de las áreas con más puntaje, así que podría ser una de las direcciones que más te llaman la atención.",
+    "Estuvo entre tus puntajes más altos, por lo que podría ser uno de los caminos que más te interesa explorar.",
   ],
   media: [
     "En tus respuestas quedó en un nivel parecido al de otras áreas, así que podría ser una más entre tus varios intereses.",
@@ -505,14 +505,10 @@ function descripcionesAreasDiversas(areas, puntajes) {
 // "ordenadas": las tarjetas van de mayor a menor puntaje (en 8° básico; ver
 // construirPaginasResultados), y así se le dice al estudiante.
 function mensajeSinAreaDestacada(areas, puntajes, { ordenadas = false } = {}) {
-  const { parejo } = nivelesDiversos(areas, puntajes);
-  const inicio = parejo
-    ? "Tus puntajes se repartieron de forma pareja entre las áreas y ninguna llegó a 7 puntos (el puntaje que marca un interés destacado)"
-    : "Ninguna área llegó a 7 puntos (el puntaje que marca un interés destacado) y tus puntajes se repartieron entre varias áreas";
-  const muestra = ordenadas
-    ? `Aquí te mostramos las ${areas.length} áreas, ordenadas desde la de mayor puntaje hasta la de menor puntaje, para que sigas explorando tus opciones:`
-    : `Aquí te mostramos las ${areas.length} áreas, para que sigas explorando tus opciones:`;
-  return `${inicio}: esto podría indicar que tus intereses son amplios y variados, algo que también puede ser una ventaja. ${muestra}`;
+  // en positivo: no se le dice que "ninguna área llegó a 7", sino que sus intereses son
+  // diversos y que por eso el informe le muestra todas las áreas con sus carreras
+  const cuales = ordenadas ? `las ${areas.length} áreas, ordenadas de mayor a menor puntaje,` : `las ${areas.length} áreas`;
+  return `Tus puntajes fueron diversos, lo que indica que tienes múltiples áreas de interés. Por eso, en tu informe personal te mostramos en detalle ${cuales} con las carreras que imparte la UMAG y las que imparten otras universidades. Tómalo como una oportunidad para seguir explorando tus intereses:`;
 }
 
 // "textoDiverso": sin área destacada, la descripción armada para ese caso
