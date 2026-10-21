@@ -1665,3 +1665,30 @@ details.grupo-colegio > summary .btn-lapiz-colegio:focus-visible { opacity: 1; c
 .mcc-actualizar input { width: auto; }
 .csv-curso-quienes { display: block; font-size: 11.5px; color: var(--texto-suave); margin-top: 1px; }
 .csv-curso-resumen li.csv-curso-ojo { color: #7a5200; }
+
+/* ---------- importar un archivo que trae varios cursos ---------- */
+.imp-multi { margin-top: 8px; background: #f8f6fd; border: 1px solid var(--borde); border-radius: 8px; padding: 9px 12px; font-size: 13px; }
+.imp-multi-titulo { color: var(--morado-oscuro); margin-bottom: 5px; }
+.imp-multi-op { display: flex; align-items: center; gap: 7px; margin: 3px 0; font-size: 12.5px; font-weight: 600; color: var(--texto); cursor: pointer; }
+.imp-multi-op input { width: auto; }
+.imp-multi-tabla { width: 100%; border-collapse: collapse; margin-top: 7px; font-size: 12.5px; }
+.imp-multi-tabla th { text-align: left; font-size: 11px; color: var(--texto-suave); padding: 2px 6px 4px 0; }
+.imp-multi-tabla td { padding: 3px 6px 3px 0; vertical-align: middle; }
+.imp-multi-tabla input { padding: 5px 8px; font-size: 13px; }
+.imp-multi-tabla .imp-g-letra { width: 60px; }
+.imp-g-origen { color: var(--texto-suave); font-style: italic; max-width: 160px; }
+.imp-g-aviso { color: #96690a; font-weight: 600; font-size: 11.5px; white-space: nowrap; }
+.imp-multi-nota { margin-top: 5px; font-size: 11.5px; color: var(--texto-suave); }
+/* separado en varios cursos: se ocultan el curso, la letra y la carpeta únicos; cargado
+   en un solo curso: se oculta la tabla de cursos */
+.fila-importar-archivo.imp-separar .imp-solo-uno { display: none; }
+.fila-importar-archivo:not(.imp-separar) .imp-multi-tabla,
+.fila-importar-archivo:not(.imp-separar) .imp-multi-nota { display: none; }
+/* importación masiva y "Añadir un curso desde CSV" con varios cursos */
+.mv-multi { margin-top: 7px; background: #f8f6fd; border: 1px solid var(--borde); border-radius: 7px; padding: 7px 10px; font-size: 12.5px; }
+.mv-multi-op { display: flex; align-items: center; gap: 7px; margin: 0; font-weight: 600; color: var(--texto); cursor: pointer; }
+.mv-multi-op input { width: auto; }
+.mv-multi-lista { margin-top: 4px; color: var(--texto-suave); font-size: 12px; }
+#modal-curso-csv.mcc-varios .mcc-campos { grid-template-columns: 1fr; }
+#modal-curso-csv.mcc-varios .mcc-campos > div:not(:first-child) { display: none; }
+.fila-importar-archivo.imp-separar .grid-form { grid-template-columns: 1fr; }

@@ -572,8 +572,11 @@ function exportarExcelKuder() {
 
 // misma estructura de columnas que exporta el sistema de Kuder (rut, las 10 áreas,
 // nombre, colegio, curso), por si hace falta armar una planilla a mano.
+// la letra va en su propia columna y es opcional: si queda vacía, el curso queda sin
+// letra (no se pide). Si cada fila trae un curso distinto, al importar se ofrece separar
+// el archivo en un curso por cada uno.
 function descargarPlanillaEnBlancoKuder() {
-  const encabezados = ["rut", "nombre", ...AREAS_KUDER.map((a) => a.id), "colegio", "curso"];
+  const encabezados = ["rut", "nombre", ...AREAS_KUDER.map((a) => a.id), "colegio", "curso", "letra"];
   const hoja = XLSX.utils.aoa_to_sheet([encabezados]);
   hoja["!cols"] = encabezados.map((h) => ({ wch: h === "nombre" ? 28 : h === "colegio" ? 22 : 11 }));
   const libro = XLSX.utils.book_new();

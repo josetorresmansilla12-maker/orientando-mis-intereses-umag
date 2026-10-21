@@ -145,6 +145,11 @@ function leerPlanillaKuder(arrayBuffer) {
       // no se usan en los informes, pero se guardan para devolverlos en el CSV (Uso interno)
       contacto: idxContacto !== -1 ? (fila[idxContacto] || "").toString().trim() : "",
       nacimiento: idxNacimiento !== -1 ? textoFechaKuder(fila[idxNacimiento]) : "",
+      // colegio, curso y letra de SU fila (un archivo puede traer varios cursos; ver
+      // leerPlanillaKuderParaImportar)
+      colegioFila: idxColegio !== -1 ? (fila[idxColegio] || "").toString().trim() : "",
+      cursoFila: idxCurso !== -1 ? (fila[idxCurso] || "").toString().trim() : "",
+      letraFila: idxLetra !== -1 ? (fila[idxLetra] || "").toString().trim() : "",
       puntajes,
     });
   }
@@ -168,14 +173,43 @@ function separarCursoLetraKuder(texto) {
 // estudiantes para generar sus informes individuales): mismo lector que usan los
 // informes grupales, pero con el curso separado de su letra (la app guarda curso y
 // letra por separado, igual que en 8° básico).
+// curso y letra de un texto como viene en el archivo: "2do A" → "2do Medio" + "A";
+// "primero NB" → "1ro Medio" + "NB" (letras de 1 o 2 caracteres, como en los cursos de
+// adultos); si la letra viene en su propia columna, se usa esa. Sin letra, queda vacía
+// (no se pide).
+function cursoYLetraKuder(cursoTexto, letraTexto) {
+  let curso = (cursoTexto || "").toString().trim();
+  let letra = (letraTexto || "").toString().trim().toUpperCase();
+  if (curso && !letra) {
+    const sep = separarCursoLetra(curso); // reconoce el nivel y letras de 1 o 2 caracteres
+    ({ curso, letra } = sep.letra ? sep : separarCursoLetraKuder(curso));
+  }
+  return { curso: normalizarCursoKuder(curso), letra: (letra || "").toUpperCase() }; // "2do" → "2do Medio"
+}
+
+// versión del lector para cargar estudiantes en la app. Cada estudiante queda con el
+// curso y la letra de SU fila ("grupo"): si el archivo trae un solo curso (lo normal),
+// hay un solo grupo; si trae varios (por ejemplo, un test aplicado a varios cursos a la
+// vez, con "primero", "primero A", "primero NB"...), "grupos" los lista y la ventana de
+// importación pregunta si separarlos en un curso cada uno.
 function leerPlanillaKuderParaImportar(arrayBuffer) {
   const lectura = leerPlanillaKuder(arrayBuffer);
-  let { curso, letra } = lectura;
-  if (curso && !letra) ({ curso, letra } = separarCursoLetraKuder(curso));
-  curso = normalizarCursoKuder(curso); // "2do" → "2do Medio" (en Kuder todo es enseñanza media)
+  const grupos = [];
+  const porClave = new Map();
+  lectura.estudiantes.forEach((e) => {
+    const { curso, letra } = cursoYLetraKuder(e.cursoFila, e.letraFila);
+    const clave = `${normalizarTexto(curso)}|${letra}`;
+    if (!porClave.has(clave)) {
+      porClave.set(clave, grupos.length);
+      grupos.push({ curso, letra, ejemplo: [e.cursoFila, e.letraFila].filter(Boolean).join(" "), n: 0 });
+    }
+    e.grupo = porClave.get(clave);
+    grupos[e.grupo].n++;
+  });
+  const primero = grupos[0] || cursoYLetraKuder(lectura.curso, lectura.letra);
   // los tests mal traspasados se muestran ordenados en la ventana de importación
   // (revisionTraspaso), así que no se repiten como advertencias sueltas
-  return { ...lectura, advertencias: [], curso, letra: (letra || "").toUpperCase() };
+  return { ...lectura, advertencias: [], curso: primero.curso, letra: primero.letra, grupos };
 }
 
 // la pestaña "Informes para orientadores" sirve para los dos tests: lee la planilla

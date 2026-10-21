@@ -99,6 +99,9 @@ function separarCursoLetra(texto) {
   const esMedio = (curso, letra) => /^m$/i.test(letra) && !(leerNivelCurso(curso) || {}).tipo;
   let m = /^(.*\S)\s+([A-Za-zÑñ])$/.exec(t);
   if (m && leerNivelCurso(m[1]) && !esMedio(m[1], m[2])) return { curso: m[1], letra: m[2].toUpperCase() };
+  // letra de dos caracteres, escrita en mayúscula ("primero NB", "1ro NV": cursos de adultos)
+  m = /^(.*\S)\s+([A-ZÑ]{2})$/.exec(t);
+  if (m && leerNivelCurso(m[1])) return { curso: m[1], letra: m[2] };
   m = /^(\d{1,2}\s*(?:°|º|ro|do|er|to|vo|mo|no)?)([A-Za-z])$/i.exec(t);
   if (m && !esMedio(m[1], m[2])) return { curso: m[1].trim(), letra: m[2].toUpperCase() };
   return { curso: t, letra: "" };

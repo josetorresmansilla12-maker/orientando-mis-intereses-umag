@@ -73,11 +73,16 @@ async function leerCursoDesdeCsv(archivo) {
   cursoCsv.archivo = archivo;
   cursoCsv.lectura = lectura;
 
-  // curso y letra: solo lo que dice el archivo
+  // curso y letra: solo lo que dice el archivo. Si trae varios cursos (cada estudiante
+  // con el suyo), se crean todos en este colegio, cada estudiante en su curso y letra
+  cursoCsv.varios = (lectura.grupos || []).length > 1;
+  document.getElementById("modal-curso-csv").classList.toggle("mcc-varios", cursoCsv.varios);
   let curso = lectura.curso || "";
   let letra = (lectura.letra || "").toUpperCase();
   if (curso && !letra) ({ curso, letra } = separarCursoLetra(curso));
-  document.getElementById("mcc-titulo").textContent = `📥 Añadir un curso a ${cursoCsv.colegio || "Sin colegio"}`;
+  document.getElementById("mcc-titulo").textContent = cursoCsv.varios
+    ? `📥 Añadir ${lectura.grupos.length} cursos a ${cursoCsv.colegio || "Sin colegio"}`
+    : `📥 Añadir un curso a ${cursoCsv.colegio || "Sin colegio"}`;
   document.getElementById("mcc-colegio").value = cursoCsv.colegio;
   document.getElementById("mcc-curso").value = curso ? c.store.normalizarCurso(curso) : "";
   document.getElementById("mcc-curso").placeholder = c.placeholderCurso;
@@ -86,8 +91,15 @@ async function leerCursoDesdeCsv(archivo) {
   document.getElementById("mcc-curso").classList.remove("invalido");
   pintarCursoDesdeCsv();
   document.getElementById("modal-curso-csv").style.display = "flex";
-  const vacio = !document.getElementById("mcc-curso").value;
+  const vacio = !cursoCsv.varios && !document.getElementById("mcc-curso").value;
   document.getElementById(vacio ? "mcc-curso" : "mcc-aceptar").focus();
+}
+
+// curso y letra donde queda un estudiante del archivo: el de su fila si el archivo trae
+// varios cursos; si no, el escrito en la ventana
+function destinoCursoCsv(fe, d) {
+  const g = cursoCsv.varios ? cursoCsv.lectura.grupos[fe.grupo] : null;
+  return g ? { colegio: d.colegio, curso: g.curso, letra: g.letra } : d;
 }
 
 function datosCursoCsv() {
@@ -132,14 +144,23 @@ function pintarCursoDesdeCsv() {
   const otroColegio = lectura.colegio && !parecidoColegios(lectura.colegio, cursoCsv.colegio);
 
   document.getElementById("mcc-archivo").innerHTML = `📄 <b>${escaparHtml(cursoCsv.archivo.name)}</b> · ${pluralCurso(lectura.estudiantes.length, "estudiante", "estudiantes")}`;
+  const lineaCursos = cursoCsv.varios
+    ? `<li>📚 El archivo trae <b>${lectura.grupos.length} cursos distintos</b>: se crean en este colegio y cada estudiante queda en su curso y letra: ${lectura.grupos
+        .map((g) => {
+          const ya = c.store.listar().filter((e) => claveCursoGuardado(e) === claveCursoGuardado({ colegio: cursoCsv.colegio, curso: g.curso, letra: g.letra })).length;
+          return `<b>${escaparHtml(etiquetaCursoGuardado(g))}</b> (${g.n}${ya ? `; ya tiene ${ya}` : ""})`;
+        })
+        .join(" · ")}.</li>`
+    : null;
   document.getElementById("mcc-detalle").innerHTML = [
     `<ul class="csv-curso-resumen">`,
-    yaEnCurso
+    lineaCursos ||
+      (yaEnCurso
       ? `<li>📘 Este colegio ya tiene <b>${escaparHtml(etiquetaCursoGuardado(d))}</b> (${pluralCurso(yaEnCurso, "estudiante", "estudiantes")}): los nuevos se suman a ese curso.</li>`
       : d.curso
         ? `<li>📘 Se crea el curso <b>${escaparHtml(etiquetaCursoGuardado(d))}</b> en este colegio.</li>`
-        : `<li>✏️ El archivo no dice el curso: escríbelo arriba.</li>`,
-    emp.nuevos.length ? `<li>➕ <b>${pluralCurso(emp.nuevos.length, "estudiante nuevo", "estudiantes nuevos")}</b>: se ${emp.nuevos.length === 1 ? "agrega" : "agregan"} al curso.</li>` : `<li>✓ No hay estudiantes nuevos: todos ya están en la app.</li>`,
+        : `<li>✏️ El archivo no dice el curso: escríbelo arriba.</li>`),
+    emp.nuevos.length ? `<li>➕ <b>${pluralCurso(emp.nuevos.length, "estudiante nuevo", "estudiantes nuevos")}</b>: se ${emp.nuevos.length === 1 ? "agrega" : "agregan"} ${cursoCsv.varios ? "cada uno a su curso" : "al curso"}.</li>` : `<li>✓ No hay estudiantes nuevos: todos ya están en la app.</li>`,
     iguales
       ? `<li>✓ ${pluralCurso(iguales, "ya estaba", "ya estaban")} en la app <b>con el mismo RUT</b> y los mismos datos: no se ${iguales === 1 ? "duplica" : "duplican"} y se ${iguales === 1 ? "queda" : "quedan"} en su curso. ${listaQuienes(emp.pares.filter((p) => !conDif.includes(p)).map((p) => p.app))}</li>`
       : "",
@@ -162,7 +183,9 @@ function pintarCursoDesdeCsv() {
   const actualizar = document.getElementById("mcc-actualizar").checked && conDif.length;
   btn.disabled = !emp.nuevos.length && !actualizar;
   btn.textContent = emp.nuevos.length
-    ? yaEnCurso
+    ? cursoCsv.varios
+      ? `📥 Crear los cursos (${pluralCurso(emp.nuevos.length, "estudiante", "estudiantes")})`
+      : yaEnCurso
       ? `📥 Agregar ${pluralCurso(emp.nuevos.length, "estudiante", "estudiantes")}`
       : `📥 Crear el curso (${pluralCurso(emp.nuevos.length, "estudiante", "estudiantes")})`
     : actualizar
@@ -182,7 +205,7 @@ function cargarCursoDesdeCsv() {
   const d = datosCursoCsv();
   const inpCurso = document.getElementById("mcc-curso");
   const { emp, conDif } = analisisCursoCsv();
-  if (emp.nuevos.length && !d.curso) {
+  if (emp.nuevos.length && !d.curso && !cursoCsv.varios) {
     inpCurso.classList.add("invalido");
     inpCurso.focus();
     return mostrarToast("Escribe el curso");
@@ -198,7 +221,7 @@ function cargarCursoDesdeCsv() {
     }
     if (emp.nuevos.length) {
       const creados = c.store.crearVarios(
-        emp.nuevos.map((fe) => ({ nombre: fe.nombre, rut: fe.rut, contacto: fe.contacto, nacimiento: fe.nacimiento, puntajes: fe.puntajes, ...d, fecha: "" }))
+        emp.nuevos.map((fe) => ({ nombre: fe.nombre, rut: fe.rut, contacto: fe.contacto, nacimiento: fe.nacimiento, puntajes: fe.puntajes, ...destinoCursoCsv(fe, d), fecha: "" }))
       );
       afectados.push(...creados.map((e) => e.id));
     }
@@ -206,10 +229,12 @@ function cargarCursoDesdeCsv() {
   cerrarCursoDesdeCsv();
   // el colegio y el curso nuevo quedan abiertos en la lista
   estado.gruposAbiertos.add(claveGrupoColegio(d.colegio));
-  estado.gruposAbiertos.add(claveGrupoCurso(d.colegio, etiquetaCurso(d)));
+  if (!cursoCsv.varios) estado.gruposAbiertos.add(claveGrupoCurso(d.colegio, etiquetaCurso(d)));
+  const varios = cursoCsv.varios;
+  const nCursos = varios ? new Set(emp.nuevos.map((fe) => fe.grupo)).size : 1;
   render();
   const partes = [];
-  if (emp.nuevos.length) partes.push(`${pluralCurso(emp.nuevos.length, "estudiante", "estudiantes")} en ${etiquetaCursoGuardado(d)}`);
+  if (emp.nuevos.length) partes.push(`${pluralCurso(emp.nuevos.length, "estudiante", "estudiantes")} en ${varios ? pluralCurso(nCursos, "curso", "cursos") : etiquetaCursoGuardado(d)}`);
   if (actualizar && conDif.length) partes.push(pluralCurso(conDif.length, "actualizado", "actualizados"));
   mostrarToast(`Listo: ${partes.join(" y ")} (se puede deshacer arriba)`);
 

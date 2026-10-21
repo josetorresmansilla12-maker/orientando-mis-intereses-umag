@@ -356,6 +356,16 @@ function renderResumenMasiva() {
             .join("")}</ul></details>`
         : "";
       const necesitaCurso = a.nuevos.length > 0;
+      // archivo con varios cursos (cada estudiante trae el suyo): por defecto se separan
+      const grupos = (it.lectura && it.lectura.grupos) || [];
+      const separar = grupos.length > 1 && it.separar !== false;
+      const htmlVarios =
+        grupos.length > 1
+          ? `<div class="mv-multi">
+              <label class="mv-multi-op"><input type="checkbox" class="mv-separar" ${separar ? "checked" : ""} /> 📚 Trae <b>${grupos.length} cursos distintos</b>: separarlos (cada estudiante con su curso y su letra, en el mismo colegio)</label>
+              <div class="mv-multi-lista">${grupos.map((g) => `${escaparHtml(etiquetaCursoGuardado(g))} (${g.n})`).join(" · ")}</div>
+            </div>`
+          : "";
       return `
       <div class="mv-item${it.marcado ? " mv-item--marcado" : ""}" data-uid="${it.uid}">
         <div class="mv-item-cab">
@@ -378,13 +388,18 @@ function renderResumenMasiva() {
         ${a.recomendacion ? `<div class="mv-recomendacion">${escaparHtml(a.recomendacion)}</div>` : ""}
         ${opciones}
         ${listaDifs}
+        ${htmlVarios}
         ${
           necesitaCurso
             ? `<div class="grid-form mv-datos">
                 <div><label>Colegio *</label><input type="text" class="mv-colegio" value="${escaparHtml(d.colegio)}" /></div>
-                <div><label>Curso *</label><input type="text" class="mv-curso" value="${escaparHtml(d.curso)}" placeholder="${escaparHtml(c.placeholderCurso)}" /></div>
+                ${
+                  separar
+                    ? `<div class="mv-datos-nota">Los estudiantes nuevos quedan en este colegio, cada uno en su curso y letra (los de la lista de arriba).</div>`
+                    : `<div><label>Curso *</label><input type="text" class="mv-curso" value="${escaparHtml(d.curso)}" placeholder="${escaparHtml(c.placeholderCurso)}" /></div>
                 <div><label>Letra</label><input type="text" class="mv-letra" maxlength="2" value="${escaparHtml(d.letra)}" /></div>
-                <div class="mv-datos-nota">${d.desdeApp ? "Los nuevos van al mismo curso donde ya están sus compañeros en la app." : "Curso para los estudiantes nuevos (leído del archivo)."}</div>
+                <div class="mv-datos-nota">${d.desdeApp ? "Los nuevos van al mismo curso donde ya están sus compañeros en la app." : "Curso para los estudiantes nuevos (leído del archivo)."}</div>`
+                }
               </div>`
             : ""
         }
@@ -426,6 +441,12 @@ function renderResumenMasiva() {
       masiva.items = masiva.items.filter((x) => x !== it);
       renderResumenMasiva();
     };
+    const chkSeparar = div.querySelector(".mv-separar");
+    if (chkSeparar)
+      chkSeparar.onchange = () => {
+        it.separar = chkSeparar.checked;
+        renderResumenMasiva();
+      };
     const chk = div.querySelector(".mv-marcar");
     if (chk)
       chk.onchange = () => {
@@ -475,7 +496,9 @@ function importarMarcadosMasiva() {
   const marcados = masiva.items.filter((it) => it.marcado && it.analisis.tipo !== "error");
   if (!marcados.length) return;
   // los que traen estudiantes nuevos necesitan colegio y curso
-  const sinCurso = marcados.filter((it) => it.analisis.nuevos.length && (!(it.datos.colegio || "").trim() || !(it.datos.curso || "").trim()));
+  // (un archivo con varios cursos separados solo necesita el colegio)
+  const separado = (it) => ((it.lectura && it.lectura.grupos) || []).length > 1 && it.separar !== false;
+  const sinCurso = marcados.filter((it) => it.analisis.nuevos.length && (!(it.datos.colegio || "").trim() || (!separado(it) && !(it.datos.curso || "").trim())));
   if (sinCurso.length) {
     sinCurso.forEach((it) => {
       const div = document.querySelector(`.mv-item[data-uid="${it.uid}"]`);
@@ -507,13 +530,14 @@ function importarMarcadosMasiva() {
         });
       }
       if (emp.nuevos.length) {
-        const destino = {
-          colegio: it.datos.colegio.replace(/\s+/g, " ").trim(),
-          curso: it.datos.curso.trim(),
-          letra: (it.datos.letra || "").trim().toUpperCase(),
-        };
+        const colegio = it.datos.colegio.replace(/\s+/g, " ").trim();
+        // separado: cada estudiante a su curso y letra; si no, todos al curso de abajo
+        const destinoDe = (fe) =>
+          separado(it) && it.lectura.grupos[fe.grupo]
+            ? { colegio, curso: it.lectura.grupos[fe.grupo].curso, letra: it.lectura.grupos[fe.grupo].letra }
+            : { colegio, curso: (it.datos.curso || "").trim(), letra: (it.datos.letra || "").trim().toUpperCase() };
         c.store.crearVarios(
-          emp.nuevos.map((fe) => ({ nombre: fe.nombre, rut: fe.rut, contacto: fe.contacto, nacimiento: fe.nacimiento, puntajes: fe.puntajes, ...destino, fecha: "" }))
+          emp.nuevos.map((fe) => ({ nombre: fe.nombre, rut: fe.rut, contacto: fe.contacto, nacimiento: fe.nacimiento, puntajes: fe.puntajes, ...destinoDe(fe), fecha: "" }))
         );
         creados += emp.nuevos.length;
       }

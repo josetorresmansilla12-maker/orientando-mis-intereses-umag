@@ -552,7 +552,7 @@ function pedirDatosPorArchivo(lecturas, cursoHeader) {
     // carpetas (cursos) que ya están cargadas: cada archivo se puede enlazar a una
     const carpetas = cursosDelStore(c.store);
     const htmlSelectorCarpeta = carpetas.length
-      ? `<div class="imp-carpeta"><label>📁 ¿Va en una carpeta que ya existe?</label><select class="imp-carpeta-sel">
+      ? `<div class="imp-carpeta imp-solo-uno"><label>📁 ¿Va en una carpeta que ya existe?</label><select class="imp-carpeta-sel">
           <option value="">No: es un curso nuevo (escribe colegio, curso y letra abajo)</option>
           ${carpetas.map((cu, k) => `<option value="${k}">${escaparHtml(cu.colegio || "Sin colegio")} · ${escaparHtml(etiquetaCursoGuardado(cu))} (${cu.estudiantes.length} est.)</option>`).join("")}
         </select></div>`
@@ -593,24 +593,49 @@ function pedirDatosPorArchivo(lecturas, cursoHeader) {
           (nErrores ? `, ${nErrores} ${nErrores === 1 ? "fila con problemas" : "filas con problemas"}` : "") +
           (nAdvertencias ? `, ${nAdvertencias} ${nAdvertencias === 1 ? "fila para revisar" : "filas para revisar"}` : "") +
           (nTraspaso ? `, ${nTraspaso} ${nTraspaso === 1 ? "test mal traspasado" : "tests mal traspasados"}` : "");
+        // varios cursos en el mismo archivo (cada estudiante trae el suyo en su fila): se
+        // avisa y se pregunta si separarlos en un curso cada uno (lo propuesto) o cargar a
+        // todos en uno solo. El curso y la letra de cada uno se pueden corregir.
+        const grupos = lectura.grupos || [];
+        const varios = grupos.length > 1;
+        const htmlVarios = varios
+          ? `<div class="imp-multi">
+              <div class="imp-multi-titulo">📚 Este archivo trae <b>${grupos.length} cursos distintos</b> (según el curso y la letra de cada estudiante). ¿Cómo lo cargo?</div>
+              <label class="imp-multi-op"><input type="radio" name="imp-modo-${i}" value="separar" checked /> Separar en ${grupos.length} cursos: cada estudiante queda con su curso y su letra (todos en el mismo colegio)</label>
+              <label class="imp-multi-op"><input type="radio" name="imp-modo-${i}" value="uno" /> Cargar a todos en un solo curso</label>
+              <table class="imp-multi-tabla">
+                <thead><tr><th>En el archivo</th><th>Curso *</th><th>Letra</th><th>Est.</th><th></th></tr></thead>
+                <tbody>${grupos
+                  .map(
+                    (g, k) => `<tr data-g="${k}"><td class="imp-g-origen">${escaparHtml(g.ejemplo || "(sin curso)")}</td>
+                      <td><input type="text" class="imp-g-curso" value="${escaparHtml(g.curso)}" placeholder="${escaparHtml(c.placeholderCurso)}" /></td>
+                      <td><input type="text" class="imp-g-letra" maxlength="2" value="${escaparHtml(g.letra)}" /></td>
+                      <td>${g.n}</td><td class="imp-g-aviso"></td></tr>`
+                  )
+                  .join("")}</tbody>
+              </table>
+              <div class="imp-multi-nota">La letra puede quedar vacía. Si dos filas quedan con el mismo curso y letra, se juntan en una sola carpeta.</div>
+            </div>`
+          : "";
         return `
-        <div class="fila-importar-archivo" data-idx="${i}">
+        <div class="fila-importar-archivo${varios ? " imp-separar" : ""}" data-idx="${i}">
           <div class="fila-importar-archivo-nombre">
             ${nombreArchivo}
             <span class="fila-importar-archivo-info">${info}</span>
             ${quitar}
           </div>
+          ${htmlVarios}
           ${htmlSelectorCarpeta}
           <div class="grid-form">
             <div>
               <label>Colegio *</label>
               <input type="text" class="imp-colegio" value="${escaparHtml(colegioPre)}" />
             </div>
-            <div>
+            <div class="imp-solo-uno">
               <label>Curso *</label>
               <input type="text" class="imp-curso" value="${escaparHtml(cursoPre)}" placeholder="${escaparHtml(c.placeholderCurso)}" />
             </div>
-            <div>
+            <div class="imp-solo-uno">
               <label>Letra</label>
               <input type="text" class="imp-letra" maxlength="2" value="${escaparHtml(letraPre)}" placeholder="Ej: A" />
             </div>
@@ -622,11 +647,29 @@ function pedirDatosPorArchivo(lecturas, cursoHeader) {
       .join("");
 
     let filasConEstudiantes = [...cont.querySelectorAll(".fila-importar-archivo[data-idx]")];
+    // "grupos": si el archivo se separa en varios cursos, el curso y la letra de cada uno
     const leerFila = (fila) => ({
       colegio: fila.querySelector(".imp-colegio").value.trim(),
       curso: fila.querySelector(".imp-curso").value.trim(),
       letra: fila.querySelector(".imp-letra").value.trim().toUpperCase(),
+      grupos: fila.classList.contains("imp-separar")
+        ? [...fila.querySelectorAll(".imp-multi-tabla tr[data-g]")].map((tr) => ({
+            g: Number(tr.dataset.g),
+            curso: tr.querySelector(".imp-g-curso").value.trim(),
+            letra: tr.querySelector(".imp-g-letra").value.trim().toUpperCase(),
+          }))
+        : null,
     });
+    // cuántos estudiantes ya hay en la app en ese colegio, curso y letra
+    const yaCargadosEn = (activos, colegio, curso, letra) =>
+      colegio && curso
+        ? activos.filter(
+            (e) =>
+              (e.colegio || "").trim().toLowerCase() === colegio.toLowerCase() &&
+              (e.curso || "").trim().toLowerCase() === c.store.normalizarCurso(curso).toLowerCase() &&
+              (e.letra || "").trim().toLowerCase() === (letra || "").toLowerCase()
+          ).length
+        : 0;
 
     // aviso en vivo si el colegio/curso/letra escritos ya tienen estudiantes cargados (y
     // la lista de carpetas muestra cuál es, si coincide con una)
@@ -638,17 +681,24 @@ function pedirDatosPorArchivo(lecturas, cursoHeader) {
         const sel = fila.querySelector(".imp-carpeta-sel");
         const elegida = sel && sel.value !== "" ? carpetas[Number(sel.value)] : null;
         if (elegida && (d.colegio !== elegida.colegio || c.store.normalizarCurso(d.curso) !== elegida.curso || d.letra !== (elegida.letra || "").toUpperCase())) sel.value = "";
-        const yaCargados =
-          d.colegio && d.curso
-            ? activos.filter(
-                (e) =>
-                  (e.colegio || "").trim().toLowerCase() === d.colegio.toLowerCase() &&
-                  (e.curso || "").trim().toLowerCase() === c.store.normalizarCurso(d.curso).toLowerCase() &&
-                  (e.letra || "").trim().toLowerCase() === d.letra.toLowerCase()
-              ).length
-            : 0;
+        const consejo = `Para agregar solo los que faltan, usa "📥 Añadir un curso desde CSV" dentro del colegio (Estudiantes e informes) o la "📦 Importación masiva".`;
+        if (d.grupos) {
+          // separado en varios cursos: el aviso va en cada curso que ya tiene estudiantes
+          let algunoExiste = false;
+          d.grupos.forEach((g) => {
+            const n = yaCargadosEn(activos, d.colegio, g.curso, g.letra);
+            if (n) algunoExiste = true;
+            const celda = fila.querySelector(`.imp-multi-tabla tr[data-g="${g.g}"] .imp-g-aviso`);
+            if (celda) celda.textContent = n ? `⚠ ya tiene ${n}` : "";
+          });
+          fila.querySelector(".imp-aviso-existente").textContent = algunoExiste
+            ? `⚠ Algunos de estos cursos ya tienen estudiantes en la app (marcados arriba): si importas el archivo aquí, sus estudiantes se agregan de nuevo (quedarían repetidos). ${consejo}`
+            : "";
+          return;
+        }
+        const yaCargados = yaCargadosEn(activos, d.colegio, d.curso, d.letra);
         fila.querySelector(".imp-aviso-existente").textContent = yaCargados
-          ? `⚠ Esta carpeta ya tiene ${yaCargados} ${yaCargados === 1 ? "estudiante" : "estudiantes"}. Si importas el archivo aquí, todos sus estudiantes se agregan (los que ya estaban quedan repetidos). Para agregar solo los que faltan, usa "📥 Añadir CSV a este curso" dentro de la carpeta (Estudiantes e informes) o la "📦 Importación masiva".`
+          ? `⚠ Esta carpeta ya tiene ${yaCargados} ${yaCargados === 1 ? "estudiante" : "estudiantes"}. Si importas el archivo aquí, todos sus estudiantes se agregan (los que ya estaban quedan repetidos). ${consejo}`
           : "";
       });
     };
@@ -669,7 +719,17 @@ function pedirDatosPorArchivo(lecturas, cursoHeader) {
         actualizarAvisosExistentes();
       });
     });
-    cont.querySelectorAll("input").forEach((inp) => inp.addEventListener("input", actualizarAvisosExistentes));
+    // separar en varios cursos o cargar todo en uno: cambia qué campos se muestran
+    filasConEstudiantes.forEach((fila) => {
+      fila.querySelectorAll(`input[name^="imp-modo-"]`).forEach((r) =>
+        r.addEventListener("change", () => {
+          fila.classList.toggle("imp-separar", r.value === "separar" && r.checked);
+          actualizarAvisosExistentes();
+          actualizarEleccion();
+        })
+      );
+    });
+    cont.querySelectorAll("input[type='text']").forEach((inp) => inp.addEventListener("input", actualizarAvisosExistentes));
     actualizarAvisosExistentes();
 
     // Kuder: dos maneras de terminar la carga. (a) cargar y descargar altiro la carpeta
@@ -680,7 +740,7 @@ function pedirDatosPorArchivo(lecturas, cursoHeader) {
     const eleccion = document.getElementById("modal-imp-eleccion");
     const actualizarEleccion = () => {
       const nPendientes = filasConEstudiantes.reduce((acc, fila) => acc + (lecturas[Number(fila.dataset.idx)].lectura.revisionTraspaso || []).length, 0);
-      const nCursos = filasConEstudiantes.length;
+      const nCursos = filasConEstudiantes.reduce((acc, fila) => acc + (fila.classList.contains("imp-separar") ? fila.querySelectorAll(".imp-multi-tabla tr[data-g]").length : 1), 0);
       if (c.revisarTraspaso) {
         btnContinuar.textContent = nPendientes ? "📥 Solo cargar (dejar pendientes por revisar)" : "📥 Solo cargar en la plataforma";
         btnDescargar.textContent = `📦 Cargar y descargar ${nCursos > 1 ? "las carpetas de los cursos" : "la carpeta del curso"}`;
@@ -738,17 +798,28 @@ function pedirDatosPorArchivo(lecturas, cursoHeader) {
         const item = lecturas[Number(fila.dataset.idx)];
         const d = leerFila(fila);
         fila.querySelector(".imp-colegio").classList.toggle("invalido", !d.colegio);
-        fila.querySelector(".imp-curso").classList.toggle("invalido", !d.curso);
-        if (!d.colegio || !d.curso) ok = false;
+        if (!d.colegio) ok = false;
+        if (d.grupos) {
+          // separado: cada curso necesita su nombre (la letra puede quedar vacía)
+          d.grupos.forEach((g) => {
+            const inp = fila.querySelector(`.imp-multi-tabla tr[data-g="${g.g}"] .imp-g-curso`);
+            inp.classList.toggle("invalido", !g.curso);
+            if (!g.curso) ok = false;
+          });
+        } else {
+          fila.querySelector(".imp-curso").classList.toggle("invalido", !d.curso);
+          if (!d.curso) ok = false;
+        }
         return {
           archivo: item.archivo,
           lectura: item.lectura,
-          datosCurso: { ...d, fecha: cursoHeader.fecha || "" },
+          datosCurso: { colegio: d.colegio, curso: d.curso, letra: d.letra, fecha: cursoHeader.fecha || "" },
+          grupos: d.grupos,
         };
       });
 
       if (!ok) {
-        mostrarToast("Completa colegio y curso de cada archivo");
+        mostrarToast("Completa el colegio y el curso de cada archivo (marcados en rojo)");
         return;
       }
 
@@ -826,28 +897,37 @@ function cablearImportacion() {
       let ultimoDatosCurso = null;
 
       const rangosPorArchivo = []; // qué estudiantes nuevos salen de cada archivo (un curso cada uno)
-      for (const { archivo, lectura, datosCurso } of resultado) {
+      for (const { archivo, lectura, datosCurso, grupos } of resultado) {
         const desde = nuevos.length;
-        lectura.estudiantes.forEach((e) =>
-          nuevos.push({
-            nombre: e.nombre,
-            rut: e.rut,
-            contacto: e.contacto,
-            nacimiento: e.nacimiento,
-            colegio: datosCurso.colegio,
-            curso: datosCurso.curso,
-            letra: datosCurso.letra,
-            fecha: datosCurso.fecha,
-            puntajes: e.puntajes,
-          })
-        );
+        const aNuevo = (e, curso, letra) => ({
+          nombre: e.nombre,
+          rut: e.rut,
+          contacto: e.contacto,
+          nacimiento: e.nacimiento,
+          colegio: datosCurso.colegio,
+          curso,
+          letra,
+          fecha: datosCurso.fecha,
+          puntajes: e.puntajes,
+        });
+        if (grupos) {
+          // archivo con varios cursos, separado: cada estudiante a su curso y letra (y un
+          // tramo por curso, para "Cargar y descargar" una carpeta por cada uno)
+          grupos.forEach((g) => {
+            const desdeCurso = nuevos.length;
+            lectura.estudiantes.filter((e) => e.grupo === g.g).forEach((e) => nuevos.push(aNuevo(e, g.curso, g.letra)));
+            if (nuevos.length > desdeCurso) rangosPorArchivo.push([desdeCurso, nuevos.length]);
+          });
+        } else {
+          lectura.estudiantes.forEach((e) => nuevos.push(aNuevo(e, datosCurso.curso, datosCurso.letra)));
+        }
         if (lectura.errores.length > 0) {
           erroresTotales.push(`Archivo "${archivo.name}":`, ...lectura.errores.map((e) => "  " + e));
         }
         if ((lectura.advertencias || []).length > 0) {
           advertenciasTotales.push(`Archivo "${archivo.name}":`, ...lectura.advertencias.map((e) => "  " + e));
         }
-        rangosPorArchivo.push([desde, nuevos.length]);
+        if (!grupos) rangosPorArchivo.push([desde, nuevos.length]);
         ultimoDatosCurso = datosCurso;
       }
 

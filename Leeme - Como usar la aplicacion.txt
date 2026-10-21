@@ -43,6 +43,19 @@ Paso 2: las pestañas
      elegiste por error (no se importa), y su nombre ya no queda pegado junto al botón.
      * Colegio, curso y letra vienen solo con lo que dice el archivo; si no lo trae,
        quedan vacíos para escribirlos (ya no se rellenan con el último curso cargado).
+       La letra puede venir en su propia columna "letra" (la planilla en blanco de
+       Kuder la trae) o pegada al curso ("2do A", "primero NB"); es opcional: si no
+       viene, el curso queda sin letra y no se pide.
+     * Archivo con VARIOS cursos (cada estudiante con su curso y letra en su fila, por
+       ejemplo un test aplicado a la vez a "primero", "primero A", "primero NB"...): la
+       app lo avisa ("Este archivo trae N cursos distintos") y pregunta cómo cargarlo:
+       - "Separar en N cursos" (lo propuesto): cada estudiante queda en su curso y
+         letra, todos en el mismo colegio. Se ve una tabla con cada curso tal como
+         viene en el archivo, y el curso y la letra con que va a quedar (se pueden
+         corregir; la letra puede quedar vacía).
+       - "Cargar a todos en un solo curso": como antes.
+       Con "Cargar y descargar", sale una carpeta por cada curso. Lo mismo vale en la
+       Importación masiva y en "Añadir un curso desde CSV".
      * "📁 ¿Va en una carpeta que ya existe?": en cada archivo se puede elegir a mano
        una carpeta (colegio · curso) ya cargada, y se completan el colegio, curso y
        letra tal como están en la app. Nunca se elige sola. Sirve con uno o con varios
