@@ -122,6 +122,15 @@ Paso 2: las pestañas
      curso (por ejemplo "KUDER_Colegio_Luterano_2do_Medio_A_2026"). Antes muestra la
      misma vista previa de "Descargar todos los cursos" (cursos, nombre de cada carpeta
      y cuántos informes lleva), y se puede corregir ahí.
+   - "🗂 Descargar todo en una sola carpeta (cursos fusionados)" (botón ámbar, dentro
+     de cada colegio): todos los informes del colegio juntos en UNA sola carpeta, sin
+     separar por curso, para imprimirlos todos de una vez y entregar la carpeta (por
+     ejemplo "KUDER_Colegio_Andino_todos_los_cursos_2026"). Cada archivo parte con su
+     curso ("1ro Medio A - 01 - Nombre - Colegio.pdf"), así quedan ordenados curso por
+     curso y, dentro de cada curso, con el mismo N° que lleva impreso el informe. Si
+     hay tests mal traspasados, la carpeta trae una sola nota con la lista. Antes de
+     descargar avisa qué se va a generar y cuánto puede demorar. Si se necesitan los
+     informes separados por curso, conviene usar el botón "ZIP por curso".
    - Descargar todos los informes de un curso en un ZIP.
    - "📥 Añadir un curso desde CSV" (dentro de cada colegio): crea en ese colegio un
      curso a partir de su CSV o Excel. El curso y la letra se leen del archivo (si no

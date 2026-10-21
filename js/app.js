@@ -1349,6 +1349,7 @@ function renderEstudiantes() {
       <div class="grupo-colegio-cont">
         <div class="grupo-colegio-acciones">
           <button type="button" class="chico" id="${idSeguro("zipcol", colegio)}" title="Un ZIP con todos los informes de este colegio, con una carpeta por curso (curso y letra)">⬇ Descargar todos los informes del colegio (ZIP por curso)</button>
+          <button type="button" class="chico fusionado" id="${idSeguro("zipfus", colegio)}" title="Una sola carpeta con todos los informes del colegio juntos (sin separar por curso), ordenados curso por curso, para imprimirlos de una vez">🗂 Descargar todo en una sola carpeta (cursos fusionados)</button>
           <button type="button" class="chico secundario btn-minimizar-alumnos" ${atributosBotonMinimizar(cursosAbiertos > 0)}>${textoBotonMinimizar(cursosAbiertos > 0)}</button>
           <button type="button" class="chico btn-curso-csv" data-colegio="${escaparHtml(colegio)}" title="Crea en este colegio un curso nuevo a partir de su CSV o Excel">📥 Añadir un curso desde CSV</button>
           <button class="chico peligro" id="${idSeguro("delcol", colegio)}">🗑 Eliminar colegio completo</button>
@@ -1440,6 +1441,9 @@ function renderEstudiantes() {
     // el colegio completo, aunque arriba haya un filtro de curso o de nombre.
     const btnZipColegio = document.getElementById(idSeguro("zipcol", colegio));
     if (btnZipColegio) btnZipColegio.onclick = () => accionDescargarTodosLosCursos(todos.filter((e) => e.colegio === colegio), btnZipColegio);
+    // el mismo colegio completo, pero todo en una sola carpeta (para imprimir de una vez)
+    const btnFusionado = document.getElementById(idSeguro("zipfus", colegio));
+    if (btnFusionado) btnFusionado.onclick = () => accionDescargarColegioFusionado(colegio, todos.filter((e) => e.colegio === colegio), btnFusionado);
 
     const btnDelColegio = document.getElementById(idSeguro("delcol", colegio));
     if (btnDelColegio) {
@@ -2518,6 +2522,111 @@ async function descargarTodosLosCursos(lista, btn, nombresCarpeta = new Map()) {
   } catch (err) {
     console.error(err);
     mostrarToast(`Se interrumpió la descarga (${zips} de ${porColegio.size} colegios listos). Revisa el mensaje en la consola.`);
+  } finally {
+    delete btn.dataset.generando;
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+}
+
+// "Cursos fusionados": todos los informes de un colegio en una sola carpeta, sin una
+// carpeta por curso, para imprimirlos de una vez y entregar la carpeta. Cada archivo
+// parte con su curso ("1ro Medio A - 01 - Nombre - Colegio.pdf"): así el explorador de
+// archivos los deja curso por curso y, dentro de cada curso, en orden alfabético y con
+// el mismo N° que lleva impreso cada informe (cada curso mantiene su propia numeración).
+
+function nombreCarpetaFusionada(prefijo, colegio) {
+  return `${prefijo}_${limpiarParaCarpeta(colegio) || "SinColegio"}_todos_los_cursos_${anioParaArchivo()}`;
+}
+
+function cursoParaArchivo(estudiante) {
+  return limpiarParaNombreArchivo([estudiante.curso, estudiante.letra].filter(Boolean).join(" "));
+}
+
+// los cursos en el mismo orden en que el explorador de archivos ordena los nombres
+// (1ro Medio A, 1ro Medio B, 2do Medio A…), que es el orden en que se imprimen
+function cursosEnOrdenDeArchivo(porCurso) {
+  return [...porCurso.values()].sort((a, b) => cursoParaArchivo(a[0]).localeCompare(cursoParaArchivo(b[0]), "es", { numeric: true, sensitivity: "base" }));
+}
+
+// el curso va adelante y no se repite después del nombre
+function nombreArchivoFusionado(c, estudiante) {
+  const curso = cursoParaArchivo(estudiante);
+  const resto = c.nombreArchivoIndividual({ ...estudiante, curso: "", letra: "" });
+  return curso ? `${curso} - ${resto}` : resto;
+}
+
+function accionDescargarColegioFusionado(colegio, lista, btn) {
+  if (!lista || lista.length === 0) return;
+  const c = cfg();
+  const cursos = cursosEnOrdenDeArchivo(agrupar(lista).get(colegio) || new Map());
+  const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+  const segundos = Math.round(lista.length * SEGUNDOS_POR_INFORME_APROX);
+  const tiempo = segundos < 60 ? "menos de un minuto" : `unos ${Math.ceil(segundos / 60)} minutos`;
+  const pendientes = lista.filter((e) => pendienteTraspaso(e)).length;
+  const ejemplo = nombreArchivoFusionado(c, numerarParaCarpeta(cursos[0])[0]);
+  const opciones = [];
+  if (pendientes && c.revisarTraspaso) opciones.push({ texto: "Revisar los pendientes primero", clase: "secundario", accion: irACorreccion });
+  opciones.push({
+    texto: `🗂 Descargar los ${plural(lista.length, "informe", "informes")} en una carpeta`,
+    clase: "fusionado",
+    accion: () => descargarColegioFusionado(colegio, lista, btn),
+  });
+  elegirOpcion({
+    titulo: "🗂 Todo el colegio en una sola carpeta",
+    texto:
+      `Se va a descargar <b>una sola carpeta</b> con los <b>${plural(lista.length, "informe", "informes")}</b> de los <b>${plural(cursos.length, "curso", "cursos")}</b> de <b>${escaparHtml(colegio)}</b>, todos juntos, <b>sin separar por curso</b>. Sirve para imprimirlos todos de una vez.<br/><br/>` +
+      `Cada archivo empieza con su curso, así quedan ordenados curso por curso (y dentro de cada curso, con el mismo N° que lleva impreso el informe). Por ejemplo:<br/><i>${escaparHtml(ejemplo)}</i><br/><br/>` +
+      `📁 Carpeta: <b>${escaparHtml(nombreCarpetaFusionada(c.prefijoCarpetas, colegio))}</b><br/><br/>` +
+      `⚠ Si necesitas los informes separados por curso (por ejemplo, para entregarle a cada curso los suyos), usa mejor «Descargar todos los informes del colegio (ZIP por curso)».<br/>` +
+      `⏳ Puede demorar <b>${tiempo}</b>. Deja esta pestaña abierta y a la vista mientras tanto.` +
+      (pendientes
+        ? `<br/>⚠ ${plural(pendientes, "estudiante tiene", "estudiantes tienen")} el test mal traspasado (pendientes por revisar): sus informes van marcados con su puntaje al final del nombre del archivo y la carpeta trae una nota con la lista.`
+        : ""),
+    opciones,
+  });
+}
+
+async function descargarColegioFusionado(colegio, lista, btn) {
+  const c = cfg();
+  const cursos = cursosEnOrdenDeArchivo(agrupar(lista).get(colegio) || new Map());
+  const total = lista.length;
+  const original = btn.textContent;
+  let hechos = 0;
+  btn.disabled = true;
+  btn.dataset.generando = "1";
+  const t0 = Date.now();
+  try {
+    const zip = new JSZip();
+    const nombreCarpeta = nombreCarpetaFusionada(c.prefijoCarpetas, colegio);
+    const carpeta = zip.folder(nombreCarpeta);
+    const usados = new Map();
+    const numerados = [];
+    for (const estudiantes of cursos) {
+      for (const e of numerarParaCarpeta(estudiantes)) {
+        const blob = await c.construirBlobIndividual(e);
+        let nombre = nombreArchivoFusionado(c, e);
+        const veces = usados.get(nombre.toLowerCase()) || 0;
+        usados.set(nombre.toLowerCase(), veces + 1);
+        if (veces > 0) nombre = nombre.replace(/\.pdf$/, `_${veces + 1}.pdf`);
+        carpeta.file(nombre, blob);
+        c.store.registrarInformeGenerado();
+        numerados.push(e);
+        hechos++;
+        btn.textContent = `Generando ${hechos}/${total}…`;
+      }
+    }
+    // una sola nota de pendientes para todo el colegio (el guion bajo la deja primera)
+    const nota = c.revisarTraspaso ? notaTestsMalTraspasadosKuder(numerados) : null;
+    if (nota) carpeta.file("_Revisar_tests_mal_traspasados.txt", nota);
+    const contenido = await zip.generateAsync({ type: "blob" });
+    descargarArchivo(contenido, `${nombreCarpeta}.zip`);
+    const seg = Math.round((Date.now() - t0) / 1000);
+    const duracion = seg < 60 ? `${seg} segundos` : `${Math.floor(seg / 60)} min ${seg % 60} s`;
+    mostrarToast(`Listo: ${total} informes de ${cursos.length} ${cursos.length === 1 ? "curso" : "cursos"} en una sola carpeta, en ${duracion}.`);
+  } catch (err) {
+    console.error(err);
+    mostrarToast(`Se interrumpió la descarga (${hechos} de ${total} informes listos). Revisa el mensaje en la consola.`);
   } finally {
     delete btn.dataset.generando;
     btn.disabled = false;

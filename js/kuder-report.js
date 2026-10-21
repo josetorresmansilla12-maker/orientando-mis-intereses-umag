@@ -257,7 +257,7 @@ function construirPaginaStatsKuder(datosCurso, estudiantes, conteos, total) {
   const contenedor = document.createElement("div");
   contenedor.className = "informe-page";
   contenedor.innerHTML = `
-    ${construirBanner(G().tituloGrupal, G().subtitulo)}
+    ${construirBanner(G().tituloGrupal, G().subtitulo, { logo: false })}
     ${construirCajaCursoKuder(datosCurso, total)}
     ${construirIntroKuder()}
     ${construirStatsKuder(estudiantes, conteos, total)}
@@ -574,7 +574,7 @@ function construirPaginaStatsGlobalKuder(resumenPorCurso, estudiantes, conteos, 
   const contenedor = document.createElement("div");
   contenedor.className = "informe-page";
   contenedor.innerHTML = `
-    ${construirBanner(G().tituloGlobal, G().subtitulo)}
+    ${construirBanner(G().tituloGlobal, G().subtitulo, { logo: false })}
     ${construirCajaGlobalKuder(resumenPorCurso, total, fecha)}
     ${construirIntroGlobalKuder(resumenPorCurso.length)}
     ${construirStatsKuder(estudiantes, conteos, total)}

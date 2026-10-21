@@ -347,7 +347,7 @@ function construirTarjetaAreaInternaKuder(area, conteo, total) {
 // hoja quede con un cuarto o más de espacio en blanco.
 function construirTodasLasPaginasInternoKuder(stats, periodo) {
   const htmlEncabezadoPrimera = `
-    ${construirBanner("Informe Interno · Test Vocacional de Kuder", "Unidad de Admisión y Marketing — uso interno")}
+    ${construirBanner("Informe Interno · Test Vocacional de Kuder", "Unidad de Admisión y Marketing — uso interno", { logo: false })}
     ${construirCajaResumenInternoKuder(stats, periodo)}
     ${construirIntroInternoKuder()}
   `;

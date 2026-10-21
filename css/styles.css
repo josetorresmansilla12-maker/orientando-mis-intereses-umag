@@ -296,6 +296,14 @@ button.exito {
 }
 button.exito:hover { background: #24805a; border-color: #24805a; }
 button.chico { padding: 5px 10px; font-size: 12px; }
+/* "cursos fusionados": todo un colegio en una sola carpeta (para imprimir de una vez);
+   en ámbar para que no se confunda con el ZIP por curso */
+button.fusionado {
+  background: #fff4dc;
+  color: #8a4b00;
+  border-color: #d9890b;
+}
+button.fusionado:hover { background: #ffe7b3; }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .acciones-form { display: flex; gap: 10px; margin-top: 16px; }

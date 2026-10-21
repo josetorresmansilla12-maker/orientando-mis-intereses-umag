@@ -434,7 +434,7 @@ function notaTestsMalTraspasadosKuder(estudiantes) {
     "TESTS MAL TRASPASADOS (Test de Kuder)",
     `Generado el ${fecha}`,
     "",
-    `En el Test de Kuder las 10 áreas de cada estudiante deben sumar ${SUMA_ESPERADA_KUDER} puntos. Estos ${conError.length === 1 ? "estudiante no suma" : `${conError.length} estudiantes no suman`} ${SUMA_ESPERADA_KUDER}: su informe está en esta carpeta igual, con la suma en el nombre del archivo, por ejemplo "(44 de 45)".`,
+    `En el Test de Kuder las 10 áreas de cada estudiante deben sumar ${SUMA_ESPERADA_KUDER} puntos. ${conError.length === 1 ? "Este estudiante no suma" : `Estos ${conError.length} estudiantes no suman`} ${SUMA_ESPERADA_KUDER}: su informe está en esta carpeta igual, con la suma en el nombre del archivo, por ejemplo "(44 de 45)".`,
     `Cuando tengas su hoja de respuestas, corrige sus puntajes en la aplicación (pestaña "Corrección", o el ícono ⚠ junto a su nombre en "Estudiantes e informes") y vuelve a descargar su informe. Si lo revisas y el puntaje queda como está, usa "✓ Dejar así": deja de aparecer como pendiente y su informe sale sin la marca.`,
     "",
   ];
