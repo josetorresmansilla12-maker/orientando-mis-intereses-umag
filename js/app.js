@@ -81,6 +81,9 @@ const estado = {
   gruposAbiertos: new Set(),
   gruposCerrados: new Set(),
   edicionEnLista: null,
+  // curso donde está abierto "Agregar estudiante manualmente" (ver abrirAgregarEnCurso)
+  agregarEnCurso: null,
+  filaNueva: null, // estudiante recién agregado, que se destaca un momento en la lista
   filtrosPapelera: { colegio: "", curso: "", nombre: "" },
   filtrosCorreccion: { colegio: "", tipo: "", nombre: "" },
   subCorreccion: "pendientes", // pestaña "Corrección": "pendientes" o "recientes" (Recién corregidos)
@@ -237,6 +240,7 @@ function cambiarTest(idTest) {
   estado.gruposAbiertos = new Set();
   estado.gruposCerrados = new Set();
   estado.edicionEnLista = null;
+  estado.agregarEnCurso = null;
   estado.filtrosPapelera = { colegio: "", curso: "", nombre: "" };
   estado.filtrosCorreccion = { colegio: "", tipo: "", nombre: "" };
   if (idTest !== "kuder" && TABS_SOLO_KUDER.includes(estado.tab)) estado.tab = "ingresar";
@@ -1366,15 +1370,17 @@ function renderEstudiantes() {
           <div style="margin-bottom:10px; display:flex; gap:8px; flex-wrap:wrap;">
             <button class="chico" id="${idSeguro("grp", clave)}">⬇ Descargar informes de este curso (ZIP)</button>
             ${c.configGrupal ? `<button class="chico secundario" id="${idSeguro("grpori", clave)}">📊 Informe grupal para el orientador (PDF)</button>` : ""}
+            <button type="button" class="chico secundario" id="${idSeguro("addest", clave)}" title="Agrega a este curso un estudiante escribiendo sus datos y sus puntajes">➕ Agregar estudiante manualmente</button>
             <button class="chico peligro" id="${idSeguro("delcurso", clave)}">🗑 Eliminar curso completo</button>
           </div>
+          ${estado.agregarEnCurso && estado.agregarEnCurso.test === estado.test && estado.agregarEnCurso.clave === clave ? htmlAgregarEnCurso(estado.agregarEnCurso) : ""}
           <table class="lista">
             <thead><tr><th style="width:44px;">N°</th><th>Estudiante</th><th>Área(s) de interés</th><th>Acciones</th></tr></thead>
             <tbody>
               ${ordenados
                 .map(
                   (e) => `
-                  <tr data-id="${e.id}" class="${estado.edicionEnLista === e.id ? "editando" : ""}">
+                  <tr data-id="${e.id}" class="${estado.edicionEnLista === e.id ? "editando" : ""}${estado.filaNueva === e.id ? " fila-nueva" : ""}">
                     <td style="color:#6a6178;">${c.numeroEnGrupo(e) || ""}</td>
                     <td>${nombreConLapizHtml(e)} ${botonTraspasoHtml(e, "abrirEdicionEnLista")}<br/><span style="color:#6a6178;font-size:11px;">${escaparHtml(c.formatearRut(e.rut))}</span></td>
                     <td>${chipsAreas(e)}${avisoTraspasoHtml(e, { conDejarAsi: true })}</td>
@@ -1431,6 +1437,7 @@ function renderEstudiantes() {
     };
   });
   if (editando) cablearEditorEnLista(editando);
+  cablearAgregarEnCurso();
   cont.querySelectorAll(".btn-curso-csv").forEach((b) => (b.onclick = () => abrirCursoDesdeCsv(b.dataset.colegio)));
 
   // botones de descarga y de eliminación grupal (se cablean después de insertar el HTML)
@@ -1459,6 +1466,9 @@ function renderEstudiantes() {
       const cursoCompleto = todos.filter((e) => e.colegio === colegio && etiquetaCurso(e) === claveCurso);
       const btnOri = document.getElementById(idSeguro("grpori", clave));
       if (btnOri) btnOri.onclick = () => antesDeGenerarInformes(cursoCompleto, () => accionInformeGrupal(cursoCompleto, btnOri));
+
+      const btnAgregar = document.getElementById(idSeguro("addest", clave));
+      if (btnAgregar) btnAgregar.onclick = () => abrirAgregarEnCurso(colegio, claveCurso, cursoCompleto);
 
       const btnDel = document.getElementById(idSeguro("delcurso", clave));
       if (btnDel) {
@@ -2307,6 +2317,199 @@ function guardarEdicionEnLista(id, { seguir = false, dejarAsi = false } = {}) {
     }
   }
   return actualizado;
+}
+
+// ---------------- "Agregar estudiante manualmente" (dentro de cada curso) ----------------
+// Un formulario arriba de la lista del curso para agregarle un estudiante a mano: nombre,
+// RUT y puntajes. El colegio, el curso, la letra y la fecha de aplicación son los del
+// curso. Al guardar queda listo para el siguiente. Un RUT que ya está en la app es la
+// misma persona: no se agrega de nuevo y se avisa quién es y en qué curso está.
+
+function formularioAgregarEnCurso() {
+  return document.querySelector("#grupos-estudiantes .agregar-en-curso");
+}
+
+// vuelve a dibujar la lista sin que se mueva lo que se está viendo (el curso queda en el
+// mismo lugar de la pantalla)
+function redibujarCurso(claveCurso) {
+  const buscar = () => [...document.querySelectorAll("#grupos-estudiantes details.grupo-curso")].find((d) => d.dataset.grupo === claveCurso);
+  const antes = buscar();
+  const top = antes ? antes.getBoundingClientRect().top : null;
+  const altoPagina = document.documentElement.scrollHeight;
+  render();
+  mantenerAlturaPagina(altoPagina);
+  const despues = buscar();
+  if (top !== null && despues) window.scrollBy(0, despues.getBoundingClientRect().top - top);
+}
+
+function enfocarNombreAgregar() {
+  const form = formularioAgregarEnCurso();
+  if (!form) return;
+  const r = form.getBoundingClientRect();
+  if (r.top < 70 || r.bottom > window.innerHeight) window.scrollBy(0, r.top - 120);
+  form.querySelector("[name='ag_nombre']").focus({ preventScroll: true });
+}
+
+function abrirAgregarEnCurso(colegio, claveCurso, estudiantesCurso) {
+  const actual = estado.agregarEnCurso;
+  if (actual && actual.test === estado.test && actual.clave === colegio + "|" + claveCurso) return enfocarNombreAgregar();
+  const primero = estudiantesCurso[0];
+  // la fecha de aplicación más repetida del curso
+  const veces = new Map();
+  estudiantesCurso.forEach((e) => e.fecha && veces.set(e.fecha, (veces.get(e.fecha) || 0) + 1));
+  const [fecha = ""] = [...veces].sort((a, b) => b[1] - a[1])[0] || [];
+  estado.agregarEnCurso = {
+    test: estado.test,
+    clave: colegio + "|" + claveCurso,
+    colegio,
+    claveCurso,
+    curso: primero.curso,
+    letra: primero.letra,
+    fecha,
+    valores: {}, // lo escrito, para no perderlo si la lista se vuelve a dibujar
+    ultimo: "", // aviso del último agregado
+  };
+  for (const clave of [claveGrupoColegio(colegio), claveGrupoCurso(colegio, claveCurso)]) {
+    estado.gruposAbiertos.add(clave);
+    estado.gruposCerrados.delete(clave);
+  }
+  redibujarCurso(claveGrupoCurso(colegio, claveCurso));
+  enfocarNombreAgregar();
+}
+
+function cerrarAgregarEnCurso() {
+  const a = estado.agregarEnCurso;
+  estado.agregarEnCurso = null;
+  if (a) redibujarCurso(claveGrupoCurso(a.colegio, a.claveCurso));
+}
+
+function htmlAgregarEnCurso(a) {
+  const c = cfg();
+  const v = (nombre) => escaparHtml(a.valores[nombre] || "");
+  return `
+    <div class="agregar-en-curso">
+      <div class="editor-en-lista-titulo">➕ Agregar un estudiante a <b>${escaparHtml(a.colegio)} · ${escaparHtml(a.claveCurso)}</b></div>
+      ${a.ultimo ? `<div class="agregar-en-curso-ultimo">${a.ultimo}</div>` : ""}
+      <div class="agregar-en-curso-aviso" hidden></div>
+      <div class="editor-en-lista-datos">
+        <div class="ed-ancho"><label>Nombre *</label><input type="text" name="ag_nombre" value="${v("ag_nombre")}" autocomplete="off" /></div>
+        <div><label>RUT</label><input type="text" name="ag_rut" value="${v("ag_rut")}" autocomplete="off" /></div>
+      </div>
+      <div class="editor-en-lista-puntajes">
+        ${c.areas
+          .map(
+            (ar) => `
+          <div>
+            <label>${ar.icono} ${ar.nombre}</label>
+            <input type="number" min="${c.puntajeMin}" max="${c.puntajeMax}" step="1" name="ag_p_${ar.id}" value="${v("ag_p_" + ar.id)}" />
+          </div>`
+          )
+          .join("")}
+      </div>
+      <div class="suma-puntajes editor-en-lista-suma"></div>
+      <div class="editor-en-lista-acciones">
+        <button type="button" class="chico" data-ag="guardar">💾 Guardar y agregar otro</button>
+        <button type="button" class="chico secundario" data-ag="guardar-cerrar">💾 Guardar y cerrar</button>
+        <button type="button" class="chico secundario" data-ag="cerrar">Cerrar</button>
+        <span class="editor-en-lista-ayuda">Enter guarda y deja listo para el siguiente · Esc cierra</span>
+      </div>
+    </div>`;
+}
+
+function cablearAgregarEnCurso() {
+  const a = estado.agregarEnCurso;
+  const form = formularioAgregarEnCurso();
+  if (!a || !form) return;
+  const suma = form.querySelector(".editor-en-lista-suma");
+  const leer = (idArea) => form.querySelector(`[name="ag_p_${idArea}"]`).value;
+  pintarSumaPuntajes(suma, leer);
+  form.querySelectorAll("input[name]").forEach((inp) =>
+    inp.addEventListener("input", () => {
+      a.valores[inp.name] = inp.value;
+      if (inp.name.startsWith("ag_p_")) pintarSumaPuntajes(suma, leer);
+    })
+  );
+  form.querySelector("[data-ag='guardar']").onclick = () => guardarAgregarEnCurso();
+  form.querySelector("[data-ag='guardar-cerrar']").onclick = () => guardarAgregarEnCurso({ cerrar: true });
+  form.querySelector("[data-ag='cerrar']").onclick = cerrarAgregarEnCurso;
+  form.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter" && ev.target.tagName === "INPUT") {
+      ev.preventDefault();
+      guardarAgregarEnCurso();
+    } else if (ev.key === "Escape") {
+      ev.preventDefault();
+      cerrarAgregarEnCurso();
+    }
+  });
+}
+
+function guardarAgregarEnCurso({ cerrar = false } = {}) {
+  const a = estado.agregarEnCurso;
+  const form = formularioAgregarEnCurso();
+  if (!a || !form) return;
+  const c = cfg();
+  const campo = (nombre) => form.querySelector(`[name="${nombre}"]`);
+  let ok = true;
+  const nombre = campo("ag_nombre").value.replace(/\s+/g, " ").trim();
+  campo("ag_nombre").classList.toggle("invalido", !nombre);
+  if (!nombre) ok = false;
+  const puntajes = {};
+  c.areas.forEach((ar) => {
+    const inp = campo(`ag_p_${ar.id}`);
+    const n = Number(inp.value);
+    const valido = inp.value !== "" && Number.isInteger(n) && n >= c.puntajeMin && n <= c.puntajeMax;
+    inp.classList.toggle("invalido", !valido);
+    if (valido) puntajes[ar.id] = n;
+    else ok = false;
+  });
+  if (!ok) {
+    mostrarToast(`Revisa los campos marcados en rojo (el nombre es obligatorio y los puntajes van de ${c.puntajeMin} a ${c.puntajeMax})`);
+    return;
+  }
+
+  const rut = campo("ag_rut").value.trim();
+  const aviso = form.querySelector(".agregar-en-curso-aviso");
+  // un RUT que ya está en la app es la misma persona: no se agrega dos veces
+  const mismoRut = claveRut(rut) ? c.store.listar().find((e) => claveRut(e.rut) === claveRut(rut)) : null;
+  campo("ag_rut").classList.toggle("invalido", !!mismoRut);
+  if (mismoRut) {
+    aviso.hidden = false;
+    aviso.innerHTML = `⚠ Ese RUT ya está cargado: <b>${escaparHtml(quienEsEnApp(mismoRut))}</b>. Es la misma persona, así que no se agrega de nuevo. Si el RUT está mal escrito, corrígelo; si es esa persona, edita sus datos en su curso.`;
+    mostrarToast("Ese RUT ya está cargado en la app: no se agregó.");
+    return;
+  }
+  aviso.hidden = true;
+
+  const agregar = () => {
+    const nuevo = c.store.crear({ nombre, rut, colegio: a.colegio, curso: a.curso, letra: a.letra, fecha: a.fecha, puntajes });
+    const numero = c.numeroEnGrupo(nuevo);
+    const areas = c.calcularAreas(nuevo.puntajes).map((ar) => ar.nombre);
+    const r = revisionTraspaso(nuevo.puntajes);
+    a.ultimo =
+      `✓ Se agregó a <b>${escaparHtml(nuevo.nombre)}</b>${numero ? ` como <b>N° ${numero}</b>` : ""}. ` +
+      (areas.length ? `Áreas de interés: ${escaparHtml(areas.join(", "))}.` : "Sin áreas destacadas.") +
+      (r ? ` <span class="agregar-en-curso-ojo">Ojo: ${escaparHtml(r.texto.resumen.toLowerCase())}, test mal traspasado (queda pendiente por revisar).</span>` : "");
+    a.valores = {};
+    if (cerrar) estado.agregarEnCurso = null;
+    estado.filaNueva = nuevo.id;
+    redibujarCurso(claveGrupoCurso(a.colegio, a.claveCurso));
+    estado.filaNueva = null;
+    mostrarToast(`✓ Se agregó a ${nuevo.nombre}${numero ? ` (N° ${numero})` : ""}${r ? ". Ojo: test mal traspasado" : ""}`);
+    if (!cerrar) enfocarNombreAgregar();
+  };
+
+  // mismo nombre que otro ya cargado, sin RUT en los dos para confirmar si es la misma
+  // persona: se pregunta antes, mostrando quién es y dónde está
+  const mismoNombre = c.store.listar().find((e) => claveNombre(e.nombre) === claveNombre(nombre) && !(claveRut(e.rut) && claveRut(rut)));
+  if (!mismoNombre) return agregar();
+  elegirOpcion({
+    titulo: "⚠ Ya hay un estudiante con ese nombre",
+    texto:
+      `Ya está cargado <b>${escaparHtml(quienEsEnApp(mismoNombre))}</b>.<br/><br/>` +
+      `Sin el RUT de los dos no se puede saber si es la misma persona. Si es otro estudiante, agrégalo como nuevo; si es el mismo, cancela y edita sus datos en su curso.`,
+    opciones: [{ texto: "Agregar como estudiante nuevo", accion: agregar }],
+    textoCancelar: "Cancelar",
+  });
 }
 
 function accionEliminarGrupo(descripcion, ids) {

@@ -1326,6 +1326,35 @@ body.test-kuder .editor-en-lista { border-left-color: var(--teal); }
   .editor-en-lista-datos, .editor-en-lista-puntajes { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* "Agregar estudiante manualmente" (dentro de cada curso) */
+.agregar-en-curso {
+  border: 1px solid var(--morado-claro);
+  border-left: 4px solid var(--morado);
+  background: #fbfaff;
+  border-radius: 8px;
+  padding: 10px 14px 12px;
+  margin-bottom: 12px;
+}
+body.test-kuder .agregar-en-curso { border-left-color: var(--teal); }
+.agregar-en-curso label { font-size: 11px; margin-bottom: 2px; }
+.agregar-en-curso input { padding: 6px 8px; font-size: 13px; }
+.agregar-en-curso-aviso,
+.agregar-en-curso-ultimo {
+  font-size: 12px;
+  line-height: 1.45;
+  border-radius: 6px;
+  padding: 5px 9px;
+  margin-bottom: 8px;
+}
+.agregar-en-curso-aviso { color: #7a5200; background: #fff4e0; }
+.agregar-en-curso-ultimo { color: #1f7a52; background: #eefaf3; }
+.agregar-en-curso-ojo { color: #7a5200; }
+table.lista tr.fila-nueva td { animation: fila-nueva 3s ease-out; }
+@keyframes fila-nueva {
+  from { background: #fff1c2; }
+  to { background: transparent; }
+}
+
 /* ---------- "Ver PDF": vista previa del informe dentro de la app ---------- */
 .modal-caja.modal-vista-pdf {
   max-width: 980px;
