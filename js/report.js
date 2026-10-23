@@ -253,16 +253,15 @@ function mejorProporcionCarreras(clave, armarCuadros) {
 
 // barra morada (pareja, sin degradado) de la primera hoja de todos los informes (de los
 // dos tests, individuales, grupales, globales e interno), con los logos 2027 en blanco:
-// UMAG a la izquierda y el eslogan "Quédate para llegar más lejos" a la derecha.
-// "logo: false": sin el logo UMAG, para las hojas donde la credencial de abajo (con el
-// nombre del curso o del colegio) ya lo lleva (informes grupal, global e interno), así
-// no se repite dos veces en la misma hoja.
-function construirBanner(titulo, subtitulo, { logo = true } = {}) {
-  const largo = logo && titulo.length > 34; // sin el logo hay espacio de sobra para el título
+// UMAG arriba a la izquierda y el eslogan "Quédate para llegar más lejos" a la derecha.
+// (En los informes grupal, global e interno la credencial de abajo, con el nombre del
+// curso o del colegio, ya no lleva el logo: así no se repite en la misma hoja.)
+function construirBanner(titulo, subtitulo) {
+  const largo = titulo.length > 34;
   return `
     <div class="informe-banner">
-      ${logo ? `<img src="${LOGO_UMAG_2027_BLANCO}" alt="UMAG · Universidad de Magallanes" class="informe-logo-blanco" />
-      <div class="informe-banner-sep"></div>` : ""}
+      <img src="${LOGO_UMAG_2027_BLANCO}" alt="UMAG · Universidad de Magallanes" class="informe-logo-blanco" />
+      <div class="informe-banner-sep"></div>
       <div class="informe-banner-text">
         <div class="informe-banner-sub">Unidad de Admisión y Marketing</div>
         <div class="informe-banner-title${largo ? " informe-banner-title--largo" : ""}">${titulo}</div>

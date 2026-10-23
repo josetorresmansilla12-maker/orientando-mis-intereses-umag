@@ -131,6 +131,12 @@ Paso 2: las pestañas
      hay tests mal traspasados, la carpeta trae una sola nota con la lista. Antes de
      descargar avisa qué se va a generar y cuánto puede demorar. Si se necesitan los
      informes separados por curso, conviene usar el botón "ZIP por curso".
+   - "📊 Descargar el informe para orientadores" (dentro de cada colegio): el informe
+     grupal del colegio. Si tiene varios cursos, pregunta cuál: el "informe global del
+     colegio" (un solo PDF que suma todos sus cursos) o "un informe por curso" (un PDF
+     por cada curso, juntos en un ZIP). Si tiene un solo curso, descarga directo el de
+     ese curso. Es el mismo informe de la pestaña "Informes para orientadores", pero sin
+     el límite de 12 cursos.
    - Descargar todos los informes de un curso en un ZIP.
    - "➕ Agregar estudiante manualmente" (dentro de cada curso): abre un formulario
      arriba de la lista del curso para escribir el nombre, el RUT y los puntajes de un
@@ -325,9 +331,11 @@ Logos y carreras en todos los informes (2027)
 ---------------------------------------------
 - La barra morada de la primera hoja de todos los informes (individual de los dos
   tests, grupal por curso, global e interno) lleva los logos 2027 en blanco: UMAG a
-  la izquierda y "Quédate para llegar más lejos" a la derecha. La credencial del
-  estudiante o del curso lleva el logo UMAG 2027 a color. Los archivos originales del
-  diseñador están en assets/logos-2027/.
+  la izquierda (arriba) y "Quédate para llegar más lejos" a la derecha. La credencial
+  del estudiante (informes individuales) también lleva el logo UMAG; en los informes
+  grupal, global e interno la credencial del curso o del colegio va sin logo, para que
+  no se repita en la misma hoja. Los archivos originales del diseñador están en
+  assets/logos-2027/.
 - El ícono de Mecánica son dos engranajes que encajan entre sí.
 - Las carreras de una misma familia van juntas bajo un solo nombre, para ahorrar
   espacio: "Ingenierías: Construcción, Electricidad, Mecánica...", "Ingenierías

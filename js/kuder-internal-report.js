@@ -155,7 +155,6 @@ function construirCajaResumenInternoKuder(stats, periodo) {
           <div class="id-card-sub">${stats.totalTests} ${stats.totalTests === 1 ? "aplicación" : "aplicaciones"} · ${stats.colegiosDistintos} ${stats.colegiosDistintos === 1 ? "colegio" : "colegios"}</div>
           ${textoPeriodo ? `<div class="id-card-sub">Período: ${textoPeriodo}</div>` : ""}
         </div>
-        <div class="id-card-logo"><img src="${LOGO_UMAG_DATAURI}" alt="UMAG" /></div>
       </div>
     </div>`;
 }
@@ -347,7 +346,7 @@ function construirTarjetaAreaInternaKuder(area, conteo, total) {
 // hoja quede con un cuarto o más de espacio en blanco.
 function construirTodasLasPaginasInternoKuder(stats, periodo) {
   const htmlEncabezadoPrimera = `
-    ${construirBanner("Informe Interno · Test Vocacional de Kuder", "Unidad de Admisión y Marketing — uso interno", { logo: false })}
+    ${construirBanner("Informe Interno · Test Vocacional de Kuder", "Unidad de Admisión y Marketing — uso interno")}
     ${construirCajaResumenInternoKuder(stats, periodo)}
     ${construirIntroInternoKuder()}
   `;

@@ -1354,6 +1354,7 @@ function renderEstudiantes() {
         <div class="grupo-colegio-acciones">
           <button type="button" class="chico" id="${idSeguro("zipcol", colegio)}" title="Un ZIP con todos los informes de este colegio, con una carpeta por curso (curso y letra)">⬇ Descargar todos los informes del colegio (ZIP por curso)</button>
           <button type="button" class="chico fusionado" id="${idSeguro("zipfus", colegio)}" title="Una sola carpeta con todos los informes del colegio juntos (sin separar por curso), ordenados curso por curso, para imprimirlos de una vez">🗂 Descargar todo en una sola carpeta (cursos fusionados)</button>
+          ${c.configGrupal ? `<button type="button" class="chico secundario" id="${idSeguro("oricol", colegio)}" title="Informe grupal para los orientadores del colegio: uno global con todos sus cursos sumados, o uno por curso">📊 Descargar el informe para orientadores</button>` : ""}
           <button type="button" class="chico secundario btn-minimizar-alumnos" ${atributosBotonMinimizar(cursosAbiertos > 0)}>${textoBotonMinimizar(cursosAbiertos > 0)}</button>
           <button type="button" class="chico btn-curso-csv" data-colegio="${escaparHtml(colegio)}" title="Crea en este colegio un curso nuevo a partir de su CSV o Excel">📥 Añadir un curso desde CSV</button>
           <button class="chico peligro" id="${idSeguro("delcol", colegio)}">🗑 Eliminar colegio completo</button>
@@ -1451,6 +1452,8 @@ function renderEstudiantes() {
     // el mismo colegio completo, pero todo en una sola carpeta (para imprimir de una vez)
     const btnFusionado = document.getElementById(idSeguro("zipfus", colegio));
     if (btnFusionado) btnFusionado.onclick = () => accionDescargarColegioFusionado(colegio, todos.filter((e) => e.colegio === colegio), btnFusionado);
+    const btnOriColegio = document.getElementById(idSeguro("oricol", colegio));
+    if (btnOriColegio) btnOriColegio.onclick = () => accionInformeOrientadoresColegio(colegio, todos.filter((e) => e.colegio === colegio), btnOriColegio);
 
     const btnDelColegio = document.getElementById(idSeguro("delcol", colegio));
     if (btnDelColegio) {
@@ -2834,6 +2837,61 @@ async function descargarColegioFusionado(colegio, lista, btn) {
     delete btn.dataset.generando;
     btn.disabled = false;
     btn.textContent = original;
+  }
+}
+
+// ---------------- "Descargar el informe para orientadores" (de un colegio) ----------------
+// El informe grupal de los cursos del colegio (el mismo de la pestaña "Informes para
+// orientadores"): uno global que suma todos sus cursos en un solo PDF, o uno por curso
+// (un PDF por curso, juntos en un ZIP). Con un solo curso se descarga directo el suyo.
+
+function cursosParaInformeOrientadores(colegio, lista) {
+  return cursosEnOrdenDeArchivo(agrupar(lista).get(colegio) || new Map()).map((estudiantes) => {
+    const fechas = [...new Set(estudiantes.map((e) => e.fecha).filter(Boolean))];
+    return { colegio, curso: etiquetaCursoKuder(estudiantes[0]), fecha: fechas.length === 1 ? fechas[0] : "", estudiantes, total: estudiantes.length };
+  });
+}
+
+function accionInformeOrientadoresColegio(colegio, lista, btn) {
+  if (!lista || lista.length === 0) return;
+  const cursos = cursosParaInformeOrientadores(colegio, lista);
+  if (cursos.length === 1) return antesDeGenerarInformes(lista, () => accionInformeGrupal(lista, btn));
+  const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+  elegirOpcion({
+    titulo: `📊 Informe para orientadores · ${colegio}`,
+    texto:
+      `El colegio tiene <b>${plural(cursos.length, "curso", "cursos")}</b> (${plural(lista.length, "estudiante", "estudiantes")}). ¿Qué informe quieres descargar?<br/><br/>` +
+      `• <b>Informe global del colegio</b>: un solo PDF que suma todos sus cursos.<br/>` +
+      `• <b>Un informe por curso</b>: un PDF por cada curso, juntos en un ZIP (útil si cada curso tiene su orientador o profesor jefe).`,
+    opciones: [
+      { texto: "📁 Un informe por curso (ZIP)", clase: "secundario", accion: () => antesDeGenerarInformes(lista, () => descargarInformeOrientadoresColegio(cursos, btn, { porCurso: true })) },
+      { texto: "📊 Informe global del colegio (PDF)", accion: () => antesDeGenerarInformes(lista, () => descargarInformeOrientadoresColegio(cursos, btn)) },
+    ],
+  });
+}
+
+async function descargarInformeOrientadoresColegio(cursos, btn, { porCurso = false } = {}) {
+  const config = cfg().configGrupal;
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Generando…";
+  try {
+    if (porCurso) {
+      await generarInformesPorCursoKuderZip(cursos, "", config);
+      mostrarToast(`Listo: ${cursos.length} informes para orientadores (uno por curso) en un ZIP`);
+    } else {
+      const estudiantes = cursos.flatMap((cu) => cu.estudiantes);
+      const fechas = [...new Set(cursos.map((cu) => cu.fecha))];
+      const resumenPorCurso = cursos.map((cu) => ({ colegio: cu.colegio, curso: cu.curso, total: cu.total }));
+      await generarInformeGlobalKuderPdf(resumenPorCurso, estudiantes, fechas.length === 1 ? fechas[0] : "", config);
+      mostrarToast("Informe global del colegio descargado");
+    }
+  } catch (err) {
+    console.error(err);
+    mostrarToast("No se pudo generar el informe para orientadores. Revisa el mensaje en la consola.");
+  } finally {
+    btn.textContent = original;
+    btn.disabled = false;
   }
 }
 

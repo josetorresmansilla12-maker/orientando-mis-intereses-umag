@@ -133,7 +133,6 @@ function construirCajaCursoKuder(datosCurso, totalEstudiantes) {
           <div class="id-card-sub">${totalEstudiantes} ${totalEstudiantes === 1 ? "estudiante evaluado" : "estudiantes evaluados"}</div>
           ${datosCurso.fecha ? `<div class="id-card-sub">Fecha de aplicación: ${fmtFechaKuder(datosCurso.fecha)}</div>` : ""}
         </div>
-        <div class="id-card-logo"><img src="${LOGO_UMAG_DATAURI}" alt="UMAG" /></div>
       </div>
     </div>`;
 }
@@ -257,7 +256,7 @@ function construirPaginaStatsKuder(datosCurso, estudiantes, conteos, total) {
   const contenedor = document.createElement("div");
   contenedor.className = "informe-page";
   contenedor.innerHTML = `
-    ${construirBanner(G().tituloGrupal, G().subtitulo, { logo: false })}
+    ${construirBanner(G().tituloGrupal, G().subtitulo)}
     ${construirCajaCursoKuder(datosCurso, total)}
     ${construirIntroKuder()}
     ${construirStatsKuder(estudiantes, conteos, total)}
@@ -558,7 +557,6 @@ function construirCajaGlobalKuder(resumenPorCurso, totalEstudiantes, fecha) {
           <div class="id-card-sub">${totalEstudiantes} ${totalEstudiantes === 1 ? "estudiante evaluado" : "estudiantes evaluados"} en ${resumenPorCurso.length} cursos</div>
           ${fecha ? `<div class="id-card-sub">Fecha de aplicación: ${fmtFechaKuder(fecha)}</div>` : ""}
         </div>
-        <div class="id-card-logo"><img src="${LOGO_UMAG_DATAURI}" alt="UMAG" /></div>
       </div>
     </div>`;
 }
@@ -574,7 +572,7 @@ function construirPaginaStatsGlobalKuder(resumenPorCurso, estudiantes, conteos, 
   const contenedor = document.createElement("div");
   contenedor.className = "informe-page";
   contenedor.innerHTML = `
-    ${construirBanner(G().tituloGlobal, G().subtitulo, { logo: false })}
+    ${construirBanner(G().tituloGlobal, G().subtitulo)}
     ${construirCajaGlobalKuder(resumenPorCurso, total, fecha)}
     ${construirIntroGlobalKuder(resumenPorCurso.length)}
     ${construirStatsKuder(estudiantes, conteos, total)}
@@ -895,8 +893,10 @@ async function generarInformesPorCursoKuderZip(porArchivo, fecha, config) {
   const zip = new JSZip();
   const usados = new Map();
 
-  for (const { colegio, curso, estudiantes } of porArchivo) {
-    const blob = await construirBlobInformeGrupalKuder({ colegio, curso, fecha }, estudiantes, config);
+  // cada curso puede traer su propia fecha de aplicación (los que vienen de la app, desde
+  // "Estudiantes e informes"); si no, va la fecha elegida para todos
+  for (const { colegio, curso, estudiantes, fecha: fechaCurso } of porArchivo) {
+    const blob = await construirBlobInformeGrupalKuder({ colegio, curso, fecha: fechaCurso || fecha }, estudiantes, config);
     let nombre = conConfigGrupal(config, () => nombreArchivoInformeKuder({ colegio, curso }));
     const veces = usados.get(nombre) || 0;
     usados.set(nombre, veces + 1);
