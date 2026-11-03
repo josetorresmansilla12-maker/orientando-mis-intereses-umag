@@ -231,6 +231,16 @@ Paso 2: las pestañas
      solo uno.
    - En la revisión de este informe no se marcan los tests mal traspasados (a esa
      altura los informes individuales ya se entregaron).
+   - La primera hoja es un resumen ejecutivo para gerencia, con cifras grandes:
+     estudiantes evaluados, colegios atendidos, cursos evaluados, % con al menos un
+     área de interés clara; los promedios de estudiantes por curso, de estudiantes
+     por colegio, de cursos por colegio y de áreas de interés por estudiante; los 3
+     colegios que más solicitan el test (por N° de cursos evaluados) y los 3 con más
+     estudiantes evaluados (con cuánto concentran del total); los niveles evaluados y
+     las 5 áreas de interés más frecuentes. Desde la hoja 2 va el detalle: la tabla de
+     todos los colegios (cursos, estudiantes, promedio por curso y % de estudiantes),
+     la de niveles, el gráfico de las 10 áreas y una tarjeta por área. Es de uso
+     interno, así que no lleva datos de contacto.
    - La app NO guarda los archivos CSV que subes (ni ahí ni en "Ingresar datos"): solo
      los lee. Por eso, "⬇ Descargar todos los CSV (ZIP)" arma de nuevo un CSV por
      curso con los datos actuales de la app (con las correcciones de puntajes y

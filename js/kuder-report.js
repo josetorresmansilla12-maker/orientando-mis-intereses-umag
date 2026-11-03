@@ -139,12 +139,17 @@ function construirCajaCursoKuder(datosCurso, totalEstudiantes) {
 
 // línea liviana de curso/colegio para el encabezado de las páginas de continuación
 // (2da hoja de áreas en adelante) — mismo espíritu que construirLineaEstudiante.
+// "titulo": texto propio de la línea (informe global), en vez de "Colegio: … Curso: …"
 function construirLineaCursoKuder(datosCurso) {
   return `
     <div class="espaciador-inicio-pagina"></div>
     <div class="linea-estudiante">
-      <span><b>Colegio:</b> ${datosCurso.colegio || "—"}</span>
-      <span><b>Curso:</b> ${(datosCurso.curso || "—") + (datosCurso.letra || "")}</span>
+      ${
+        datosCurso.titulo
+          ? `<span>${datosCurso.titulo}</span>`
+          : `<span><b>Colegio:</b> ${datosCurso.colegio || "—"}</span>
+      <span><b>Curso:</b> ${(datosCurso.curso || "—") + (datosCurso.letra || "")}</span>`
+      }
     </div>`;
 }
 
@@ -163,7 +168,8 @@ function construirIntroKuder() {
 // La combinación (10 × 1 columna + 5 × 2 columnas = 20 unidades) llena exactamente 5
 // filas completas de la grilla de 4 columnas, para que la página de estadísticas
 // (que ahora va sola, sin el gráfico de barras al lado) quede bien ocupada.
-function construirStatsKuder(estudiantes, conteos, total) {
+// "delGrupo": "del curso" en el informe por curso, "del total" en el global
+function construirStatsKuder(estudiantes, conteos, total, { delGrupo = "del curso" } = {}) {
   const AREAS_T = G().areas;
   const areasPorEstudiante = estudiantes.map((e) => G().calcularAreas(e.puntajes).length);
   const sinArea = areasPorEstudiante.filter((n) => n === 0).length;
@@ -222,8 +228,8 @@ function construirStatsKuder(estudiantes, conteos, total) {
       <div class="stat-card kuder-stat-ancho"><div class="num kuder-stat-num-area">${top1.nombre}</div><div class="lbl">Área más elegida: ${top1.c} de ${total} (${top1.pct}%)</div></div>
       <div class="stat-card kuder-stat-ancho"><div class="num kuder-stat-num-area">${top2.nombre}</div><div class="lbl">Segunda área más elegida: ${top2.c} de ${total} (${top2.pct}%)</div></div>
       <div class="stat-card kuder-stat-ancho"><div class="num kuder-stat-num-area">${ultima.nombre}</div><div class="lbl">Área menos elegida: ${ultima.c} de ${total} (${ultima.pct}%)</div></div>
-      <div class="stat-card kuder-stat-ancho"><div class="num kuder-stat-num-area">${mayorPromedio.nombre}</div><div class="lbl">Mayor puntaje promedio del curso (${promedioArea(mayorPromedio).toFixed(1)} pts)</div></div>
-      <div class="stat-card kuder-stat-ancho"><div class="num kuder-stat-num-area">${menorPromedio.nombre}</div><div class="lbl">Menor puntaje promedio del curso (${promedioArea(menorPromedio).toFixed(1)} pts)</div></div>
+      <div class="stat-card kuder-stat-ancho"><div class="num kuder-stat-num-area">${mayorPromedio.nombre}</div><div class="lbl">Mayor puntaje promedio ${delGrupo} (${promedioArea(mayorPromedio).toFixed(1)} pts)</div></div>
+      <div class="stat-card kuder-stat-ancho"><div class="num kuder-stat-num-area">${menorPromedio.nombre}</div><div class="lbl">Menor puntaje promedio ${delGrupo} (${promedioArea(menorPromedio).toFixed(1)} pts)</div></div>
     </div>`;
 }
 
@@ -245,10 +251,10 @@ function construirFooterKuder() {
 // segunda/menos) y "puntaje promedio": los primeros cuentan estudiantes que
 // cruzaron el umbral de interés, el segundo promedia el puntaje bruto de todo el
 // curso en esa área — son dos miradas distintas y pueden nombrar áreas distintas.
-function construirNotaStatsKuder() {
+function construirNotaStatsKuder({ quienes = "todo el curso" } = {}) {
   return `
     <div class="kuder-stats-nota">
-      <b>Elegida</b> = puntaje ≥ 7 en el área. <b>Puntaje promedio</b> = promedio bruto de todo el curso en esa área (sin umbral) — por eso pueden ser distintas.
+      <b>Elegida</b> = puntaje ≥ 7 en el área. <b>Puntaje promedio</b> = promedio bruto de ${quienes} en esa área (sin umbral) — por eso pueden ser distintas.
     </div>`;
 }
 
@@ -282,7 +288,7 @@ function construirIntroResultadosKuder() {
     </div>`;
 }
 
-function construirBloqueResultadosKuder(conteos, total) {
+function construirBloqueResultadosKuder(conteos, total, { delGrupo = "del curso" } = {}) {
   const areasOrdenadas = [...G().areas].sort((a, b) => (conteos[b.id] || 0) - (conteos[a.id] || 0));
   const filas = areasOrdenadas.map((a) => {
     const c = conteos[a.id] || 0;
@@ -296,7 +302,7 @@ function construirBloqueResultadosKuder(conteos, total) {
 
   return `
     <div class="kuder-chart-bloque kuder-chart-bloque-grande ${G().claseGrafico}">
-      <div class="kuder-resumen-titulo">Resultados: áreas de interés del curso, de mayor a menor</div>
+      <div class="kuder-resumen-titulo">Resultados: áreas de interés ${delGrupo}, de mayor a menor</div>
       <div class="kuder-chart-plot">
         <div class="kuder-chart-gridlines">
           ${marcas.map((m) => `<div class="kuder-chart-gridline" style="left:${(m / dominioMax) * 100}%;"><span>${m}%</span></div>`).join("")}
@@ -575,8 +581,8 @@ function construirPaginaStatsGlobalKuder(resumenPorCurso, estudiantes, conteos, 
     ${construirBanner(G().tituloGlobal, G().subtitulo)}
     ${construirCajaGlobalKuder(resumenPorCurso, total, fecha)}
     ${construirIntroGlobalKuder(resumenPorCurso.length)}
-    ${construirStatsKuder(estudiantes, conteos, total)}
-    ${construirNotaStatsKuder()}
+    ${construirStatsKuder(estudiantes, conteos, total, { delGrupo: "del total" })}
+    ${construirNotaStatsKuder({ quienes: "todos los estudiantes" })}
     ${construirFooterKuder()}
   `;
   return contenedor;
@@ -596,7 +602,7 @@ function construirPaginaResultadosGlobalKuder(datosCursoContinuacion, resumenPor
     ${construirLineaCursoKuder(datosCursoContinuacion)}
     ${construirCursosIncluidosKuder(resumenPorCurso)}
     ${construirIntroResultadosGlobalKuder(resumenPorCurso.length)}
-    <div class="${claseGrafico}">${construirBloqueResultadosKuder(conteos, total)}</div>
+    <div class="${claseGrafico}">${construirBloqueResultadosKuder(conteos, total, { delGrupo: "del total" })}</div>
     ${construirFooterKuder()}
   `;
   // con muchos cursos la lista de "cursos incluidos" ocupa más líneas: si la hoja no
@@ -632,7 +638,9 @@ async function construirBlobInformeGlobalKuder(resumenPorCurso, estudiantes, fec
   const paginas = conConfigGrupal(config, () => {
     const total = estudiantes.length;
     const conteos = calcularConteosPorAreaKuder(estudiantes);
-    const datosCursoContinuacion = { colegio: `${resumenPorCurso.length} cursos (informe global)`, curso: "" };
+    const colegios = [...new Set(resumenPorCurso.map((r) => r.colegio).filter(Boolean))];
+    const quien = colegios.length === 1 ? colegios[0] : `${colegios.length} colegios`;
+    const datosCursoContinuacion = { titulo: `<b>Informe global</b> · ${quien} · ${resumenPorCurso.length} cursos` };
     return [
       construirPaginaStatsGlobalKuder(resumenPorCurso, estudiantes, conteos, total, fecha),
       construirPaginaResultadosGlobalKuder(datosCursoContinuacion, resumenPorCurso, conteos, total),

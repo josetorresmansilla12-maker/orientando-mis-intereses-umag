@@ -959,6 +959,66 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
 /* ---------- informe interno de Kuder (Admisión y Marketing): tablas de ranking ---------- */
 /* bloque "flowable": se usa suelto (no envuelto en un contenedor con margen propio,
    como sí pasaba en el diseño anterior), así que trae su propio margen de página. */
+/* informe interno, hoja 1: resumen ejecutivo para gerencia (cifras grandes y pocas
+   palabras; colores sólidos, para que se lea bien también impreso en blanco y negro) */
+.ejec { margin: 18px 30px 0; }
+.ejec-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.ejec-kpi {
+  background: var(--morado);
+  border-radius: 12px;
+  padding: 16px 10px 14px;
+  text-align: center;
+  color: white;
+}
+.ejec-num { font-size: 38px; font-weight: 800; line-height: 1; }
+.ejec-lbl { font-size: 12.5px; font-weight: 600; margin-top: 7px; line-height: 1.25; }
+.ejec-promedios { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 12px; }
+.ejec-prom {
+  border: 1.5px solid var(--borde);
+  border-radius: 10px;
+  padding: 10px 10px 9px;
+  text-align: center;
+}
+.ejec-prom b { display: block; font-size: 26px; font-weight: 800; color: var(--morado); line-height: 1.05; }
+.ejec-prom span { display: block; font-size: 11.5px; color: #4a4058; margin-top: 4px; line-height: 1.25; }
+.ejec-dos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.ejec-caja { border: 1.5px solid var(--borde); border-radius: 12px; padding: 12px 14px 11px; }
+.ejec-caja-titulo { font-size: 14px; font-weight: 800; color: var(--morado-oscuro); }
+.ejec-caja-sub { font-size: 11px; color: var(--texto-suave); margin: 1px 0 8px; }
+.ejec-top-fila { display: flex; align-items: center; gap: 9px; padding: 6px 0; border-top: 1px solid #eee8f6; }
+.ejec-top-fila:first-child { border-top: none; }
+.ejec-pos {
+  flex: 0 0 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--morado);
+  color: white;
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ejec-nombre { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; color: #2b2140; }
+.ejec-dato { font-size: 12px; color: #4a4058; white-space: nowrap; }
+.ejec-dato b { font-size: 16px; color: var(--morado); }
+.ejec-caja-pie { font-size: 11px; color: #4a4058; margin-top: 7px; line-height: 1.35; }
+.ejec-caja-pie b { color: var(--morado-oscuro); }
+.ejec-barra-fila { margin-top: 7px; }
+.ejec-barra-texto { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; color: #2b2140; }
+.ejec-barra-texto span { font-size: 12px; color: #4a4058; white-space: nowrap; }
+.ejec-barra { height: 9px; background: #eee8f6; border-radius: 5px; margin-top: 3px; overflow: hidden; }
+.ejec-barra div { height: 100%; background: var(--morado); border-radius: 5px; }
+.ejec-nota { font-size: 10px; color: var(--texto-suave); margin-top: 14px; line-height: 1.4; }
+.ejec-nota b { color: #402a63; }
+.ejec-compacto .ejec-kpi { padding: 12px 10px 10px; }
+.ejec-compacto .ejec-num { font-size: 32px; }
+.ejec-compacto .ejec-dos { margin-top: 10px; }
+.ejec-compacto .ejec-top-fila { padding: 4px 0; }
+.ejec-compacto .ejec-nombre { font-size: 12.5px; }
+.ejec-compacto .ejec-barra-fila { margin-top: 5px; }
+.ejec-compacto .ejec-nota { margin-top: 10px; }
+
 .kuder-ranking-bloque { margin: 18px 30px 0; }
 .kuder-tabla-ranking { width: 100%; border-collapse: collapse; font-size: 12px; }
 .kuder-tabla-ranking th {
@@ -971,7 +1031,7 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
   padding: 6px 8px;
   border-bottom: 2px solid var(--borde);
 }
-.kuder-tabla-ranking th.cant, .kuder-tabla-ranking td.cant { text-align: right; }
+.kuder-tabla-ranking th.cant, .kuder-tabla-ranking td.cant { text-align: right; white-space: nowrap; width: 1%; }
 .kuder-tabla-ranking td { padding: 6px 8px; border-bottom: 1px solid var(--borde); color: #2b2140; }
 .kuder-tabla-ranking tr:last-child td { border-bottom: none; }
 .kuder-tabla-ranking tbody tr:nth-child(odd) td { background: var(--lila-fondo); }
