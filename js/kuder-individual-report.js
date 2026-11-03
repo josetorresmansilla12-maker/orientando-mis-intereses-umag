@@ -300,8 +300,9 @@ function construirTarjetaAreaIndividualKuder(area, espaciosa, textoDiverso = nul
 
 // qué áreas lleva el informe (mismo criterio que en 8° básico): TODAS las de puntaje
 // 7 o más, sin límite, de mayor a menor puntaje (a igual puntaje, en el orden normal
-// de las áreas). Si ninguna llegó a 7, se muestran las 10 áreas y el mensaje le dice
-// al estudiante que tiene intereses diversos (no que "no tiene intereses").
+// de las áreas). Si ninguna llegó a 7, se muestran las de puntaje más alto (todas las
+// que empaten; si empatan las 10, van las 10) y el mensaje le dice al estudiante que
+// tiene intereses diversos (no que "no tiene intereses").
 function seleccionarAreasInformeKuder(puntajes) {
   const puntaje = (a) => {
     const p = Number(puntajes[a.id]);
@@ -310,11 +311,11 @@ function seleccionarAreasInformeKuder(puntajes) {
   const porPuntaje = (a, b) => puntaje(b) - puntaje(a) || AREAS_KUDER.indexOf(a) - AREAS_KUDER.indexOf(b);
   const deInteres = calcularAreasDeInteresKuder(puntajes).sort(porPuntaje);
   if (deInteres.length > 0) return { areas: deInteres, caso: "normal" };
-  return { areas: [...AREAS_KUDER].sort(porPuntaje), caso: "ninguna" };
+  return { areas: areasConPuntajeMasAlto(AREAS_KUDER, puntajes), caso: "ninguna" };
 }
 
 function mensajeResultadosKuder(estudiante, areas, caso) {
-  if (caso === "ninguna") return mensajeSinAreaDestacada(areas, estudiante.puntajes);
+  if (caso === "ninguna") return mensajeSinAreaDestacada(areas, AREAS_KUDER.length);
   return `De acuerdo a tus respuestas, ${areas.length === 1 ? "tu área de interés es" : "tus áreas de interés son"}:`;
 }
 
@@ -344,7 +345,7 @@ function construirPaginasResultadosKuder(estudiante) {
   const htmlEncabezado = construirEncabezadoResultadosKuder(estudiante, areas, caso);
   const htmlEncabezadoCont = construirEncabezadoContinuacionKuder(estudiante);
   const htmlAviso = construirAvisoContinua();
-  const textosDiversos = caso === "ninguna" ? descripcionesAreasDiversas(areas, estudiante.puntajes) : [];
+  const textosDiversos = caso === "ninguna" ? descripcionesAreasDiversas(areas, estudiante.puntajes, AREAS_KUDER) : [];
   const htmlTarjetas = areas.map((a, i) => construirTarjetaAreaIndividualKuder(a, false, textosDiversos[i] || null));
   const htmlTarjetasEspaciosas = areas.map((a, i) => construirTarjetaAreaIndividualKuder(a, true, textosDiversos[i] || null));
 

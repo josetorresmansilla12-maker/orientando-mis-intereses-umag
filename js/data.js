@@ -15,8 +15,8 @@
 //
 // Cada área tiene dos descripciones para el informe del estudiante: "descripcion",
 // cuando el área destacó (7 u 8 puntos), y "diversaQueEs" + "diversaInvitacion",
-// cuando ninguna área llegó a 7 (se muestran las 6 áreas, como intereses amplios y
-// variados, sin hablar de un interés alto). Entre esas dos va una frase que se elige
+// cuando ninguna área llegó a 7 (se muestran las de puntaje más alto, como intereses
+// amplios y variados, sin hablar de un interés alto). Entre esas dos va una frase que se elige
 // según el puntaje real del área comparado con las demás (frasesNivelDiverso, js/report.js).
 // Los textos dirigidos al estudiante están escritos en tono de posibilidad ("podría
 // indicar que...", "es posible que..."): explican qué representa el área y qué podría

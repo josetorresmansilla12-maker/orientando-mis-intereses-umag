@@ -304,17 +304,24 @@ Cómo se ve el informe de Kuder (individual)
 - Hojas siguientes: los datos del estudiante y un recuadro por cada área de interés
   (7 puntos o más), con su descripción, "Tus Carreras UMAG" y "Otras carreras".
 - Aparecen todas sus áreas de interés, sin límite. Si ningún área llega a 7, el
-  informe se lo explica en positivo: "Tus puntajes fueron diversos, lo que indica que
-  tienes múltiples áreas de interés. Por eso, en tu informe personal te mostramos en
-  detalle las 10 áreas con las carreras que imparte la UMAG y las que imparten otras
-  universidades. Tómalo como una oportunidad para seguir explorando tus intereses"
-  (en 8° básico, las 6 áreas). Cada área lleva una descripción propia para ese caso,
-  que no habla de un interés alto; la frase sobre su puntaje se calcula con el puntaje
-  real del área comparado con las demás: "entre las de más puntaje", "parecido a
-  otras áreas" o "menos puntaje que otras áreas".
-- En 8° básico, en ese caso las 6 áreas van ordenadas de mayor a menor puntaje (y el
-  informe lo dice). En Kuder no se ordenan: con 10 áreas, ordenarlas dejaba más
-  espacios en blanco y a veces una hoja más.
+  informe muestra solo las áreas con su puntaje más alto: si una sola tiene el
+  puntaje más alto, va esa; si varias empatan en ese puntaje, van todas las que
+  empatan; y si todas las áreas tienen el mismo puntaje (por ejemplo, todas con 4),
+  van todas. Se lo explica en positivo: "Tus puntajes fueron diversos, lo que indica
+  que tienes múltiples áreas de interés. En tu informe personal te mostramos en
+  detalle el área en la que obtuviste tu puntaje más alto [o: las 2 áreas en las que
+  obtuviste tu puntaje más alto / las 10 áreas, ya que obtuviste el mismo puntaje en
+  todas], con las carreras que imparte la UMAG y las que imparten otras
+  universidades. Tómalo como una oportunidad para seguir explorando tus intereses".
+  Esto vale para los dos tests (en 8° básico, con sus 6 áreas). En Kuder, como las 10
+  áreas suman 45, el puntaje más alto de un test bien traspasado es siempre 5 o más.
+- Cada área lleva una descripción propia para ese caso, que no habla de un interés
+  alto; la frase sobre su puntaje se calcula comparándolo con todas las áreas del
+  estudiante (también las que no se muestran): "el área con más puntaje", "entre tus
+  puntajes más altos" o, si todos sus puntajes son parejos (1 punto o menos de
+  diferencia), "parecido a otras áreas".
+- En la lista de "Estudiantes e informes", al pasar el mouse sobre "Sin área
+  destacada" se ve qué áreas mostrará su informe.
 - Las descripciones de las áreas (en los dos tests) están escritas en tono de
   posibilidad ("podría indicar que...", "es posible que..."): explican qué representa
   cada área y qué podría abrirle al estudiante, sin dar por hecho sus gustos ni rasgos.

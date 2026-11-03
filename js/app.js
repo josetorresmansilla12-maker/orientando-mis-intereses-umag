@@ -1145,7 +1145,18 @@ function chipsAreas(estudiante) {
   const areas = cfg().calcularAreas(estudiante.puntajes);
   return areas.length > 0
     ? areas.map((a) => `<span class="chip">${a.icono} ${a.nombre}</span>`).join("")
-    : `<span class="chip generico">Sin área destacada</span>`;
+    : `<span class="chip generico" title="${escaparHtml(textoResultadoAreas(estudiante.puntajes))}">Sin área destacada</span>`;
+}
+
+// lo que dice la app de los resultados de un estudiante: sus áreas de interés (7 o más)
+// o, si no tiene ninguna, cuáles mostrará su informe (las de puntaje más alto)
+function textoResultadoAreas(puntajes) {
+  const c = cfg();
+  const areas = c.calcularAreas(puntajes).map((a) => a.nombre);
+  if (areas.length) return `Áreas de interés: ${areas.join(", ")}.`;
+  const altas = areasConPuntajeMasAlto(c.areas, puntajes).map((a) => a.nombre);
+  if (altas.length === c.areas.length) return "Sin áreas de 7 o más y el mismo puntaje en todas: su informe mostrará todas las áreas.";
+  return `Sin áreas de 7 o más: su informe mostrará ${altas.length === 1 ? "su área de puntaje más alto" : "sus áreas de puntaje más alto"} (${altas.join(", ")}).`;
 }
 
 // lista en vivo de los estudiantes ya ingresados para el colegio/curso/letra
@@ -2291,8 +2302,7 @@ function guardarEdicionEnLista(id, { seguir = false, dejarAsi = false } = {}) {
   actualizarListaConservandoPosicion(id);
 
   const r = revisionTraspaso(actualizado.puntajes);
-  const areas = c.calcularAreas(actualizado.puntajes).map((a) => a.nombre);
-  const resultado = areas.length ? `Áreas de interés: ${areas.join(", ")}.` : "Sin áreas destacadas: su informe mostrará todas las áreas (intereses diversos).";
+  const resultado = textoResultadoAreas(actualizado.puntajes);
   mostrarToast(
     c.revisarTraspaso
       ? r
@@ -2486,11 +2496,10 @@ function guardarAgregarEnCurso({ cerrar = false } = {}) {
   const agregar = () => {
     const nuevo = c.store.crear({ nombre, rut, colegio: a.colegio, curso: a.curso, letra: a.letra, fecha: a.fecha, puntajes });
     const numero = c.numeroEnGrupo(nuevo);
-    const areas = c.calcularAreas(nuevo.puntajes).map((ar) => ar.nombre);
     const r = revisionTraspaso(nuevo.puntajes);
     a.ultimo =
       `✓ Se agregó a <b>${escaparHtml(nuevo.nombre)}</b>${numero ? ` como <b>N° ${numero}</b>` : ""}. ` +
-      (areas.length ? `Áreas de interés: ${escaparHtml(areas.join(", "))}.` : "Sin áreas destacadas.") +
+      escaparHtml(textoResultadoAreas(nuevo.puntajes)) +
       (r ? ` <span class="agregar-en-curso-ojo">Ojo: ${escaparHtml(r.texto.resumen.toLowerCase())}, test mal traspasado (queda pendiente por revisar).</span>` : "");
     a.valores = {};
     if (cerrar) estado.agregarEnCurso = null;
@@ -3142,8 +3151,7 @@ function guardarCorreccionPuntajes({ dejarAsi = false } = {}) {
   cerrarCorreccionPuntajes();
 
   const r = revisionTraspaso(actualizado.puntajes);
-  const areas = c.calcularAreas(actualizado.puntajes).map((a) => a.nombre);
-  const resultado = areas.length ? `Áreas de interés: ${areas.join(", ")}.` : "Sin áreas sobre 7: su informe mostrará todas las áreas (intereses diversos).";
+  const resultado = textoResultadoAreas(actualizado.puntajes);
   mostrarToast(
     r
       ? traspasoDejadoAsi(actualizado)

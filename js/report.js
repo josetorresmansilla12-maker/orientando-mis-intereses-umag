@@ -458,16 +458,32 @@ function construirCuadrosCarrerasResultados(clave, area) {
 }
 
 // ==================== informes sin un área destacada (ninguna llegó a 7) ====================
-// Se muestran todas las áreas, cada una con "qué es" + una frase sobre su puntaje +
-// una invitación. Esa frase del medio se elige con el puntaje REAL del área comparado
-// con el de las demás del mismo estudiante (no por el lugar en que aparece la tarjeta):
+// Se muestran solo las áreas con el puntaje más alto del estudiante: todas las que
+// empaten en ese puntaje (si todas empatan, van todas). Cada una lleva "qué es" + una
+// frase sobre su puntaje + una invitación. Esa frase del medio se elige con el puntaje
+// REAL del área comparado con el de TODAS las áreas del estudiante (también las que no
+// se muestran):
 // - si entre el puntaje más alto y el más bajo hay 1 punto o menos, todas son "media"
 //   (puntajes de verdad parejos);
-// - si no, las que tienen el puntaje más alto son "alta", las del más bajo "baja" y el
-//   resto "media".
+// - si no, las que tienen el puntaje más alto son "alta" ("unica" si es una sola), las
+//   del más bajo "baja" y el resto "media".
 // Así nunca se dice que un área quedó pareja o baja cuando estuvo entre las más altas,
 // ni al revés. Los sirve a los dos tests (también js/kuder-individual-report.js).
+
+// las áreas con el puntaje más alto (todas las que empatan), en el orden normal
+function areasConPuntajeMasAlto(areas, puntajes) {
+  const puntaje = (a) => {
+    const p = Number(puntajes[a.id]);
+    return Number.isFinite(p) ? p : -Infinity;
+  };
+  const max = Math.max(...areas.map(puntaje));
+  return areas.filter((a) => puntaje(a) === max);
+}
+
 const FRASES_NIVEL_DIVERSO = {
+  unica: [
+    "Fue el área con más puntaje en tus respuestas, así que podría ser la dirección que más te llama la atención.",
+  ],
   alta: [
     "En tus respuestas fue una de las áreas con más puntaje, así que podría ser una de las direcciones que más te llaman la atención.",
     "Estuvo entre tus puntajes más altos, por lo que podría ser uno de los caminos que más te interesa explorar.",
@@ -482,21 +498,23 @@ const FRASES_NIVEL_DIVERSO = {
   ],
 };
 
-function nivelesDiversos(areas, puntajes) {
+// "todas": todas las áreas del test (el nivel se compara con todas, aunque no se muestren)
+function nivelesDiversos(todas, puntajes) {
   const puntaje = (a) => Number(puntajes[a.id]) || 0;
-  const valores = areas.map(puntaje);
+  const valores = todas.map(puntaje);
   const max = Math.max(...valores);
   const min = Math.min(...valores);
   const parejo = max - min <= 1;
-  const nivel = (a) => (parejo ? "media" : puntaje(a) === max ? "alta" : puntaje(a) === min ? "baja" : "media");
+  const unica = valores.filter((v) => v === max).length === 1;
+  const nivel = (a) => (parejo ? "media" : puntaje(a) === max ? (unica ? "unica" : "alta") : puntaje(a) === min ? "baja" : "media");
   return { parejo, nivel };
 }
 
 // texto de cada área, en el orden en que se muestran (las frases de un mismo nivel se
 // van alternando, para que no se repitan tarjeta tras tarjeta)
-function descripcionesAreasDiversas(areas, puntajes) {
-  const { nivel } = nivelesDiversos(areas, puntajes);
-  const usos = { alta: 0, media: 0, baja: 0 };
+function descripcionesAreasDiversas(areas, puntajes, todas) {
+  const { nivel } = nivelesDiversos(todas, puntajes);
+  const usos = { unica: 0, alta: 0, media: 0, baja: 0 };
   return areas.map((a) => {
     const n = nivel(a);
     const frase = FRASES_NIVEL_DIVERSO[n][usos[n]++ % FRASES_NIVEL_DIVERSO[n].length];
@@ -504,14 +522,18 @@ function descripcionesAreasDiversas(areas, puntajes) {
   });
 }
 
-// encabezado de esos informes: "pareja" solo si los puntajes de verdad lo fueron.
-// "ordenadas": las tarjetas van de mayor a menor puntaje (en 8° básico; ver
-// construirPaginasResultados), y así se le dice al estudiante.
-function mensajeSinAreaDestacada(areas, puntajes, { ordenadas = false } = {}) {
+// encabezado de esos informes. "nTotal": cuántas áreas tiene el test (si se muestran
+// todas, es porque todas empataron en el puntaje más alto)
+function mensajeSinAreaDestacada(areas, nTotal) {
   // en positivo: no se le dice que "ninguna área llegó a 7", sino que sus intereses son
-  // diversos y que por eso el informe le muestra todas las áreas con sus carreras
-  const cuales = ordenadas ? `las ${areas.length} áreas, ordenadas de mayor a menor puntaje,` : `las ${areas.length} áreas`;
-  return `Tus puntajes fueron diversos, lo que indica que tienes múltiples áreas de interés. Por eso, en tu informe personal te mostramos en detalle ${cuales} con las carreras que imparte la UMAG y las que imparten otras universidades. Tómalo como una oportunidad para seguir explorando tus intereses:`;
+  // diversos, y cuáles son las áreas que le mostramos
+  const cuales =
+    areas.length === nTotal
+      ? `las ${nTotal} áreas, ya que obtuviste el mismo puntaje en todas`
+      : areas.length === 1
+        ? "el área en la que obtuviste tu puntaje más alto"
+        : `las ${areas.length} áreas en las que obtuviste tu puntaje más alto`;
+  return `Tus puntajes fueron diversos, lo que indica que tienes múltiples áreas de interés. En tu informe personal te mostramos en detalle ${cuales}, con las carreras que imparte la UMAG y las que imparten otras universidades. Tómalo como una oportunidad para seguir explorando tus intereses:`;
 }
 
 // "textoDiverso": sin área destacada, la descripción armada para ese caso
@@ -535,7 +557,7 @@ function construirTarjetaArea(area, textoDiverso = null, espaciosa = false) {
 // destacaron las 6) se cuenta ese resultado en una frase corta y, sin
 // complicarse más, se muestran las 6 áreas igual que si todas hubiesen salido.
 function mensajeResultados(estudiante, areas, casoEspecial) {
-  if (casoEspecial === "ninguna") return mensajeSinAreaDestacada(areas, estudiante.puntajes, { ordenadas: true });
+  if (casoEspecial === "ninguna") return mensajeSinAreaDestacada(areas, AREAS.length);
   if (casoEspecial === "todas") {
     return "¡Tus respuestas destacaron en las 6 áreas! Esto podría indicar que te interesan muchas cosas a la vez. Aquí tienes la información de todas:";
   }
@@ -792,29 +814,18 @@ function repartirMuchasTarjetas(alturas, capacidad, costo) {
 
 function construirPaginasResultados(estudiante) {
   const areasInteres = calcularAreasDeInteres(estudiante.puntajes);
-  // caso especial: ninguna área destacó, o destacaron absolutamente todas — en ambos
-  // casos no hay un foco claro, así que en vez de complicarse con una página distinta,
-  // se arma el informe normal mostrando las 6 áreas (como si todas fueran de interés),
-  // con una frase corta al principio contando qué pasó.
+  // casos especiales: ninguna área destacó (se muestran las de puntaje más alto, todas
+  // las que empaten), o destacaron absolutamente todas (se muestran las 6). En los dos
+  // se arma el informe normal, con una frase corta al principio contando qué pasó.
   let casoEspecial = null;
   if (areasInteres.length === 0) casoEspecial = "ninguna";
   else if (areasInteres.length === AREAS.length) casoEspecial = "todas";
-  // sin área destacada, las 6 áreas van de mayor a menor puntaje (a igual puntaje, en
-  // el orden normal) y se reparten en hojas sin cambiar ese orden (cortarEnOrden):
-  // medido con muchas combinaciones de puntajes, así nunca quedan más hojas ni más
-  // espacio en blanco que repartiéndolas por tamaño
-  const puntaje = (a) => Number(estudiante.puntajes[a.id]) || 0;
-  const areas =
-    casoEspecial === "ninguna"
-      ? [...AREAS].sort((a, b) => puntaje(b) - puntaje(a) || AREAS.indexOf(a) - AREAS.indexOf(b))
-      : casoEspecial
-        ? AREAS
-        : areasInteres;
+  const areas = casoEspecial === "ninguna" ? areasConPuntajeMasAlto(AREAS, estudiante.puntajes) : casoEspecial ? AREAS : areasInteres;
 
   const htmlEncabezado = construirEncabezadoResultados(estudiante, areas, casoEspecial);
   const htmlEncabezadoCont = construirEncabezadoContinuacion(estudiante);
   const htmlAviso = construirAvisoContinua();
-  const textosDiversos = casoEspecial === "ninguna" ? descripcionesAreasDiversas(areas, estudiante.puntajes) : [];
+  const textosDiversos = casoEspecial === "ninguna" ? descripcionesAreasDiversas(areas, estudiante.puntajes, AREAS) : [];
   const htmlTarjetas = areas.map((a, i) => construirTarjetaArea(a, textosDiversos[i] || null));
   const htmlTarjetasEspaciosas = areas.map((a, i) => construirTarjetaArea(a, textosDiversos[i] || null, true));
 
@@ -827,14 +838,8 @@ function construirPaginasResultados(estudiante) {
     medirAlturaFragmento(`<div class="informe-areas" style="margin-top:0;">${html}</div>`)
   );
 
-  // reparto de las tarjetas en hojas (ver repartirTarjetasEnHojas): sin área destacada,
-  // las 6 áreas van de mayor a menor puntaje (así lo dice la frase de arriba), así que
-  // se reparten sin cambiar ese orden
-  const grupos = repartirTarjetasEnHojas(
-    alturasTarjetas,
-    { primera: altoEncabezado, cont: altoEncabezadoCont, aviso: altoReservaInferior },
-    { enOrden: casoEspecial === "ninguna" }
-  );
+  // reparto de las tarjetas en hojas (ver repartirTarjetasEnHojas)
+  const grupos = repartirTarjetasEnHojas(alturasTarjetas, { primera: altoEncabezado, cont: altoEncabezadoCont, aviso: altoReservaInferior });
 
   // el presupuesto de arriba es una estimación (suma de fragmentos medidos por
   // separado); antes de armar las páginas de verdad, se arma cada grupo tal cual
