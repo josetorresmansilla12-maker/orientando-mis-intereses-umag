@@ -3273,6 +3273,7 @@ function renderEstadisticas() {
 
   const colegios = opcionesUnicas(todos, "colegio").length;
   document.getElementById("stat-colegios").textContent = colegios;
+  document.getElementById("stat-cursos").textContent = new Set(todos.map((e) => `${e.colegio}|${etiquetaCurso(e)}`)).size;
 
   if (c.revisarTraspaso) {
     const conError = todos.map((e) => pendienteTraspaso(e)).filter(Boolean);
@@ -3302,8 +3303,65 @@ function renderEstadisticas() {
     })
     .join("");
 
-  renderDesglose("desglose-colegio", contarPorCampo(todos, "colegio"), "colegio");
+  renderRankingColegios(todos);
+  renderEstudiantesPorNivel(todos);
   renderDesglose("desglose-fecha", contarPorCampo(todos, "fecha", fmtFechaSimple), "fecha de aplicación");
+}
+
+// colegios ordenados por estudiantes evaluados (lo principal); a igual cantidad, por
+// cursos evaluados, que van aparte como dato complementario
+function renderRankingColegios(todos) {
+  const cont = document.getElementById("desglose-colegio");
+  const porColegio = new Map();
+  todos.forEach((e) => {
+    const colegio = e.colegio || "Sin colegio";
+    if (!porColegio.has(colegio)) porColegio.set(colegio, { colegio, estudiantes: 0, cursos: new Set() });
+    const fila = porColegio.get(colegio);
+    fila.estudiantes++;
+    fila.cursos.add(etiquetaCurso(e));
+  });
+  const filas = [...porColegio.values()].sort((a, b) => b.estudiantes - a.estudiantes || b.cursos.size - a.cursos.size);
+  if (!filas.length) {
+    cont.innerHTML = `<div class="vacio">Todavía no hay datos de colegio.</div>`;
+    return;
+  }
+  const pct = (n) => `${Math.round((n / todos.length) * 100)}%`;
+  cont.innerHTML = `
+    <table class="desglose-tabla">
+      <thead><tr><th class="pos">N°</th><th>Colegio</th><th class="cant">Estudiantes</th><th class="cant">%</th><th class="cant secundario">Cursos</th></tr></thead>
+      <tbody>
+        ${filas
+          .map(
+            (f, i) =>
+              `<tr${i < 5 ? ` class="top"` : ""}><td class="pos">${i + 1}</td><td>${escaparHtml(f.colegio)}</td><td class="cant">${f.estudiantes}</td><td class="cant">${pct(f.estudiantes)}</td><td class="cant secundario">${f.cursos.size}</td></tr>`
+          )
+          .join("")}
+      </tbody>
+    </table>`;
+}
+
+// estudiantes por nivel, sin separar por letra (todos los primeros juntos, todos los
+// segundos juntos...); en el test de 8°, sin "medio" ni "básico" escrito, es básico
+function renderEstudiantesPorNivel(todos) {
+  const cont = document.getElementById("desglose-nivel");
+  const porNivel = new Map();
+  todos.forEach((e) => {
+    const nivel = nivelDeCurso(e.curso, { basico: cfg().id === "octavo" }) || { etiqueta: "Nivel no reconocido", orden: 99 };
+    if (!porNivel.has(nivel.etiqueta)) porNivel.set(nivel.etiqueta, { ...nivel, estudiantes: 0 });
+    porNivel.get(nivel.etiqueta).estudiantes++;
+  });
+  const filas = [...porNivel.values()].sort((a, b) => a.orden - b.orden);
+  if (!filas.length) {
+    cont.innerHTML = `<div class="vacio">Todavía no hay datos de curso.</div>`;
+    return;
+  }
+  cont.innerHTML = `
+    <table class="desglose-tabla">
+      <thead><tr><th>Nivel</th><th class="cant">Estudiantes</th><th class="cant">%</th></tr></thead>
+      <tbody>
+        ${filas.map((f) => `<tr><td>${escaparHtml(f.etiqueta)}</td><td class="cant">${f.estudiantes}</td><td class="cant">${Math.round((f.estudiantes / todos.length) * 100)}%</td></tr>`).join("")}
+      </tbody>
+    </table>`;
 }
 
 // "2026-09-01" → "01/09/2026", leyendo los componentes a mano: con new Date(iso), la

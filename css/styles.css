@@ -470,6 +470,11 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
 .desglose-tabla td { padding: 7px 4px; font-size: 13px; border-bottom: 1px solid var(--borde); }
 .desglose-tabla tr:last-child td { border-bottom: none; }
 .desglose-tabla td.cant { text-align: right; font-weight: 700; color: var(--morado); width: 60px; }
+.desglose-tabla th { padding: 6px 4px; font-size: 11px; text-align: left; color: var(--texto-suave); text-transform: uppercase; border-bottom: 2px solid var(--borde); }
+.desglose-tabla th.cant { text-align: right; white-space: nowrap; }
+.desglose-tabla .pos { width: 32px; color: var(--texto-suave); }
+.desglose-tabla td.cant.secundario { font-weight: 400; color: var(--texto-suave); }
+.desglose-tabla tr.top td:not(.pos):not(.secundario) { font-weight: 700; }
 
 /* ---------- datos recientes (pestaña ingresar) ---------- */
 .recientes-lista { width: 100%; border-collapse: collapse; }
@@ -985,8 +990,16 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
 .ejec-caja { border: 1.5px solid var(--borde); border-radius: 12px; padding: 12px 14px 11px; }
 .ejec-caja-titulo { font-size: 14px; font-weight: 800; color: var(--morado-oscuro); }
 .ejec-caja-sub { font-size: 11px; color: var(--texto-suave); margin: 1px 0 8px; }
-.ejec-top-fila { display: flex; align-items: center; gap: 9px; padding: 6px 0; border-top: 1px solid #eee8f6; }
-.ejec-top-fila:first-child { border-top: none; }
+/* ranking de colegios: una fila por colegio, con su barra (estudiantes) y, aparte y en
+   gris, sus cursos evaluados (dato complementario: no cambia el orden) */
+.ejec-ranking { margin-top: 14px; }
+.ejec-rank-fila { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid #eee8f6; }
+.ejec-ranking .ejec-caja-sub + .ejec-rank-fila { border-top: none; }
+.ejec-rank-fila .ejec-nombre { flex: 0 0 34%; }
+.ejec-rank-barra { flex: 1; height: 10px; background: #eee8f6; border-radius: 5px; overflow: hidden; }
+.ejec-rank-barra span { display: block; height: 100%; background: var(--morado); border-radius: 5px; }
+.ejec-rank-fila .ejec-dato { flex: 0 0 104px; text-align: right; }
+.ejec-cursos { flex: 0 0 62px; text-align: right; font-size: 11.5px; color: var(--texto-suave); white-space: nowrap; }
 .ejec-pos {
   flex: 0 0 24px;
   height: 24px;
@@ -1014,7 +1027,8 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
 .ejec-compacto .ejec-kpi { padding: 12px 10px 10px; }
 .ejec-compacto .ejec-num { font-size: 32px; }
 .ejec-compacto .ejec-dos { margin-top: 10px; }
-.ejec-compacto .ejec-top-fila { padding: 4px 0; }
+.ejec-compacto .ejec-rank-fila { padding: 4px 0; }
+.ejec-compacto .ejec-ranking { margin-top: 10px; }
 .ejec-compacto .ejec-nombre { font-size: 12.5px; }
 .ejec-compacto .ejec-barra-fila { margin-top: 5px; }
 .ejec-compacto .ejec-nota { margin-top: 10px; }
@@ -1032,6 +1046,7 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
   border-bottom: 2px solid var(--borde);
 }
 .kuder-tabla-ranking th.cant, .kuder-tabla-ranking td.cant { text-align: right; white-space: nowrap; width: 1%; }
+.kuder-tabla-secundario { color: var(--texto-suave); }
 .kuder-tabla-ranking td { padding: 6px 8px; border-bottom: 1px solid var(--borde); color: #2b2140; }
 .kuder-tabla-ranking tr:last-child td { border-bottom: none; }
 .kuder-tabla-ranking tbody tr:nth-child(odd) td { background: var(--lila-fondo); }
@@ -1052,6 +1067,7 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
 }
 .kuder-chart-filas { position: relative; z-index: 1; }
 .kuder-chart-fila { display: flex; align-items: center; gap: 8px; height: 27px; }
+.kuder-chart-interno-compacto .kuder-chart-fila { height: 21px; }
 .kuder-chart-etiqueta { width: 164px; flex-shrink: 0; font-size: 12px; font-weight: 600; color: #2b2140; }
 .kuder-chart-track { flex: 1; height: 16px; position: relative; }
 .kuder-chart-barra { height: 100%; border-radius: 2px; }

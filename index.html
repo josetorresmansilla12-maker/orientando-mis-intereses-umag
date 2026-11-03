@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Orientando mis Intereses — Informes</title>
-<link rel="stylesheet" href="css/styles.css?v=20261029" />
+<link rel="stylesheet" href="css/styles.css?v=20261030" />
 </head>
 <body class="test-octavo">
 
@@ -287,6 +287,7 @@
           <div class="stat-card"><div class="num" id="stat-con-area">0</div><div class="lbl">Con área de interés</div></div>
           <div class="stat-card"><div class="num" id="stat-sin-area">0</div><div class="lbl">Sin área destacada</div></div>
           <div class="stat-card"><div class="num" id="stat-colegios">0</div><div class="lbl">Colegios distintos</div></div>
+          <div class="stat-card"><div class="num" id="stat-cursos">0</div><div class="lbl">Cursos evaluados</div></div>
           <div class="stat-card" data-solo-test="kuder"><div class="num" id="stat-traspaso">0</div><div class="lbl" id="stat-traspaso-lbl">Tests mal traspasados (no suman 45)</div></div>
         </div>
         <h2 style="font-size:16px;">Estudiantes por área de interés</h2>
@@ -294,8 +295,15 @@
       </div>
 
       <div class="tarjeta">
-        <h2 style="font-size:16px;">Desglose por colegio</h2>
+        <h2 style="font-size:16px;">Colegios que más solicitan el test</h2>
+        <p class="ayuda">Ordenados por estudiantes evaluados (a igual cantidad, por cursos evaluados). "%": del total de estudiantes. "Cursos": cuántos cursos se evaluaron en cada colegio (dato complementario, no cambia el orden).</p>
         <div id="desglose-colegio"></div>
+      </div>
+
+      <div class="tarjeta">
+        <h2 style="font-size:16px;">Estudiantes evaluados por nivel</h2>
+        <p class="ayuda">Todos los cursos de un mismo nivel juntos (todos los primeros, todos los segundos…), sin separar por letra.</p>
+        <div id="desglose-nivel"></div>
       </div>
 
       <div class="tarjeta">
@@ -592,33 +600,33 @@
        cada actualización (si no, puede mezclar archivos nuevos con otros guardados en
        caché y la app deja de funcionar); se cambia cada vez que se publica una versión -->
   <!-- datos de cada test (van primero: js/store.js arma un guardado por test) -->
-  <script src="js/data.js?v=20261029"></script>
-  <script src="js/icons.js?v=20261029"></script>
-  <script src="js/kuder-data.js?v=20261029"></script>
-  <script src="js/kuder-icons.js?v=20261029"></script>
-  <script src="js/cursos.js?v=20261029"></script>
-  <script src="js/logo.js?v=20261029"></script>
-  <script src="js/store.js?v=20261029"></script>
+  <script src="js/data.js?v=20261030"></script>
+  <script src="js/icons.js?v=20261030"></script>
+  <script src="js/kuder-data.js?v=20261030"></script>
+  <script src="js/kuder-icons.js?v=20261030"></script>
+  <script src="js/cursos.js?v=20261030"></script>
+  <script src="js/logo.js?v=20261030"></script>
+  <script src="js/store.js?v=20261030"></script>
 
   <!-- informes: 8° básico (individual) y Kuder (grupal para orientadores e individual) -->
-  <script src="js/report.js?v=20261029"></script>
-  <script src="js/excel.js?v=20261029"></script>
-  <script src="js/kuder.js?v=20261029"></script>
-  <script src="js/kuder-report.js?v=20261029"></script>
-  <script src="js/kuder-individual-report.js?v=20261029"></script>
+  <script src="js/report.js?v=20261030"></script>
+  <script src="js/excel.js?v=20261030"></script>
+  <script src="js/kuder.js?v=20261030"></script>
+  <script src="js/kuder-report.js?v=20261030"></script>
+  <script src="js/kuder-individual-report.js?v=20261030"></script>
 
   <!-- interfaz común (selector de test, pestañas, formularios) -->
-  <script src="js/app.js?v=20261029"></script>
+  <script src="js/app.js?v=20261030"></script>
   <!-- elegir cursos de la app, editar carpetas e importación masiva -->
-  <script src="js/selector-cursos.js?v=20261029"></script>
-  <script src="js/carpetas.js?v=20261029"></script>
-  <script src="js/importacion-masiva.js?v=20261029"></script>
-  <script src="js/anadir-curso-csv.js?v=20261029"></script>
+  <script src="js/selector-cursos.js?v=20261030"></script>
+  <script src="js/carpetas.js?v=20261030"></script>
+  <script src="js/importacion-masiva.js?v=20261030"></script>
+  <script src="js/anadir-curso-csv.js?v=20261030"></script>
 
   <!-- informe interno de Kuder (Admisión y Marketing) — reutiliza el lector de
        planillas de js/kuder.js y varias utilidades genéricas de js/kuder-report.js -->
-  <script src="js/kuder-internal-data.js?v=20261029"></script>
-  <script src="js/kuder-internal-report.js?v=20261029"></script>
-  <script src="js/kuder-internal.js?v=20261029"></script>
+  <script src="js/kuder-internal-data.js?v=20261030"></script>
+  <script src="js/kuder-internal-report.js?v=20261030"></script>
+  <script src="js/kuder-internal.js?v=20261030"></script>
 </body>
 </html>

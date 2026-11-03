@@ -91,6 +91,18 @@ function leerNivelCurso(texto) {
   return { nivel, tipo };
 }
 
+// nivel de un curso, sin la letra, para agrupar a todos los primeros juntos, todos los
+// segundos juntos, etc.: "2do Medio A", "2° medio", "segundo" → { etiqueta: "2° Medio",
+// orden }. Si no dice "medio" ni "básico": del 5° al 8° es básico (no existe 5° medio) y
+// del 1° al 4°, medio ("basico": en el test de 8°, siempre básico). null si no se reconoce.
+// "orden": básica antes que media, y dentro de cada una del menor al mayor.
+function nivelDeCurso(texto, { basico = false } = {}) {
+  const l = leerNivelCurso(texto) || leerNivelCurso(separarCursoLetra(texto).curso);
+  if (!l) return null;
+  const esBasico = l.tipo ? l.tipo === "basico" : basico || l.nivel >= 5;
+  return { etiqueta: `${l.nivel}° ${esBasico ? "Básico" : "Medio"}`, orden: (esBasico ? 0 : 10) + l.nivel };
+}
+
 // "8vo A" → { curso: "8vo", letra: "A" }; "8°A" → { "8°", "A" }; "2do Medio B" →
 // { "2do Medio", "B" }. Si no hay una letra suelta al final, queda todo como curso.
 function separarCursoLetra(texto) {
