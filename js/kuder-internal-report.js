@@ -89,11 +89,16 @@ function calcularEstadisticasInternasKuder(archivos) {
   // nivel de cada estudiante sale de su propio curso (un archivo puede traer varios) y,
   // si no lo tiene, del curso del archivo
   const porNivel = new Map();
+  const estudiantesDeNivel = new Map();
   archivos.forEach((a) =>
     a.estudiantes.forEach((e) => {
       const nivel = nivelDeCurso(e.curso || e.cursoFila || a.curso) || { etiqueta: "Nivel no reconocido", orden: 99 };
-      if (!porNivel.has(nivel.etiqueta)) porNivel.set(nivel.etiqueta, { nivel: nivel.etiqueta, orden: nivel.orden, estudiantes: 0 });
+      if (!porNivel.has(nivel.etiqueta)) {
+        porNivel.set(nivel.etiqueta, { nivel: nivel.etiqueta, orden: nivel.orden, estudiantes: 0 });
+        estudiantesDeNivel.set(nivel.etiqueta, []);
+      }
       porNivel.get(nivel.etiqueta).estudiantes++;
+      estudiantesDeNivel.get(nivel.etiqueta).push(e);
     })
   );
   const estudiantesPorNivel = [...porNivel.values()].sort((a, b) => a.orden - b.orden);
@@ -107,6 +112,16 @@ function calcularEstadisticasInternasKuder(archivos) {
 
 
   const areasOrdenadas = [...AREAS_KUDER].sort((a, b) => (conteosAreas[b.id] || 0) - (conteosAreas[a.id] || 0));
+
+  // área más frecuente de cada colegio (en el orden del ranking) y de cada nivel
+  const estudiantesDeColegio = new Map();
+  archivos.forEach((a) => {
+    const clave = ((a.colegio || "").trim() || "Sin colegio").toLowerCase();
+    if (!estudiantesDeColegio.has(clave)) estudiantesDeColegio.set(clave, []);
+    estudiantesDeColegio.get(clave).push(...a.estudiantes);
+  });
+  const areaPorColegio = rankingColegios.map((c) => ({ grupo: c.colegio, ...areasMasFrecuentesKuder(estudiantesDeColegio.get(c.colegio.toLowerCase()) || []) }));
+  const areaPorNivel = estudiantesPorNivel.map((n) => ({ grupo: n.nivel, ...areasMasFrecuentesKuder(estudiantesDeNivel.get(n.nivel) || []) }));
 
   return {
     totalTests,
@@ -125,7 +140,55 @@ function calcularEstadisticasInternasKuder(archivos) {
     promedioCursosPorColegio: rankingColegios.length > 0 ? totalTests / rankingColegios.length : 0,
     conAreaClara: totalEstudiantes - sinAreaClara,
     pctConAreaClara: totalEstudiantes > 0 ? Math.round(((totalEstudiantes - sinAreaClara) / totalEstudiantes) * 100) : 0,
+    areaPorColegio,
+    areaPorNivel,
+    demandaCarreras: calcularDemandaCarrerasKuder(todosLosEstudiantes),
   };
+}
+
+// el área (o las áreas, si empatan) que más estudiantes del grupo tienen como interés
+// (7 o más), con cuántos estudiantes la tienen
+function areasMasFrecuentesKuder(estudiantes) {
+  const conteos = {};
+  estudiantes.forEach((e) => calcularAreasDeInteresKuder(e.puntajes).forEach((a) => (conteos[a.id] = (conteos[a.id] || 0) + 1)));
+  const max = Math.max(0, ...Object.values(conteos));
+  return { total: estudiantes.length, areas: max > 0 ? AREAS_KUDER.filter((a) => conteos[a.id] === max) : [], conArea: max };
+}
+
+// ==================== demanda potencial por carrera UMAG (estimación) ====================
+// Solo con los resultados del test: cuántos estudiantes tienen su área predominante (la
+// de mayor puntaje entre sus áreas de 7 o más; si empatan, todas) en alguna de las áreas
+// a las que está vinculada cada carrera UMAG (AREAS_KUDER, js/kuder-data.js). No usa
+// matrícula ni datos de mercado. Las carreras vinculadas a las mismas áreas dan la misma
+// estimación, así que van juntas en una fila. Un estudiante puede contar para varias.
+const CARRERAS_UMAG_KUDER = (() => {
+  const carreras = new Map();
+  AREAS_KUDER.forEach((area) =>
+    area.carrerasUMAG.forEach((c) => {
+      if (!carreras.has(c)) carreras.set(c, []);
+      carreras.get(c).push(area);
+    })
+  );
+  return carreras;
+})();
+
+function areasPredominantesKuder(puntajes) {
+  const areas = calcularAreasDeInteresKuder(puntajes);
+  const max = Math.max(...areas.map((a) => Number(puntajes[a.id])));
+  return areas.filter((a) => Number(puntajes[a.id]) === max);
+}
+
+function calcularDemandaCarrerasKuder(estudiantes) {
+  const predominantes = estudiantes.map((e) => new Set(areasPredominantesKuder(e.puntajes).map((a) => a.id)));
+  const grupos = new Map();
+  for (const [carrera, areas] of CARRERAS_UMAG_KUDER) {
+    const clave = areas.map((a) => a.id).sort().join("|");
+    if (!grupos.has(clave)) grupos.set(clave, { carreras: [], areas });
+    grupos.get(clave).carreras.push(carrera);
+  }
+  return [...grupos.values()]
+    .map((g) => ({ ...g, estudiantes: predominantes.filter((ids) => g.areas.some((a) => ids.has(a.id))).length }))
+    .sort((a, b) => b.estudiantes - a.estudiantes || a.carreras[0].localeCompare(b.carreras[0], "es"));
 }
 
 // ==================== encabezado (banner + credencial + intro) ====================
@@ -145,11 +208,11 @@ function construirCajaResumenInternoKuder(stats, periodo) {
 }
 
 // ==================== hoja 1: resumen ejecutivo (para gerencia) ====================
-// Cifras grandes y fáciles de leer: totales, promedios, los 5 colegios que más solicitan
-// el test (por estudiantes evaluados; sus cursos van como dato aparte, sin cambiar el
-// orden), los estudiantes por nivel y las 5 áreas de interés más frecuentes. No se
-// comparan colegios por curso: uno con un solo curso no podría competir con los demás.
-// El detalle completo va en las hojas siguientes.
+// Breve y con cifras grandes: los 4 totales (con sus promedios debajo), los 5 colegios
+// que más solicitan el test (por estudiantes evaluados; sus cursos van como dato aparte,
+// sin cambiar el orden), las 5 áreas de interés más frecuentes y las 5 carreras UMAG con
+// más demanda potencial (estimación). No se comparan colegios por curso: uno con un solo
+// curso no podría competir con los demás. El detalle completo va en las hojas siguientes.
 
 function pluralInterno(n, uno, varios) {
   return `${n} ${n === 1 ? uno : varios}`;
@@ -187,51 +250,32 @@ function construirTopColegiosInterno(colegios, total) {
     </div>`;
 }
 
-const NIVELES_EN_RESUMEN = 6;
 const AREAS_EN_RESUMEN = 5;
+const CARRERAS_EN_RESUMEN = 5;
+
+const NOTA_DEMANDA_KUDER =
+  "Estimación basada solo en los resultados del Test de Kuder: estudiantes cuya área predominante (la de mayor puntaje, con 7 o más) está vinculada a la carrera. No considera datos de matrícula ni de mercado, y un estudiante puede contar para varias carreras.";
 
 // "compacto": menos aire, para cuando los nombres de colegio son largos y no cabe la hoja.
 // "nColegios": cuántos colegios lleva el ranking (5 si caben; si no, 3)
 function construirResumenEjecutivoInternoKuder(stats, { compacto = false, nColegios = 5 } = {}) {
   const total = stats.totalEstudiantes;
-  const niveles = stats.estudiantesPorNivel.slice(0, NIVELES_EN_RESUMEN);
-  const nivelesRestantes = stats.estudiantesPorNivel.length - niveles.length;
-  const maxNivel = Math.max(1, ...niveles.map((n) => n.estudiantes));
   const topAreas = stats.areasOrdenadas.slice(0, AREAS_EN_RESUMEN).map((area) => ({ area, c: stats.conteosAreas[area.id] || 0 }));
+  const topCarreras = stats.demandaCarreras.slice(0, CARRERAS_EN_RESUMEN);
+  const kpi = (num, lbl, sub) => `<div class="ejec-kpi"><div class="ejec-num">${num}</div><div class="ejec-lbl">${lbl}</div><div class="ejec-sub">${sub}</div></div>`;
 
   return `
     <div class="ejec${compacto ? " ejec-compacto" : ""}">
       <div class="ejec-kpis">
-        <div class="ejec-kpi"><div class="ejec-num">${total}</div><div class="ejec-lbl">Estudiantes evaluados</div></div>
-        <div class="ejec-kpi"><div class="ejec-num">${stats.colegiosDistintos}</div><div class="ejec-lbl">Colegios atendidos</div></div>
-        <div class="ejec-kpi"><div class="ejec-num">${stats.totalTests}</div><div class="ejec-lbl">Cursos evaluados</div></div>
-        <div class="ejec-kpi"><div class="ejec-num">${stats.pctConAreaClara}%</div><div class="ejec-lbl">Con al menos un área de interés clara</div></div>
-      </div>
-
-      <div class="ejec-promedios">
-        <div class="ejec-prom"><b>${decimalInterno(stats.promedioPorCurso)}</b><span>estudiantes por curso, en promedio</span></div>
-        <div class="ejec-prom"><b>${decimalInterno(stats.promedioPorColegio)}</b><span>estudiantes por colegio, en promedio</span></div>
-        <div class="ejec-prom"><b>${decimalInterno(stats.promedioCursosPorColegio)}</b><span>cursos por colegio, en promedio</span></div>
-        <div class="ejec-prom"><b>${decimalInterno(stats.promedioAreasInteres)}</b><span>áreas de interés por estudiante, en promedio</span></div>
+        ${kpi(total, "Estudiantes evaluados", `${decimalInterno(stats.promedioPorCurso)} por curso, en promedio`)}
+        ${kpi(stats.colegiosDistintos, "Colegios atendidos", `${decimalInterno(stats.promedioPorColegio)} estudiantes por colegio`)}
+        ${kpi(stats.totalTests, "Cursos evaluados", `${decimalInterno(stats.promedioCursosPorColegio)} cursos por colegio`)}
+        ${kpi(`${stats.pctConAreaClara}%`, "Con al menos un área de interés clara", `${decimalInterno(stats.promedioAreasInteres)} áreas por estudiante`)}
       </div>
 
       ${construirTopColegiosInterno(stats.rankingColegios.slice(0, nColegios), total)}
 
       <div class="ejec-dos">
-        <div class="ejec-caja">
-          <div class="ejec-caja-titulo">Estudiantes evaluados por nivel</div>
-          <div class="ejec-caja-sub">todos los cursos de un mismo nivel juntos</div>
-          ${niveles
-            .map(
-              (n) => `
-            <div class="ejec-barra-fila">
-              <div class="ejec-barra-texto"><b>${escaparHtmlKuder(n.nivel)}</b><span>${n.estudiantes} est. · ${porcentajeInterno(n.estudiantes, total)}%</span></div>
-              <div class="ejec-barra"><div style="width:${(n.estudiantes / maxNivel) * 100}%;"></div></div>
-            </div>`
-            )
-            .join("")}
-          ${nivelesRestantes > 0 ? `<div class="ejec-caja-pie">Y ${pluralInterno(nivelesRestantes, "nivel más", "niveles más")} (detalle en las hojas siguientes).</div>` : ""}
-        </div>
         <div class="ejec-caja">
           <div class="ejec-caja-titulo">Las ${AREAS_EN_RESUMEN} áreas de interés más frecuentes</div>
           <div class="ejec-caja-sub">% de estudiantes con puntaje 7 o más en el área</div>
@@ -245,21 +289,36 @@ function construirResumenEjecutivoInternoKuder(stats, { compacto = false, nColeg
             )
             .join("")}
         </div>
+        <div class="ejec-caja">
+          <div class="ejec-caja-titulo">Carreras UMAG con más demanda potencial*</div>
+          <div class="ejec-caja-sub">estudiantes con su área predominante vinculada a la carrera</div>
+          ${topCarreras
+            .map(
+              (c) => `
+            <div class="ejec-barra-fila">
+              <div class="ejec-barra-texto"><b class="ejec-carreras">${escaparHtmlKuder(c.carreras[0])}${c.carreras.length > 1 ? ` <span class="ejec-afines">y ${pluralInterno(c.carreras.length - 1, "carrera afín", "carreras afines")}</span>` : ""}</b><span>${porcentajeInterno(c.estudiantes, total)}% · ${c.estudiantes} est.</span></div>
+              <div class="ejec-barra"><div style="width:${porcentajeInterno(c.estudiantes, total)}%;"></div></div>
+            </div>`
+            )
+            .join("")}
+        </div>
       </div>
 
       <div class="ejec-nota">
         <b>Curso evaluado</b> = una aplicación del Test de Kuder a un curso. <b>Área de interés clara</b> = puntaje 7 o más en esa área. "est." = estudiantes.
-        El detalle por colegio, por nivel y por área está en las hojas siguientes.
+        <b>*</b> ${NOTA_DEMANDA_KUDER} El detalle por colegio, nivel, área y carrera está en las hojas siguientes.
       </div>
     </div>`;
 }
 
 // ==================== rankings: colegios y niveles ====================
 
-function construirTablaRankingKuder(titulo, filas, columnas) {
+// "intro": un párrafo corto entre el título y la tabla
+function construirTablaRankingKuder(titulo, filas, columnas, intro = "") {
   return `
     <div class="kuder-ranking-bloque">
       <div class="kuder-resumen-titulo">${titulo}</div>
+      ${intro ? `<div class="kuder-tabla-intro">${intro}</div>` : ""}
       <table class="kuder-tabla-ranking">
         <thead>
           <tr>${columnas.map((c) => `<th class="${c.align === "right" ? "cant" : ""}">${c.label}</th>`).join("")}</tr>
@@ -276,12 +335,21 @@ function construirTablaRankingKuder(titulo, filas, columnas) {
     </div>`;
 }
 
-// con muchos colegios la tabla no cabe en una hoja: se parte en tramos que sí caben en
-// una hoja (se mide fila por fila, porque un nombre largo ocupa dos líneas), cada uno su
-// propio bloque (los siguientes con "(continuación)"), y la paginación los reparte
-const ALTO_MAXIMO_TRAMO_RANKING = ALTO_PAGINA_PX - PADDING_INFERIOR_PX - 130;
+// las tablas del detalle van como datos ({ tabla }), no como HTML ya armado: así la
+// paginación puede cortarlas entre filas para llenar cada hoja (lo que no cabe sigue en
+// la hoja siguiente, con "(continuación)" en el título). "intro": un párrafo corto que va
+// entre el título y la tabla, solo en el primer tramo.
+function tablaInterno(titulo, filas, columnas, { intro = "" } = {}) {
+  return { tabla: { titulo, filas, columnas, intro, continuacion: false } };
+}
 
-function construirBloquesRankingColegiosInterno(stats) {
+function htmlTablaInterno(t, nFilas) {
+  return t.continuacion
+    ? construirTablaRankingKuder(`${t.titulo} (continuación)`, t.filas.slice(0, nFilas), t.columnas)
+    : construirTablaRankingKuder(t.titulo, t.filas.slice(0, nFilas), t.columnas, t.intro);
+}
+
+function tablaRankingColegiosInterno(stats) {
   const titulo = "Colegios que más solicitan el test (por N° de estudiantes evaluados)";
   const columnas = [
     { key: "posicion", label: "N°", align: "right" },
@@ -297,27 +365,54 @@ function construirBloquesRankingColegiosInterno(stats) {
     pct: `${porcentajeInterno(f.estudiantes, stats.totalEstudiantes)}%`,
     cursos: `<span class="kuder-tabla-secundario">${f.aplicaciones}</span>`,
   }));
-  const bloques = [];
-  let tramo = [];
-  const armar = (filasTramo) => construirTablaRankingKuder(bloques.length === 0 ? titulo : `${titulo} (continuación)`, filasTramo, columnas);
-  for (const fila of filas) {
-    if (tramo.length && medirAlturaFragmento(armar([...tramo, fila])) > ALTO_MAXIMO_TRAMO_RANKING) {
-      bloques.push(armar(tramo));
-      tramo = [];
-    }
-    tramo.push(fila);
-  }
-  bloques.push(armar(tramo));
-  return bloques;
+  return tablaInterno(titulo, filas, columnas);
 }
 
-function construirBloqueRankingNivelesInterno(stats) {
+// área más frecuente de cada colegio o de cada nivel (si dos o más empatan, van todas)
+function tablaAreaFrecuenteInterno(titulo, etiquetaGrupo, grupos) {
+  const filas = grupos.map((g) => ({
+    grupo: escaparHtmlKuder(g.grupo),
+    total: g.total,
+    area: g.areas.length ? g.areas.map((a) => `${a.icono} ${a.nombre}`).join(" / ") : "—",
+    pct: g.areas.length ? `${g.conArea} (${porcentajeInterno(g.conArea, g.total)}%)` : "—",
+  }));
+  return tablaInterno(titulo, filas, [
+    { key: "grupo", label: etiquetaGrupo },
+    { key: "total", label: "Estudiantes", align: "right" },
+    { key: "area", label: "Área más frecuente" },
+    { key: "pct", label: "Estudiantes con esa área", align: "right" },
+  ]);
+}
+
+function tablaDemandaCarrerasInterno(stats) {
+  const filas = stats.demandaCarreras.map((c, i) => ({
+    posicion: i + 1,
+    carrera: c.carreras.map(escaparHtmlKuder).join("<br/>"),
+    areas: c.areas.map((a) => a.nombre).join(", "),
+    estudiantes: c.estudiantes,
+    pct: `${porcentajeInterno(c.estudiantes, stats.totalEstudiantes)}%`,
+  }));
+  return tablaInterno(
+    "Demanda potencial por carrera UMAG (estimación)",
+    filas,
+    [
+      { key: "posicion", label: "N°", align: "right" },
+      { key: "carrera", label: "Carreras UMAG" },
+      { key: "areas", label: "Áreas vinculadas" },
+      { key: "estudiantes", label: "Estudiantes", align: "right" },
+      { key: "pct", label: "% del total", align: "right" },
+    ],
+    { intro: `${NOTA_DEMANDA_KUDER} Las carreras vinculadas a las mismas áreas tienen la misma estimación y van juntas en una fila; las vinculadas a más áreas tienden a sumar más estudiantes.` }
+  );
+}
+
+function tablaNivelesInterno(stats) {
   const filas = stats.estudiantesPorNivel.map((f) => ({
     nivel: escaparHtmlKuder(f.nivel),
     estudiantes: f.estudiantes,
     pct: `${porcentajeInterno(f.estudiantes, stats.totalEstudiantes)}%`,
   }));
-  return construirTablaRankingKuder("Estudiantes evaluados por nivel (todos los cursos de un mismo nivel juntos)", filas, [
+  return tablaInterno("Estudiantes evaluados por nivel (todos los cursos de un mismo nivel juntos)", filas, [
     { key: "nivel", label: "Nivel" },
     { key: "estudiantes", label: "Estudiantes", align: "right" },
     { key: "pct", label: "% del total", align: "right" },
@@ -422,24 +517,26 @@ function construirTarjetaAreaInternaKuder(area, conteo, total) {
 // ejecutivo le queda espacio libre en su última hoja, la primera tarjeta de área lo
 // aprovecha en vez de empezar sí o sí en una página nueva — es lo que evita que una
 // hoja quede con un cuarto o más de espacio en blanco.
+// el título deja claro para quién es el informe
+const TITULO_INFORME_GLOBAL_KUDER = "Informe Global para la Unidad de Admisión y Marketing";
+
 function construirTodasLasPaginasInternoKuder(stats, periodo) {
   // hoja 1: solo el resumen ejecutivo, para gerencia (ver construirResumenEjecutivoInternoKuder)
   const hojaResumen = document.createElement("div");
   hojaResumen.className = "informe-page";
   const armarResumen = (opciones) => `
-    ${construirBanner("Informe Interno · Test Vocacional de Kuder", "Enseñanza Media · documento de uso interno")}
+    ${construirBanner(TITULO_INFORME_GLOBAL_KUDER, "Test Vocacional de Kuder · Enseñanza Media · documento de uso interno", { antetitulo: "Universidad de Magallanes" })}
     ${construirCajaResumenInternoKuder(stats, periodo)}
     ${construirResumenEjecutivoInternoKuder(stats, opciones)}
   `;
   const intentos = [{ compacto: false, nColegios: 5 }, { compacto: true, nColegios: 5 }, { compacto: true, nColegios: 3 }];
-  const cabe = intentos.find((o) => medirAlturaFragmento(armarResumen(o)) <= ALTO_PAGINA_PX - PADDING_INFERIOR_PX);
-  hojaResumen.innerHTML = armarResumen(cabe || intentos[intentos.length - 1]);
+  const opcionQueCabe = intentos.find((o) => medirAlturaFragmento(armarResumen(o)) <= ALTO_PAGINA_PX - PADDING_INFERIOR_PX);
+  hojaResumen.innerHTML = armarResumen(opcionQueCabe || intentos[intentos.length - 1]);
 
   // el detalle parte en la hoja 2, todas con el mismo encabezado liviano
   const htmlEncabezadoCont = `
     <div class="espaciador-inicio-pagina"></div>
-    <div class="linea-estudiante"><span><b>Informe interno</b> — Test Vocacional de Kuder (Admisión y Marketing)</span></div>`;
-  const htmlEncabezadoPrimera = htmlEncabezadoCont;
+    <div class="linea-estudiante"><span><b>${TITULO_INFORME_GLOBAL_KUDER}</b> — Test Vocacional de Kuder (uso interno)</span></div>`;
   const htmlAviso = construirAvisoContinua();
 
   const areasOrdenadas = stats.areasOrdenadas;
@@ -451,125 +548,97 @@ function construirTodasLasPaginasInternoKuder(stats, periodo) {
     `<div class="informe-areas">${construirTarjetaAreaInternaKuder(area, stats.conteosAreas[area.id] || 0, stats.totalEstudiantes)}</div>`
   );
 
-  const bloques = [...construirBloquesRankingColegiosInterno(stats), construirBloqueRankingNivelesInterno(stats)];
-  const iGrafico = bloques.length;
-  bloques.push(construirBloqueGraficoAreasInterno(stats), ...htmlTarjetasArea);
-
-  const alturaPrimera = medirAlturaFragmento(htmlEncabezadoPrimera);
-  const alturaCont = medirAlturaFragmento(htmlEncabezadoCont);
-  const alturaAviso = medirAlturaFragmento(htmlAviso);
-  const alturasBloques = bloques.map((html) => medirAlturaFragmento(html));
+  // contenido del detalle, en orden: bloques de HTML (no se cortan) y tablas (se cortan
+  // entre filas)
+  const contenido = [
+    tablaRankingColegiosInterno(stats),
+    tablaNivelesInterno(stats),
+    { html: construirBloqueGraficoAreasInterno(stats), compacto: construirBloqueGraficoAreasInterno(stats, { compacto: true }) },
+    tablaAreaFrecuenteInterno("Área de interés más frecuente por colegio", "Colegio", stats.areaPorColegio),
+    tablaAreaFrecuenteInterno("Área de interés más frecuente por nivel", "Nivel", stats.areaPorNivel),
+    tablaDemandaCarrerasInterno(stats),
+    ...htmlTarjetasArea.map((html) => ({ html })),
+  ];
 
   const LIMITE_PAGINA_PX = ALTO_PAGINA_PX - PADDING_INFERIOR_PX;
-  const HOLGURA_AJUSTE_PX = 20;
-  const MARGEN_SEGURIDAD_PX = 20;
-
-  const paginasArmadas = [];
-  let i = 0;
-  let esPrimera = true;
-  while (i < bloques.length) {
-    const altoEncabezado = esPrimera ? alturaPrimera : alturaCont;
-    let disponible = LIMITE_PAGINA_PX - altoEncabezado - alturaAviso - MARGEN_SEGURIDAD_PX;
-    const indices = [];
-    while (i < bloques.length && alturasBloques[i] <= disponible) {
-      indices.push(i);
-      disponible -= alturasBloques[i];
-      i++;
-    }
-    if (indices.length === 0) {
-      // un solo bloque ya es más alto que el espacio disponible: se deja solo en su
-      // página de todas formas (mejor que quedar en un loop infinito).
-      indices.push(i);
-      i++;
-    }
-    paginasArmadas.push({ esPrimera, indices });
-    esPrimera = false;
-  }
-
-  // el presupuesto de arriba suma alturas medidas por separado, y ese margen entre
-  // bloques puede colapsar distinto al medirlos sueltos que al concatenarlos de
-  // verdad en una misma página — con hasta 14 bloques (4 del resumen + 10 tarjetas de
-  // área) ese desajuste se nota más que en el resto del informe. Por eso, igual que la
-  // paginación de tarjetas de área del informe de orientadores, cada página ya armada
-  // se mide de verdad; si se pasa del límite, se saca su último bloque y pasa a la
-  // página siguiente (o abre una nueva si era la última), repitiendo hasta que todas
-  // quepan de verdad.
-  // la última hoja lleva el pie de página institucional; se cuenta al armarla (antes se
-  // agregaba después, y si esa hoja venía llena, el pie la hacía pasarse de la hoja)
+  // una tabla que se corta deja al menos estas filas en cada hoja (para que no quede un
+  // título con una sola fila al pie, ni una fila suelta arriba de la hoja siguiente)
+  const MIN_FILAS_TRAMO = 3;
   const htmlPie = construirFooterInternoKuder();
-  function armarHtmlPagina(indices, esPrimeraPagina, esUltimaPagina) {
-    const encabezado = esPrimeraPagina ? htmlEncabezadoPrimera : htmlEncabezadoCont;
-    const contenido = indices.map((idx) => bloques[idx]).join("");
-    return `${encabezado}${contenido}${esUltimaPagina ? htmlPie : htmlAviso}`;
-  }
-  for (let pIdx = 0; pIdx < paginasArmadas.length; pIdx++) {
-    let intentos = 0;
-    while (paginasArmadas[pIdx].indices.length > 1 && intentos < 10) {
-      const esUltima = pIdx === paginasArmadas.length - 1;
-      const alto = medirAlturaFragmento(armarHtmlPagina(paginasArmadas[pIdx].indices, paginasArmadas[pIdx].esPrimera, esUltima));
-      // unos pocos px de más no mandan un bloque entero a la hoja siguiente (dejaría media
-      // hoja en blanco): al pasar a PDF, esa hoja se achica apenas para que quepa
-      // (TOLERANCIA_AJUSTE_HOJA, js/report.js)
-      if (alto <= LIMITE_PAGINA_PX + HOLGURA_AJUSTE_PX) break;
-      const sobrante = paginasArmadas[pIdx].indices.pop();
-      if (pIdx + 1 < paginasArmadas.length) {
-        paginasArmadas[pIdx + 1].indices.unshift(sobrante);
-      } else {
-        paginasArmadas.push({ esPrimera: false, indices: [sobrante] });
+  const armarHtmlPagina = (piezas, esUltima) => `${htmlEncabezadoCont}${piezas.join("")}${esUltima ? htmlPie : htmlAviso}`;
+  const cabe = (piezas, esUltima = false) => medirAlturaFragmento(armarHtmlPagina(piezas, esUltima)) <= LIMITE_PAGINA_PX;
+
+  // se llena cada hoja midiendo la hoja de verdad (no sumando alturas sueltas): un bloque
+  // que no cabe pasa a la hoja siguiente (el gráfico, si cabe en su versión más baja, se
+  // queda); una tabla que no cabe entera se corta en la última fila que cabe
+  const hojas = [];
+  let actual = [];
+  const cola = [...contenido];
+  while (cola.length) {
+    const item = cola.shift();
+    if (item.html) {
+      if (!actual.length || cabe([...actual, item.html])) actual.push(item.html);
+      else if (item.compacto && cabe([...actual, item.compacto])) actual.push(item.compacto);
+      else {
+        hojas.push(actual);
+        actual = [item.html];
       }
-      intentos++;
+      continue;
     }
-  }
-
-  // si el gráfico de áreas no cupo por poco detrás de las tablas y pasó a la hoja
-  // siguiente (dejando esta a medio llenar), vuelve a esta en su versión más baja
-  for (let pIdx = 0; pIdx + 1 < paginasArmadas.length; pIdx++) {
-    const siguiente = paginasArmadas[pIdx + 1];
-    if (siguiente.indices[0] !== iGrafico || siguiente.indices.length < 2) continue;
-    const original = bloques[iGrafico];
-    bloques[iGrafico] = construirBloqueGraficoAreasInterno(stats, { compacto: true });
-    const indices = [...paginasArmadas[pIdx].indices, iGrafico];
-    if (medirAlturaFragmento(armarHtmlPagina(indices, paginasArmadas[pIdx].esPrimera, false)) <= LIMITE_PAGINA_PX + HOLGURA_AJUSTE_PX) {
-      paginasArmadas[pIdx].indices = indices;
-      siguiente.indices.shift();
+    const t = item.tabla;
+    const total = t.filas.length;
+    if (cabe([...actual, htmlTablaInterno(t, total)])) {
+      actual.push(htmlTablaInterno(t, total));
+      continue;
+    }
+    // la mayor cantidad de filas que caben en esta hoja (búsqueda binaria)
+    let bajo = 0;
+    let alto = total;
+    while (bajo < alto) {
+      const medio = Math.ceil((bajo + alto) / 2);
+      if (cabe([...actual, htmlTablaInterno(t, medio)])) bajo = medio;
+      else alto = medio - 1;
+    }
+    const n = Math.min(bajo, total - MIN_FILAS_TRAMO);
+    if (n >= MIN_FILAS_TRAMO || !actual.length) {
+      // en una hoja vacía siempre se pone algo (al menos una fila), para avanzar
+      const corte = n >= MIN_FILAS_TRAMO ? n : Math.max(1, bajo);
+      actual.push(htmlTablaInterno(t, corte));
+      cola.unshift({ tabla: { ...t, filas: t.filas.slice(corte), continuacion: true } });
     } else {
-      bloques[iGrafico] = original;
+      cola.unshift(item);
     }
+    hojas.push(actual);
+    actual = [];
   }
+  if (actual.length) hojas.push(actual);
 
-  // el reparto "primero llena esta página, después la siguiente" puede dejar la
-  // ÚLTIMA página de un tramo con muy poco contenido si lo que sobra no alcanza a
-  // llenar una hoja completa (acá, 10 tarjetas de área de a 3 por página dejan una
-  // sola suelta al final) — se le "pide prestado" un bloque a la vez a la página
-  // anterior mientras la última quede notoriamente vacía y el préstamo no haga
-  // desbordar a la que lo recibe; mismo total de páginas, mejor repartidas.
+  // la última hoja lleva el pie de página en vez del aviso de "continúa": si con el pie
+  // no cabe, su último bloque pasa a una hoja nueva
+  const ultima = hojas[hojas.length - 1];
+  if (ultima.length > 1 && !cabe(ultima, true)) hojas.push([ultima.pop()]);
+
+  // si la última hoja quedó con muy poco, se le pasan bloques de la anterior mientras
+  // quepan y la anterior no quede a medio llenar (mismo total de hojas, mejor repartidas)
   const UMBRAL_LLENADO_MINIMO = 0.65;
-  for (let pIdx = paginasArmadas.length - 1; pIdx > 0; pIdx--) {
-    const actual = paginasArmadas[pIdx];
-    const anterior = paginasArmadas[pIdx - 1];
-    let alturaActual = medirAlturaFragmento(armarHtmlPagina(actual.indices, actual.esPrimera, pIdx === paginasArmadas.length - 1));
-    while (anterior.indices.length > 1 && alturaActual < LIMITE_PAGINA_PX * UMBRAL_LLENADO_MINIMO) {
-      const candidato = anterior.indices[anterior.indices.length - 1];
-      const nuevosIndices = [candidato, ...actual.indices];
-      const nuevaAltura = medirAlturaFragmento(armarHtmlPagina(nuevosIndices, actual.esPrimera, pIdx === paginasArmadas.length - 1));
-      if (nuevaAltura > LIMITE_PAGINA_PX) break; // no cabe entero: se deja como está
-      // tampoco se presta si la hoja que lo entrega quedaría a medio llenar (solo se
-      // movería el hueco de una hoja a otra)
-      const alturaAnterior = medirAlturaFragmento(armarHtmlPagina(anterior.indices.slice(0, -1), anterior.esPrimera, false));
-      if (alturaAnterior < LIMITE_PAGINA_PX * UMBRAL_LLENADO_MINIMO) break;
-      anterior.indices.pop();
-      actual.indices.unshift(candidato);
-      alturaActual = nuevaAltura;
+  const altoHoja = (piezas, esUltima) => medirAlturaFragmento(armarHtmlPagina(piezas, esUltima));
+  if (hojas.length > 1) {
+    const fin = hojas[hojas.length - 1];
+    const anterior = hojas[hojas.length - 2];
+    while (anterior.length > 1 && altoHoja(fin, true) < LIMITE_PAGINA_PX * UMBRAL_LLENADO_MINIMO) {
+      const candidato = anterior[anterior.length - 1];
+      if (!cabe([candidato, ...fin], true)) break;
+      if (altoHoja(anterior.slice(0, -1), false) < LIMITE_PAGINA_PX * UMBRAL_LLENADO_MINIMO) break;
+      fin.unshift(anterior.pop());
     }
   }
 
   return [
     hojaResumen,
-    ...paginasArmadas.map((p, pageIdx) => {
-      const esUltima = pageIdx === paginasArmadas.length - 1;
+    ...hojas.map((piezas, i) => {
       const contenedor = document.createElement("div");
       contenedor.className = "informe-page";
-      contenedor.innerHTML = armarHtmlPagina(p.indices, p.esPrimera, esUltima);
+      contenedor.innerHTML = armarHtmlPagina(piezas, i === hojas.length - 1);
       return contenedor;
     }),
   ];
@@ -586,7 +655,7 @@ function construirFooterInternoKuder() {
 
 function nombreArchivoInternoKuder() {
   const fecha = new Date().toISOString().slice(0, 10);
-  return `Informe_Interno_Kuder_AdmisionMarketing_${fecha}.pdf`;
+  return `Informe_Global_Admision_y_Marketing_UMAG_Kuder_${fecha}.pdf`;
 }
 
 async function generarInformeInternoKuderPdf(archivos, periodo) {

@@ -225,8 +225,8 @@ Paso 2: las pestañas
      desde la app), la app avisa.
    - Con muchos cursos, el informe global agrupa la lista de cursos por colegio y, si
      hace falta, achica un poco el gráfico para que todo quepa en la hoja.
-   Solo en Kuder: "Uso interno" (informe consolidado para la unidad de Admisión y
-   Marketing):
+   Solo en Kuder: "Uso interno" ("Informe Global para la Unidad de Admisión y
+   Marketing", el informe consolidado de la unidad; el título lo dice así):
    - "📚 Elegir cursos de la app…" ("Marcar todos los visibles" toma todo lo
      cargado) y/o archivos sin límite: uno a uno, varios a la vez, o una carpeta
      completa ("📁 Subir una carpeta completa…"), con sus subcarpetas; lo que no sea
@@ -235,24 +235,32 @@ Paso 2: las pestañas
      solo uno.
    - En la revisión de este informe no se marcan los tests mal traspasados (a esa
      altura los informes individuales ya se entregaron).
-   - La primera hoja es un resumen ejecutivo para gerencia, con cifras grandes:
-     estudiantes evaluados, colegios atendidos, cursos evaluados, % con al menos un
-     área de interés clara; los promedios de estudiantes por curso, de estudiantes
-     por colegio, de cursos por colegio y de áreas de interés por estudiante; los 5
-     colegios que más solicitan el test (3 si los nombres son tan largos que no caben
-     5), los estudiantes evaluados por nivel y las 5 áreas de interés más frecuentes.
+   - La primera hoja es un resumen ejecutivo para gerencia, breve y con cifras
+     grandes: estudiantes evaluados, colegios atendidos, cursos evaluados y % con al
+     menos un área de interés clara (cada uno con su promedio debajo: estudiantes por
+     curso, por colegio, cursos por colegio y áreas por estudiante); los 5 colegios que
+     más solicitan el test (3 si los nombres son tan largos que no caben 5); las 5
+     áreas de interés más frecuentes y las 5 carreras UMAG con más demanda potencial.
    - El ranking de colegios se ordena por estudiantes evaluados (lo principal); si dos
      empatan, va primero el que tiene más cursos evaluados. Los cursos de cada colegio
      van aparte, en gris, como dato complementario: no cambian el orden. No se
      comparan colegios por curso (un colegio con un solo curso no podría competir).
-   - Los niveles agrupan a todos los cursos de un mismo nivel (todos los primeros
-     juntos, todos los segundos juntos...), sin separar por letra, y muestran cuántos
-     estudiantes se evaluaron en cada uno. El nivel de cada estudiante sale de su
-     propio curso; si un curso no se reconoce, queda como "Nivel no reconocido".
    - Desde la hoja 2 va el detalle: la tabla de todos los colegios (estudiantes, % del
-     total y cursos evaluados), la de estudiantes por nivel, el gráfico de las 10
-     áreas y una tarjeta por área. Es de uso interno, así que no lleva datos de
-     contacto.
+     total y cursos evaluados); los estudiantes por nivel (todos los primeros juntos,
+     todos los segundos juntos..., sin separar por letra; el nivel sale del curso de
+     cada estudiante); el gráfico de las 10 áreas; el área de interés más frecuente de
+     cada colegio y de cada nivel (si dos empatan, van las dos); la demanda potencial
+     por carrera UMAG, y una tarjeta por área. Las tablas largas se cortan entre filas
+     para llenar cada hoja (lo que no cabe sigue en la siguiente, "continuación").
+   - Demanda potencial por carrera UMAG: es una estimación hecha solo con los
+     resultados del test, no con datos de matrícula ni de mercado. Cuenta a los
+     estudiantes cuya área predominante (la de mayor puntaje, con 7 o más; si empatan,
+     todas) está vinculada a la carrera. Las carreras vinculadas a las mismas áreas dan
+     la misma cifra y van juntas en una fila (por ejemplo, las tres de Computación);
+     las vinculadas a más áreas tienden a sumar más. Un estudiante puede contar para
+     varias carreras. No se agrupa por facultad porque la app no tiene la facultad de
+     cada carrera.
+   - Es de uso interno, así que no lleva datos de contacto.
    - La app NO guarda los archivos CSV que subes (ni ahí ni en "Ingresar datos"): solo
      los lee. Por eso, "⬇ Descargar todos los CSV (ZIP)" arma de nuevo un CSV por
      curso con los datos actuales de la app (con las correcciones de puntajes y

@@ -256,14 +256,15 @@ function mejorProporcionCarreras(clave, armarCuadros) {
 // UMAG arriba a la izquierda y el eslogan "Quédate para llegar más lejos" a la derecha.
 // (En los informes grupal, global e interno la credencial de abajo, con el nombre del
 // curso o del colegio, ya no lleva el logo: así no se repite en la misma hoja.)
-function construirBanner(titulo, subtitulo) {
+// "antetitulo": la línea chica de arriba del título (por omisión, la unidad)
+function construirBanner(titulo, subtitulo, { antetitulo = "Unidad de Admisión y Marketing" } = {}) {
   const largo = titulo.length > 34;
   return `
     <div class="informe-banner">
       <img src="${LOGO_UMAG_2027_BLANCO}" alt="UMAG · Universidad de Magallanes" class="informe-logo-blanco" />
       <div class="informe-banner-sep"></div>
       <div class="informe-banner-text">
-        <div class="informe-banner-sub">Unidad de Admisión y Marketing</div>
+        <div class="informe-banner-sub">${antetitulo}</div>
         <div class="informe-banner-title${largo ? " informe-banner-title--largo" : ""}">${titulo}</div>
         ${subtitulo ? `<div class="informe-banner-sub2">${subtitulo}</div>` : ""}
       </div>
