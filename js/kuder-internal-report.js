@@ -142,7 +142,6 @@ function calcularEstadisticasInternasKuder(archivos) {
     pctConAreaClara: totalEstudiantes > 0 ? Math.round(((totalEstudiantes - sinAreaClara) / totalEstudiantes) * 100) : 0,
     areaPorColegio,
     areaPorNivel,
-    demandaCarreras: calcularDemandaCarrerasKuder(todosLosEstudiantes),
   };
 }
 
@@ -153,42 +152,6 @@ function areasMasFrecuentesKuder(estudiantes) {
   estudiantes.forEach((e) => calcularAreasDeInteresKuder(e.puntajes).forEach((a) => (conteos[a.id] = (conteos[a.id] || 0) + 1)));
   const max = Math.max(0, ...Object.values(conteos));
   return { total: estudiantes.length, areas: max > 0 ? AREAS_KUDER.filter((a) => conteos[a.id] === max) : [], conArea: max };
-}
-
-// ==================== demanda potencial por carrera UMAG (estimación) ====================
-// Solo con los resultados del test: cuántos estudiantes tienen su área predominante (la
-// de mayor puntaje entre sus áreas de 7 o más; si empatan, todas) en alguna de las áreas
-// a las que está vinculada cada carrera UMAG (AREAS_KUDER, js/kuder-data.js). No usa
-// matrícula ni datos de mercado. Las carreras vinculadas a las mismas áreas dan la misma
-// estimación, así que van juntas en una fila. Un estudiante puede contar para varias.
-const CARRERAS_UMAG_KUDER = (() => {
-  const carreras = new Map();
-  AREAS_KUDER.forEach((area) =>
-    area.carrerasUMAG.forEach((c) => {
-      if (!carreras.has(c)) carreras.set(c, []);
-      carreras.get(c).push(area);
-    })
-  );
-  return carreras;
-})();
-
-function areasPredominantesKuder(puntajes) {
-  const areas = calcularAreasDeInteresKuder(puntajes);
-  const max = Math.max(...areas.map((a) => Number(puntajes[a.id])));
-  return areas.filter((a) => Number(puntajes[a.id]) === max);
-}
-
-function calcularDemandaCarrerasKuder(estudiantes) {
-  const predominantes = estudiantes.map((e) => new Set(areasPredominantesKuder(e.puntajes).map((a) => a.id)));
-  const grupos = new Map();
-  for (const [carrera, areas] of CARRERAS_UMAG_KUDER) {
-    const clave = areas.map((a) => a.id).sort().join("|");
-    if (!grupos.has(clave)) grupos.set(clave, { carreras: [], areas });
-    grupos.get(clave).carreras.push(carrera);
-  }
-  return [...grupos.values()]
-    .map((g) => ({ ...g, estudiantes: predominantes.filter((ids) => g.areas.some((a) => ids.has(a.id))).length }))
-    .sort((a, b) => b.estudiantes - a.estudiantes || a.carreras[0].localeCompare(b.carreras[0], "es"));
 }
 
 // ==================== encabezado (banner + credencial + intro) ====================
@@ -210,9 +173,11 @@ function construirCajaResumenInternoKuder(stats, periodo) {
 // ==================== hoja 1: resumen ejecutivo (para gerencia) ====================
 // Breve y con cifras grandes: los 4 totales (con sus promedios debajo), los 5 colegios
 // que más solicitan el test (por estudiantes evaluados; sus cursos van como dato aparte,
-// sin cambiar el orden), las 5 áreas de interés más frecuentes y las 5 carreras UMAG con
-// más demanda potencial (estimación). No se comparan colegios por curso: uno con un solo
-// curso no podría competir con los demás. El detalle completo va en las hojas siguientes.
+// sin cambiar el orden), las 5 áreas de interés más frecuentes y los estudiantes por
+// nivel. Solo lo que el test mide: no se estima una demanda por carrera (los puntajes del
+// Kuder son preferencias relativas entre áreas, y la lista de carreras de cada área es de
+// orientación, no una relación validada). No se comparan colegios por curso: uno con un
+// solo curso no podría competir con los demás. El detalle va en las hojas siguientes.
 
 function pluralInterno(n, uno, varios) {
   return `${n} ${n === 1 ? uno : varios}`;
@@ -251,17 +216,16 @@ function construirTopColegiosInterno(colegios, total) {
 }
 
 const AREAS_EN_RESUMEN = 5;
-const CARRERAS_EN_RESUMEN = 5;
-
-const NOTA_DEMANDA_KUDER =
-  "Estimación basada solo en los resultados del Test de Kuder: estudiantes cuya área predominante (la de mayor puntaje, con 7 o más) está vinculada a la carrera. No considera datos de matrícula ni de mercado, y un estudiante puede contar para varias carreras.";
+const NIVELES_EN_RESUMEN = 6;
 
 // "compacto": menos aire, para cuando los nombres de colegio son largos y no cabe la hoja.
 // "nColegios": cuántos colegios lleva el ranking (5 si caben; si no, 3)
 function construirResumenEjecutivoInternoKuder(stats, { compacto = false, nColegios = 5 } = {}) {
   const total = stats.totalEstudiantes;
   const topAreas = stats.areasOrdenadas.slice(0, AREAS_EN_RESUMEN).map((area) => ({ area, c: stats.conteosAreas[area.id] || 0 }));
-  const topCarreras = stats.demandaCarreras.slice(0, CARRERAS_EN_RESUMEN);
+  const niveles = stats.estudiantesPorNivel.slice(0, NIVELES_EN_RESUMEN);
+  const nivelesRestantes = stats.estudiantesPorNivel.length - niveles.length;
+  const maxNivel = Math.max(1, ...niveles.map((n) => n.estudiantes));
   const kpi = (num, lbl, sub) => `<div class="ejec-kpi"><div class="ejec-num">${num}</div><div class="ejec-lbl">${lbl}</div><div class="ejec-sub">${sub}</div></div>`;
 
   return `
@@ -290,23 +254,24 @@ function construirResumenEjecutivoInternoKuder(stats, { compacto = false, nColeg
             .join("")}
         </div>
         <div class="ejec-caja">
-          <div class="ejec-caja-titulo">Carreras UMAG con más demanda potencial*</div>
-          <div class="ejec-caja-sub">estudiantes con su área predominante vinculada a la carrera</div>
-          ${topCarreras
+          <div class="ejec-caja-titulo">Estudiantes evaluados por nivel</div>
+          <div class="ejec-caja-sub">todos los cursos de un mismo nivel juntos</div>
+          ${niveles
             .map(
-              (c) => `
+              (n) => `
             <div class="ejec-barra-fila">
-              <div class="ejec-barra-texto"><b class="ejec-carreras">${escaparHtmlKuder(c.carreras[0])}${c.carreras.length > 1 ? ` <span class="ejec-afines">y ${pluralInterno(c.carreras.length - 1, "carrera afín", "carreras afines")}</span>` : ""}</b><span>${porcentajeInterno(c.estudiantes, total)}% · ${c.estudiantes} est.</span></div>
-              <div class="ejec-barra"><div style="width:${porcentajeInterno(c.estudiantes, total)}%;"></div></div>
+              <div class="ejec-barra-texto"><b>${escaparHtmlKuder(n.nivel)}</b><span>${n.estudiantes} est. · ${porcentajeInterno(n.estudiantes, total)}%</span></div>
+              <div class="ejec-barra"><div style="width:${(n.estudiantes / maxNivel) * 100}%;"></div></div>
             </div>`
             )
             .join("")}
+          ${nivelesRestantes > 0 ? `<div class="ejec-caja-pie">Y ${pluralInterno(nivelesRestantes, "nivel más", "niveles más")} (detalle en las hojas siguientes).</div>` : ""}
         </div>
       </div>
 
       <div class="ejec-nota">
         <b>Curso evaluado</b> = una aplicación del Test de Kuder a un curso. <b>Área de interés clara</b> = puntaje 7 o más en esa área. "est." = estudiantes.
-        <b>*</b> ${NOTA_DEMANDA_KUDER} El detalle por colegio, nivel, área y carrera está en las hojas siguientes.
+        El detalle por colegio, nivel y área, con las carreras UMAG vinculadas a cada área, está en las hojas siguientes.
       </div>
     </div>`;
 }
@@ -382,28 +347,6 @@ function tablaAreaFrecuenteInterno(titulo, etiquetaGrupo, grupos) {
     { key: "area", label: "Área más frecuente" },
     { key: "pct", label: "Estudiantes con esa área", align: "right" },
   ]);
-}
-
-function tablaDemandaCarrerasInterno(stats) {
-  const filas = stats.demandaCarreras.map((c, i) => ({
-    posicion: i + 1,
-    carrera: c.carreras.map(escaparHtmlKuder).join("<br/>"),
-    areas: c.areas.map((a) => a.nombre).join(", "),
-    estudiantes: c.estudiantes,
-    pct: `${porcentajeInterno(c.estudiantes, stats.totalEstudiantes)}%`,
-  }));
-  return tablaInterno(
-    "Demanda potencial por carrera UMAG (estimación)",
-    filas,
-    [
-      { key: "posicion", label: "N°", align: "right" },
-      { key: "carrera", label: "Carreras UMAG" },
-      { key: "areas", label: "Áreas vinculadas" },
-      { key: "estudiantes", label: "Estudiantes", align: "right" },
-      { key: "pct", label: "% del total", align: "right" },
-    ],
-    { intro: `${NOTA_DEMANDA_KUDER} Las carreras vinculadas a las mismas áreas tienen la misma estimación y van juntas en una fila; las vinculadas a más áreas tienden a sumar más estudiantes.` }
-  );
 }
 
 function tablaNivelesInterno(stats) {
@@ -539,6 +482,14 @@ function construirTodasLasPaginasInternoKuder(stats, periodo) {
     <div class="linea-estudiante"><span><b>${TITULO_INFORME_GLOBAL_KUDER}</b> — Test Vocacional de Kuder (uso interno)</span></div>`;
   const htmlAviso = construirAvisoContinua();
 
+  // las tarjetas de área (con sus carreras UMAG) van con un título y una nota que dice qué
+  // son: la lista de orientación de cada área, no una demanda por carrera. El título va
+  // pegado a la primera tarjeta, para que no quede solo al pie de una hoja.
+  const htmlIntroTarjetas = `
+    <div class="kuder-ranking-bloque">
+      <div class="kuder-resumen-titulo">Carreras UMAG vinculadas a cada área</div>
+      <div class="kuder-tabla-intro">Las áreas van de mayor a menor cantidad de estudiantes con interés (puntaje 7 o más). Las carreras de cada área salen de la lista de orientación de la unidad ("Descripciones por área con carreras UMAG"): muestran qué carreras se relacionan con cada interés, no cuántos estudiantes querrían estudiarlas. Los puntajes del Kuder indican preferencias relativas entre áreas, no la intención de seguir una carrera.</div>
+    </div>`;
   const areasOrdenadas = stats.areasOrdenadas;
   const htmlTarjetasArea = areasOrdenadas.map((area) =>
     // cada tarjeta se envuelve en su propio .informe-areas (con su margen real, no
@@ -556,8 +507,7 @@ function construirTodasLasPaginasInternoKuder(stats, periodo) {
     { html: construirBloqueGraficoAreasInterno(stats), compacto: construirBloqueGraficoAreasInterno(stats, { compacto: true }) },
     tablaAreaFrecuenteInterno("Área de interés más frecuente por colegio", "Colegio", stats.areaPorColegio),
     tablaAreaFrecuenteInterno("Área de interés más frecuente por nivel", "Nivel", stats.areaPorNivel),
-    tablaDemandaCarrerasInterno(stats),
-    ...htmlTarjetasArea.map((html) => ({ html })),
+    ...htmlTarjetasArea.map((html, i) => ({ html: i === 0 ? htmlIntroTarjetas + html : html })),
   ];
 
   const LIMITE_PAGINA_PX = ALTO_PAGINA_PX - PADDING_INFERIOR_PX;

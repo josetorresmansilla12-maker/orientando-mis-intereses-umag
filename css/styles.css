@@ -1021,8 +1021,6 @@ details.grupo-curso > summary::-webkit-details-marker { display: none; }
 .ejec-barra-fila { margin-top: 7px; }
 .ejec-barra-texto { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; color: #2b2140; }
 .ejec-barra-texto span { font-size: 12px; color: #4a4058; white-space: nowrap; }
-.ejec-barra-texto b.ejec-carreras { font-size: 12px; line-height: 1.3; }
-.ejec-barra-texto .ejec-afines { font-size: 11px; font-weight: 400; color: var(--texto-suave); white-space: normal; }
 .ejec-barra { height: 9px; background: #eee8f6; border-radius: 5px; margin-top: 3px; overflow: hidden; }
 .ejec-barra div { height: 100%; background: var(--morado); border-radius: 5px; }
 .ejec-nota { font-size: 10px; color: var(--texto-suave); margin-top: 14px; line-height: 1.4; }

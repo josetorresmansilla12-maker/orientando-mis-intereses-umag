@@ -240,7 +240,7 @@ Paso 2: las pestañas
      menos un área de interés clara (cada uno con su promedio debajo: estudiantes por
      curso, por colegio, cursos por colegio y áreas por estudiante); los 5 colegios que
      más solicitan el test (3 si los nombres son tan largos que no caben 5); las 5
-     áreas de interés más frecuentes y las 5 carreras UMAG con más demanda potencial.
+     áreas de interés más frecuentes y los estudiantes evaluados por nivel.
    - El ranking de colegios se ordena por estudiantes evaluados (lo principal); si dos
      empatan, va primero el que tiene más cursos evaluados. Los cursos de cada colegio
      van aparte, en gris, como dato complementario: no cambian el orden. No se
@@ -249,17 +249,14 @@ Paso 2: las pestañas
      total y cursos evaluados); los estudiantes por nivel (todos los primeros juntos,
      todos los segundos juntos..., sin separar por letra; el nivel sale del curso de
      cada estudiante); el gráfico de las 10 áreas; el área de interés más frecuente de
-     cada colegio y de cada nivel (si dos empatan, van las dos); la demanda potencial
-     por carrera UMAG, y una tarjeta por área. Las tablas largas se cortan entre filas
-     para llenar cada hoja (lo que no cabe sigue en la siguiente, "continuación").
-   - Demanda potencial por carrera UMAG: es una estimación hecha solo con los
-     resultados del test, no con datos de matrícula ni de mercado. Cuenta a los
-     estudiantes cuya área predominante (la de mayor puntaje, con 7 o más; si empatan,
-     todas) está vinculada a la carrera. Las carreras vinculadas a las mismas áreas dan
-     la misma cifra y van juntas en una fila (por ejemplo, las tres de Computación);
-     las vinculadas a más áreas tienden a sumar más. Un estudiante puede contar para
-     varias carreras. No se agrupa por facultad porque la app no tiene la facultad de
-     cada carrera.
+     cada colegio y de cada nivel (si dos empatan, van las dos), y una tarjeta por área
+     con sus carreras UMAG. Las tablas largas se cortan entre filas para llenar cada
+     hoja (lo que no cabe sigue en la siguiente, "continuación").
+   - No hay una "demanda por carrera": el informe muestra las carreras UMAG vinculadas a
+     cada área (la lista de orientación de la unidad), sin un número por carrera. Los
+     puntajes del Kuder son preferencias relativas entre áreas (las 10 suman 45), no
+     intención de estudiar una carrera; y como cada carrera está vinculada a un número
+     distinto de áreas, un conteo por carrera favorecería a las que tienen más áreas.
    - Es de uso interno, así que no lleva datos de contacto.
    - La app NO guarda los archivos CSV que subes (ni ahí ni en "Ingresar datos"): solo
      los lee. Por eso, "⬇ Descargar todos los CSV (ZIP)" arma de nuevo un CSV por
