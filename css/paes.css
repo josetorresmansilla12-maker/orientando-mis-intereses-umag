@@ -1,0 +1,268 @@
+/* Ensayos PAES · estilos del módulo. Usa los colores y las piezas de css/styles.css
+   (.tarjeta, .grid-form, botones) y agrega solo lo propio. Color del módulo: azul. */
+
+:root {
+  --paes: #2f66b3;
+  --paes-oscuro: #1f4a87;
+  --paes-fondo: #eef4fc;
+  --paes-borde: #cfdef3;
+  --paes-amarillo: #fff6d6;
+  --paes-amarillo-borde: #ecd27a;
+}
+
+/* ---------- entrar al módulo: se ocultan las pestañas y paneles de los test ---------- */
+#modulo-paes { display: none; }
+body.modulo-paes #modulo-paes { display: block; }
+body.modulo-paes .tabs,
+body.modulo-paes main > .panel,
+body.modulo-paes main > .aviso-test-activo,
+body.modulo-paes .topbar-acciones { display: none !important; }
+
+.test-btn.activo[data-modulo="paes"] {
+  border-color: var(--paes);
+  background: var(--paes-fondo);
+  box-shadow: 0 0 0 3px rgba(47, 102, 179, 0.18);
+}
+.test-btn.activo[data-modulo="paes"] .test-btn-texto b { color: var(--paes-oscuro); }
+
+#modulo-paes h2 { color: var(--paes-oscuro); }
+#modulo-paes button:not(.secundario):not(.peligro):not(.paes-paso):not(.paes-recorte) { background: var(--paes); border-color: var(--paes); }
+#modulo-paes button:not(.secundario):not(.peligro):not(.paes-paso):not(.paes-recorte):hover { background: var(--paes-oscuro); }
+#modulo-paes button.secundario { color: var(--paes-oscuro); border-color: var(--paes); }
+#modulo-paes button.secundario:hover { background: var(--paes-fondo); }
+#modulo-paes button:disabled { opacity: 0.45; cursor: not-allowed; }
+#modulo-paes input[type="checkbox"] { width: auto; padding: 0; }
+#modulo-paes input:focus, #modulo-paes select:focus { outline-color: var(--paes); }
+#modulo-paes code { background: #f3f1f8; border-radius: 4px; padding: 1px 5px; font-size: 12.5px; }
+
+.paes-aviso {
+  background: var(--paes-fondo);
+  border: 1px solid var(--paes-borde);
+  color: var(--paes-oscuro);
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+.paes-error { color: var(--rojo); font-weight: 600; margin: 0; }
+.paes-falta { color: #a15c00; }
+
+/* ---------- curso y ensayo elegidos ---------- */
+.paes-contexto { display: flex; gap: 18px; flex-wrap: wrap; padding: 14px 18px; margin-bottom: 12px; }
+.paes-ctx-campo { display: flex; align-items: center; gap: 8px; flex: 1 1 380px; min-width: 0; }
+.paes-ctx-campo label { margin: 0; white-space: nowrap; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; }
+.paes-ctx-campo select { flex: 1; min-width: 0; }
+.paes-ctx-campo button { white-space: nowrap; }
+
+/* ---------- pasos ---------- */
+.paes-pasos { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+.paes-paso {
+  flex: 1 1 170px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-align: left;
+  background: white;
+  color: var(--texto);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-weight: 400;
+}
+.paes-paso:hover:not(:disabled) { background: var(--paes-fondo); }
+.paes-paso-num {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #e9e6f1;
+  color: var(--texto-suave);
+  font-weight: 700;
+  font-size: 12.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.paes-paso-txt b { display: block; font-size: 13.5px; color: var(--texto); }
+.paes-paso-txt small { display: block; font-size: 11px; color: var(--texto-suave); min-height: 13px; }
+.paes-paso.activo { border-color: var(--paes); background: var(--paes-fondo); box-shadow: 0 0 0 2px rgba(47, 102, 179, 0.15); }
+.paes-paso.activo .paes-paso-num { background: var(--paes); color: white; }
+.paes-paso.activo .paes-paso-txt b { color: var(--paes-oscuro); }
+.paes-paso.con-alerta .paes-paso-txt small { color: #a15c00; font-weight: 700; }
+.paes-paso.con-alerta .paes-paso-num { background: var(--paes-amarillo-borde); color: #6b4a00; }
+
+.paes-cabecera { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap; }
+.paes-cabecera-acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+.paes-siguiente { display: flex; justify-content: flex-end; margin: -4px 0 18px; }
+
+/* ---------- avisos, notas y etiquetas ---------- */
+.paes-avisos { margin: 0 0 12px; padding: 9px 12px 9px 28px; border-radius: 7px; font-size: 13px; background: #f3f1f8; }
+.paes-avisos.amarillo { background: var(--paes-amarillo); border: 1px solid var(--paes-amarillo-borde); color: #5c4300; }
+.paes-avisos li + li { margin-top: 3px; }
+.paes-nota { font-size: 12.5px; color: var(--texto-suave); margin: 10px 0; line-height: 1.5; }
+.paes-nota.amarillo { background: var(--paes-amarillo); border: 1px solid var(--paes-amarillo-borde); color: #5c4300; border-radius: 7px; padding: 8px 12px; }
+.paes-resumen { font-size: 13.5px; margin: -4px 0 12px; }
+.paes-chip {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 2px 9px;
+  background: #ece9f3;
+  color: var(--texto-suave);
+  white-space: nowrap;
+}
+.paes-chip.verde { background: #dff3e8; color: #1c6b47; }
+.paes-chip.amarillo { background: var(--paes-amarillo); color: #7a5200; border: 1px solid var(--paes-amarillo-borde); }
+.paes-chip.rojo { background: #fbe3e0; color: #a02a1f; }
+.paes-chip.gris { background: #ececec; color: #666; }
+.paes-chip.azul { background: var(--paes-fondo); color: var(--paes-oscuro); }
+
+/* ---------- tablas ---------- */
+.paes-tabla-scroll { overflow-x: auto; margin-top: 12px; }
+.paes-tabla { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.paes-tabla th {
+  text-align: left;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--texto-suave);
+  border-bottom: 2px solid var(--borde);
+  padding: 6px 8px;
+  white-space: nowrap;
+}
+.paes-tabla td { border-bottom: 1px solid #efeaf7; padding: 6px 8px; vertical-align: middle; }
+.paes-tabla td.num { text-align: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.paes-tabla td.rut { white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--texto-suave); }
+.paes-tabla td.acciones { text-align: right; white-space: nowrap; }
+.paes-tabla td.acciones button + button { margin-left: 4px; }
+.paes-tabla td input { padding: 5px 8px; font-size: 13.5px; min-width: 110px; }
+.paes-tabla tr.paes-fila-duda td { background: var(--paes-amarillo); }
+.paes-tabla tr.paes-fila-edicion td { background: var(--paes-fondo); }
+.paes-tabla .paes-original { color: var(--texto-suave); font-size: 12px; }
+.paes-resultados td.puntaje { font-weight: 700; color: var(--paes-oscuro); font-size: 14.5px; }
+.paes-resultados tbody tr:hover td { background: #faf8fd; }
+
+/* ---------- clave y tabla de conversión ---------- */
+.paes-pegar { background: var(--paes-fondo); border: 1px solid var(--paes-borde); border-radius: 8px; padding: 12px 14px; margin-bottom: 12px; }
+.paes-pegar textarea {
+  width: 100%;
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 14px;
+  letter-spacing: 1px;
+  resize: vertical;
+}
+.paes-pegar .acciones-form { margin-top: 8px; }
+.paes-clave-grilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 6px; }
+.paes-clave-celda {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--borde);
+  border-radius: 7px;
+  padding: 4px 7px;
+  background: white;
+}
+.paes-clave-celda .n { width: 22px; text-align: right; font-size: 12px; font-weight: 700; color: var(--texto-suave); font-variant-numeric: tabular-nums; }
+.paes-clave-celda select { flex: 1; padding: 4px 4px; font-weight: 700; font-size: 14px; min-width: 0; }
+.paes-clave-celda.sin-clave { border-color: var(--paes-amarillo-borde); background: var(--paes-amarillo); }
+.paes-clave-celda.no-valida { background: #ececec; border-color: #d2d2d2; }
+.paes-clave-celda.no-valida select { color: #888; text-decoration: line-through; }
+.paes-tabla-grilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 5px; margin-top: 12px; }
+.paes-tabla-celda { display: flex; align-items: center; gap: 6px; margin: 0; border: 1px solid var(--borde); border-radius: 7px; padding: 3px 6px 3px 8px; background: white; }
+.paes-tabla-celda span { width: 20px; text-align: right; font-size: 12px; font-weight: 700; color: var(--texto-suave); font-variant-numeric: tabular-nums; }
+.paes-tabla-celda input { flex: 1; min-width: 0; padding: 3px 5px; font-size: 13.5px; border-color: transparent; text-align: right; font-variant-numeric: tabular-nums; }
+.paes-tabla-celda input:hover { border-color: var(--borde); }
+
+/* ---------- subir hojas ---------- */
+.paes-zona-subir {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  border: 2px dashed var(--paes-borde);
+  background: var(--paes-fondo);
+  border-radius: 10px;
+  padding: 18px;
+}
+.paes-progreso { margin-top: 14px; border: 1px solid var(--paes-borde); border-radius: 9px; padding: 12px 14px; }
+.paes-progreso-texto { font-size: 13.5px; display: flex; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+.paes-progreso-texto span { color: var(--texto-suave); font-size: 12.5px; }
+.paes-barra { height: 10px; background: #e7e3f0; border-radius: 999px; overflow: hidden; margin: 8px 0; }
+.paes-barra div { height: 100%; background: var(--paes); border-radius: 999px; transition: width 0.2s; }
+.paes-progreso-pie { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--texto-suave); }
+.paes-resumen-lectura { margin-top: 14px; font-size: 13.5px; }
+.paes-resumen-lectura p { margin: 0 0 8px; }
+
+/* ---------- revisión ---------- */
+.paes-cuenta { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+.paes-filtro { display: flex; align-items: center; gap: 6px; margin: 0 0 0 auto; font-size: 13px; color: var(--texto); cursor: pointer; }
+.paes-hoja {
+  background: white;
+  border: 1px solid var(--borde);
+  border-left: 5px solid var(--verde);
+  border-radius: 9px;
+  margin-bottom: 10px;
+  box-shadow: var(--sombra);
+}
+.paes-hoja.estado-revisar { border-left-color: #e0b100; background: #fffdf3; }
+.paes-hoja.estado-ilegible { border-left-color: var(--rojo); background: #fff8f7; }
+.paes-hoja.estado-ilegible-vista { border-left-color: #b9b9b9; }
+.paes-hoja.estado-repetida, .paes-hoja.estado-excluida { border-left-color: #b9b9b9; opacity: 0.78; }
+.paes-hoja-cab { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding: 9px 14px 0; font-size: 14px; }
+.paes-hoja-cab small { color: var(--texto-suave); font-size: 12px; }
+.paes-estado { font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 2px 9px; background: #dff3e8; color: #1c6b47; }
+.estado-revisar .paes-estado { background: var(--paes-amarillo); color: #7a5200; border: 1px solid var(--paes-amarillo-borde); }
+.estado-ilegible .paes-estado { background: #fbe3e0; color: #a02a1f; }
+.estado-ilegible-vista .paes-estado, .estado-repetida .paes-estado, .estado-excluida .paes-estado { background: #ececec; color: #666; }
+.paes-hoja-puntaje { margin-left: auto; font-size: 13px; color: var(--texto-suave); }
+.paes-hoja-puntaje b { color: var(--paes-oscuro); font-size: 14.5px; }
+.paes-hoja-cuerpo { display: flex; gap: 14px; padding: 9px 14px 12px; align-items: flex-start; flex-wrap: wrap; }
+.paes-recorte {
+  flex: 0 0 auto;
+  width: min(430px, 100%);
+  min-height: 62px;
+  padding: 0;
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  background: #fafafa;
+  overflow: hidden;
+  cursor: zoom-in;
+}
+.paes-recorte:hover { border-color: var(--paes); background: #fafafa; }
+.paes-recorte img { display: block; width: 100%; height: auto; }
+.estado-ilegible .paes-recorte, .estado-ilegible-vista .paes-recorte { width: 150px; }
+.paes-recorte.sin-imagen::after { content: "Sin imagen guardada"; display: block; padding: 20px 10px; font-size: 12px; color: var(--texto-suave); font-weight: 400; }
+.paes-hoja-datos { flex: 1 1 380px; min-width: 0; }
+.paes-linea { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13.5px; margin-bottom: 7px; }
+.paes-linea select { width: auto; flex: 1 1 240px; max-width: 460px; padding: 5px 8px; font-size: 13.5px; }
+.paes-etq { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: var(--texto-suave); min-width: 92px; }
+#modulo-paes code.paes-id { font-size: 14px; letter-spacing: 0.5px; font-weight: 700; }
+.paes-candidatos { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 12.5px; color: var(--texto-suave); margin-bottom: 7px; }
+.paes-candidatos button small { font-weight: 400; opacity: 0.85; }
+.paes-advertencias { margin: 0 0 8px; padding-left: 20px; font-size: 13px; color: #6b4a00; }
+.paes-hoja-acciones { display: flex; gap: 6px; flex-wrap: wrap; }
+#paes-visor { align-items: flex-start; overflow-y: auto; padding: 20px; }
+.modal-caja.paes-visor-caja { max-width: 900px; width: 100%; border-top-color: var(--paes); max-height: none; }
+.paes-visor-cab { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 14px; }
+.paes-visor-caja img { display: block; width: 100%; height: auto; border: 1px solid var(--borde); }
+
+/* ---------- resultados ---------- */
+.paes-datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 10px; margin-top: 14px; }
+.paes-dato { border: 1px solid var(--paes-borde); background: var(--paes-fondo); border-radius: 9px; padding: 9px 12px; }
+.paes-dato span { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: var(--texto-suave); }
+.paes-dato b { display: block; font-size: 21px; color: var(--paes-oscuro); line-height: 1.25; }
+.paes-dato small { display: block; font-size: 11px; color: var(--texto-suave); }
+.paes-dos { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 800px) { .paes-dos { grid-template-columns: 1fr; } }
+.paes-tramos { display: grid; gap: 5px; }
+.paes-tramo { display: grid; grid-template-columns: 78px 1fr 26px; align-items: center; gap: 8px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.paes-tramo span { color: var(--texto-suave); }
+.paes-tramo-barra { height: 12px; background: #eeebf5; border-radius: 4px; overflow: hidden; }
+.paes-tramo-barra div { height: 100%; background: var(--paes); border-radius: 4px; }
+.paes-tramo b { text-align: right; }
+.paes-no-rindieron { margin: 0; padding-left: 18px; font-size: 13.5px; columns: 2; column-gap: 24px; }
+.paes-no-rindieron small { color: var(--texto-suave); }

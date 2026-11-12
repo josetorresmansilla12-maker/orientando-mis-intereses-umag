@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8" />
+<title>Ensayos PAES · pruebas automáticas</title>
+<style>
+  body { font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 24px; color: #2b2140; max-width: 900px; }
+  h1 { font-size: 20px; } h2 { font-size: 15px; margin: 18px 0 6px; color: #1f4a87; }
+  .ok, .falla { font-size: 13.5px; padding: 2px 0; }
+  .ok::before { content: "✓ "; color: #2e9e6b; font-weight: 700; }
+  .falla { color: #c0392b; font-weight: 600; } .falla::before { content: "✗ "; }
+  #resumen { font-size: 16px; font-weight: 700; padding: 10px 14px; border-radius: 8px; background: #eef4fc; }
+  #resumen.mal { background: #fbe3e0; color: #a02a1f; }
+</style>
+</head>
+<body>
+  <h1>Ensayos PAES · pruebas automáticas</h1>
+  <p>Comprueban el lector de hojas (con hojas sintéticas torcidas, giradas, con sombra y ruido) y las reglas del módulo. No usan datos de estudiantes.</p>
+  <div id="resumen">Ejecutando…</div>
+  <div id="lista"></div>
+  <script src="../js/paes-plantillas.js"></script>
+  <script src="../js/paes-lector.js"></script>
+  <script src="../js/paes-logica.js"></script>
+  <script src="paes-hoja-sintetica.js"></script>
+  <script src="paes-pruebas.js"></script>
+  <script>
+    setTimeout(() => {
+      const r = ejecutarPruebasPaes({ rapido: /rapido/.test(location.search) });
+      const lista = document.getElementById("lista");
+      r.lineas.forEach((l) => {
+        const el = document.createElement(l.titulo ? "h2" : "div");
+        el.textContent = l.titulo || l.texto;
+        if (!l.titulo) el.className = l.ok ? "ok" : "falla";
+        lista.appendChild(el);
+      });
+      const res = document.getElementById("resumen");
+      res.textContent = `${r.total - r.fallas} de ${r.total} pruebas pasan`;
+      if (r.fallas) res.className = "mal";
+      window.resultadoPruebasPaes = r;
+    }, 50);
+  </script>
+</body>
+</html>

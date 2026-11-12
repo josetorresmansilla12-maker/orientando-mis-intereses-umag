@@ -1,0 +1,22 @@
+Pruebas del lector de Ensayos PAES con hojas reales
+====================================================
+
+Estos archivos comparan el lector de la app (js/paes-lector.js) con el lector de
+referencia y con los resultados esperados de las hojas reales de ejemplo.
+
+Las hojas reales NO están en esta carpeta ni en el repositorio: traen datos de
+menores (nombre manuscrito y RUT marcado). Se usan desde el archivo
+adjuntos_modulo_ensayos_paes.zip, que la unidad entrega aparte, y todo se procesa
+en una carpeta temporal de este computador. Ningún script imprime RUT ni nombres.
+
+Uso (macOS):
+  1. sh preparar.sh /ruta/adjuntos_modulo_ensayos_paes.zip /carpeta/temporal
+     Crea un entorno de Python, ejecuta el lector de referencia y deja cada página
+     como imagen en gris para probar el lector de la app sin navegador.
+  2. sh probar.sh /carpeta/temporal
+     Lee las mismas páginas con el lector de la app y compara: correctas esperadas,
+     respuestas pregunta por pregunta y oscuridad de cada burbuja. También las
+     prueba giradas, torcidas, a otra resolución y con sombra.
+
+Las pruebas que no necesitan hojas reales (reglas y hojas sintéticas) están en
+pruebas/paes-pruebas.html.
