@@ -414,6 +414,24 @@ El trabajo va en cinco pasos:
    oficial en Excel o CSV, con nombre y RUT. La app deja el RUT sin puntos y con
    guion, revisa el dígito verificador y muestra los nombres como "Nombres
    Apellidos". Antes de confirmar puedes corregir cualquier fila.
+   - "Ingresar nuevo curso" (arriba, y también dentro del paso 1): abre la pantalla
+     para agregar cursos. "Editar datos de este curso" NO crea un curso: cambia el
+     que está abierto.
+   - Varios cursos a la vez: en "Ingresar cursos nuevos" puedes subir varias listas
+     juntas. Cada archivo crea un curso aparte; la app propone el colegio, el nivel
+     y la letra a partir del nombre del archivo (por ejemplo
+     "Cuarto_Medio_A_Liceo_X.xlsx") y los puedes corregir antes de crear.
+   - Los cursos creados juntos se corrigen juntos: en el paso 2 el ensayo se crea
+     en todos (comparten la clave), y en el paso 3 subes las hojas de todos en uno
+     o varios archivos: cada hoja se va sola a su curso por el RUT. Arriba aparecen
+     los cursos que estás trabajando juntos, para pasar de uno a otro.
+   - Si subes a un curso la lista de OTRO curso, la app avisa (casi ningún RUT
+     coincide) y ofrece "Crear un curso nuevo con esta lista". Si ya quedaron
+     mezclados: abre el curso, sube de nuevo la lista que no corresponde y elige
+     "Es de otro curso: crear un curso nuevo"; esos estudiantes se sacan del curso
+     (salvo los que tengan hoja allí) y pasan al curso nuevo.
+   - En el paso 5, "Guardar y volver al inicio" deja la pantalla en blanco para
+     ingresar más cursos. Lo anterior queda en "Resultados guardados".
 
 2. Ensayo, clave y tabla. Elige la prueba, la forma y la fecha. La clave se
    importa (CSV o Excel) o se escribe. Cada pregunta tiene la casilla "válida":

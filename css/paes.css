@@ -417,3 +417,23 @@ body.modulo-paes .topbar-acciones { display: none !important; }
 .pinf-arriba .pinf-stat b { font-size: 15.5px; }
 .pinf-arriba .pinf-colbarra { height: 46px; }
 .pinf-eje { font-size: 9.5px; color: var(--texto-suave); margin: 3px 0 0; }
+
+/* ingreso de varios cursos a la vez */
+.paes-tanda { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12.5px; color: var(--texto-suave); padding-top: 8px; border-top: 1px dashed var(--borde); }
+.paes-tanda-chip { background: var(--lila-fondo) !important; color: var(--morado-oscuro) !important; border: 1px solid var(--borde) !important; border-radius: 999px !important; padding: 4px 11px !important; font-size: 12.5px !important; font-weight: 600; cursor: pointer; }
+.paes-tanda-chip.activo { background: var(--morado) !important; color: white !important; border-color: var(--morado) !important; }
+.paes-lista-nueva { border: 1px solid var(--borde); border-radius: 10px; padding: 12px 14px; margin: 0 0 12px; background: var(--lila-fondo); }
+.paes-lista-nueva.con-problema { border-color: #d9534f; background: #fdf3f2; }
+.paes-lista-nueva-cab { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+.paes-lista-nueva-cab b { color: var(--morado-oscuro); }
+.paes-lista-nueva-cab span { font-size: 12.5px; color: var(--texto-suave); flex: 1; }
+.paes-lista-nueva-det { margin-top: 8px; font-size: 13px; }
+.paes-lista-nueva-det summary { cursor: pointer; color: var(--morado); font-weight: 600; }
+.paes-lista-nueva-det .paes-tabla-scroll { max-height: 260px; overflow: auto; margin-top: 6px; background: white; }
+.paes-alerta-lista { background: #fdecea; border: 1px solid #e7a29b; border-radius: 8px; padding: 10px 12px; margin: 0 0 10px; }
+.paes-alerta-lista p { margin: 0 0 8px; font-size: 13.5px; color: #7a211a; }
+.paes-checks { display: flex; flex-direction: column; gap: 4px; }
+.paes-checks label { display: flex; align-items: center; gap: 7px; font-weight: 400; font-size: 13.5px; margin: 0; cursor: pointer; }
+.paes-checks input { width: auto; margin: 0; }
+.paes-cierre { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; border: 2px solid var(--morado); }
+.paes-cierre > div:first-child { flex: 1; min-width: 260px; }
