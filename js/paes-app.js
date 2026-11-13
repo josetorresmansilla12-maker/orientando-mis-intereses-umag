@@ -42,6 +42,10 @@
     resumenLectura: null,
     soloPorRevisar: false,
     urls: new Map(), // imágenes ya cargadas: "hojaId:tipo" -> URL
+    visor: null, // hoja abierta en el visor (revisión con la imagen)
+    deshacer: [], // cambios de la revisión que se pueden deshacer (por sesión)
+    sinNombres: false, // informe sin nombres (uso interno)
+    generando: false, // se está creando un informe
   };
   let raiz = null;
   let plantillas = new Map();
@@ -338,6 +342,7 @@
     global.scrollTo(0, y);
     cargarImagenes();
     actualizarConteo();
+    if (est.visor) pintarVisor();
   }
 
   function htmlContexto() {
@@ -1198,6 +1203,10 @@
         ${cuenta.excluida ? `<span class="paes-chip gris">${plural(cuenta.excluida, "excluida", "excluidas")}</span>` : ""}
         <label class="paes-filtro"><input type="checkbox" data-cambio="solo-revisar" ${est.soloPorRevisar ? "checked" : ""} /> Solo por revisar</label>
       </div>
+      <div class="acciones-form" style="margin-top:12px;">
+        <button type="button" class="secundario chico" data-accion="deshacer" ${est.deshacer.length ? "" : "disabled"}>↩ Deshacer el último cambio</button>
+        <button type="button" class="secundario chico" data-accion="historial">🕓 Historial de cambios</button>
+      </div>
     </div>`;
     let mostradas = 0;
     hojas.forEach((x, i) => {
@@ -1255,7 +1264,8 @@
       }
       if (avisos.length) h += `<ul class="paes-advertencias">${avisos.map((a) => `<li>${esc(a.detalle)}</li>`).join("")}</ul>`;
       h += `<div class="paes-hoja-acciones">
-            <button type="button" class="secundario chico" data-accion="ver-hoja" data-id="${esc(x.id)}">👁 Ver la hoja</button>`;
+            <button type="button" class="secundario chico" data-accion="ver-hoja" data-id="${esc(x.id)}">${x.estado === "ilegible" ? "👁 Ver la hoja" : "👁 Ver y corregir respuestas"}</button>`;
+      if (x.estado === "ilegible" && !x.excluida) h += `<button type="button" class="secundario chico" data-accion="ingresar-a-mano" data-id="${esc(x.id)}">✍ Ingresar respuestas a mano</button>`;
       if (x.repetidaDe) h += `<button type="button" class="secundario chico" data-accion="no-repetida" data-id="${esc(x.id)}">No es repetida: contarla</button>`;
       else if (x.excluida) h += `<button type="button" class="secundario chico" data-accion="incluir" data-id="${esc(x.id)}">↩ Volver a incluir</button>`;
       else {
@@ -1274,6 +1284,7 @@
     if (!h) return;
     const antes = h.estudianteId;
     if ((antes || null) === (estudianteId || null)) return;
+    est.deshacer.push({ tipo: "hoja", hojaId, campo: "estudiante asignado", antes: { estudianteId: h.estudianteId, asignacion: h.asignacion } });
     h.estudianteId = estudianteId || null;
     h.asignacion = estudianteId ? modo || "manual" : null;
     await guardar("hojas", h);
@@ -1295,7 +1306,9 @@
     Object.assign(h, cambios);
     await guardar("hojas", h);
     auditar(h.ensayoId, h.id, campo, JSON.stringify(antes), JSON.stringify(cambios));
-    pintar();
+    est.deshacer.push({ tipo: "hoja", hojaId, campo, antes });
+    if (est.visor) pintarVisor();
+    else pintar();
     if (mensaje) toast(mensaje);
   }
 
@@ -1363,16 +1376,197 @@
     imgs.forEach((img) => obs.observe(img));
   }
 
-  async function verHoja(hojaId) {
+  // ---- visor: la hoja con lo que la app leyó encima, para corregir mirando la imagen
+
+  const COLOR_MARCA = { correcta: "#1f9d55", incorrecta: "#d93025", falto: "#1a73e8", doble: "#f29900", marcada: "#5b3b8c", novalida: "#888888" };
+
+  function verHoja(hojaId) {
+    est.visor = hojaId;
+    pintarVisor();
+  }
+
+  function cerrarVisor() {
+    est.visor = null;
+    pintar();
+  }
+
+  // resultado de una pregunta de la hoja frente a la clave
+  function estadoPregunta(h, k) {
+    const r = L.respuestaVigente(h, k.n);
+    let res;
+    if (!k.r) res = r.estado === "ok" ? "marcada" : r.estado === "doble" ? "doble" : "omitida";
+    else if (!k.valida) res = "novalida";
+    else if (r.estado === "doble") res = "doble";
+    else if (r.estado !== "ok") res = "omitida";
+    else res = r.letras === k.r ? "correcta" : "incorrecta";
+    return { r, res };
+  }
+
+  // círculos sobre la imagen: verde correcta, rojo incorrecta, azul la correcta que faltó,
+  // naranja doble marca. Cada burbuja se puede pulsar para corregir la respuesta.
+  function svgDeHoja(h, e) {
+    const pl = plantillaDe(e);
+    const def = pl.def;
+    const f = 0.5;
+    const corr = new Map((h.lectura.deltas || []).map((d) => [d[0], d]));
+    const nAlt = Math.max(e.alternativas || 4, 4);
+    let s = "";
+    e.clave.forEach((k) => {
+      const pos = def.preguntas[k.n];
+      if (!pos) return;
+      const d = corr.get("q" + Math.floor((k.n - 1) / (def.filasPorBloque || 10)));
+      const { r, res } = estadoPregunta(h, k);
+      pos.forEach(([x, y], i) => {
+        const letra = L.LETRAS_PAES[i];
+        const marcada = r.letras.includes(letra);
+        let color = null, grosor = 3;
+        if (marcada) color = COLOR_MARCA[res === "omitida" ? "marcada" : res];
+        else if (k.valida && k.r === letra && (res === "incorrecta" || res === "omitida" || res === "doble")) color = COLOR_MARCA.falto;
+        if (i >= nAlt && !marcada) return;
+        const cx = ((x + (d ? d[1] : 0)) * f).toFixed(1), cy = ((y + (d ? d[2] : 0)) * f).toFixed(1);
+        s += `<circle class="paes-burbuja${color ? " con-marca" : ""}" cx="${cx}" cy="${cy}" r="9.5" ${color ? `stroke="${color}" stroke-width="${grosor}" fill="${color}" fill-opacity="${marcada ? 0.18 : 0}"` : `fill="transparent"`} data-accion="resp" data-id="${esc(h.id)}" data-n="${k.n}" data-l="${letra}"><title>Pregunta ${k.n}, alternativa ${letra}${k.r ? ` · clave ${k.r}` : ""}</title></circle>`;
+      });
+    });
+    return `<svg class="paes-capa" viewBox="0 0 ${def.ancho * f} ${def.alto * f}" preserveAspectRatio="none">${s}</svg>`;
+  }
+
+  function htmlPreguntas(h, e) {
+    const nAlt = e.alternativas || 4;
+    const letras = L.LETRAS_PAES.slice(0, nAlt).split("");
+    return e.clave
+      .map((k) => {
+        const { r, res } = estadoPregunta(h, k);
+        const extra = r.letras && !letras.includes(r.letras) && r.letras.length === 1 ? [r.letras] : [];
+        const leida = h.lectura.resp ? h.lectura.resp[k.n - 1] : "-";
+        return `<div class="paes-preg res-${res}${r.editada ? " editada" : ""}">
+          <span class="paes-preg-n">${k.n}</span>
+          ${letras.concat(extra).map((l) => `<button type="button" class="paes-alt${r.letras.includes(l) ? " sel" : ""}${k.r === l ? " es-clave" : ""}" data-accion="resp" data-id="${esc(h.id)}" data-n="${k.n}" data-l="${l}">${l}</button>`).join("")}
+          <button type="button" class="paes-alt blanco${r.estado !== "ok" && r.estado !== "doble" ? " sel" : ""}" data-accion="resp" data-id="${esc(h.id)}" data-n="${k.n}" data-l="" title="Sin respuesta (omitida)">–</button>
+          ${r.editada ? `<button type="button" class="paes-alt restaurar" data-accion="resp-leida" data-id="${esc(h.id)}" data-n="${k.n}" title="Volver a lo que leyó la app (${leida === "*" ? "doble marca" : leida === "-" || leida === "~" || !leida ? "sin marca" : leida})">↺</button>` : ""}
+        </div>`;
+      })
+      .join("");
+  }
+
+  async function pintarVisor() {
     const visor = raiz.querySelector("#paes-visor");
-    const h = est.hojas.find((x) => x.id === hojaId);
-    if (!visor || !h) return;
-    const url = await urlDeImagen(hojaId + ":pagina");
+    const h = est.hojas.find((x) => x.id === est.visor);
+    const e = ensayoActual();
+    const c = cursoActual();
+    if (!visor || !h || !e || !c) return;
+    const caja = visor.querySelector(".paes-visor-cuerpo");
+    const scroll = { visor: visor.scrollTop, lista: caja ? caja.querySelector(".paes-pregs").scrollTop : 0 };
+    const url = await urlDeImagen(h.id + ":pagina");
+    if (est.visor !== h.id) return;
+    const alumno = h.estudianteId ? c.estudiantes.find((s) => s.id === h.estudianteId) : null;
+    const hayClave = e.clave.some((k) => k.r);
+    const cor = L.corregirHoja(h, e.clave);
+    const p = L.puntajeDe(cor.correctas, e.tabla);
+    const editadas = Object.keys((h.ediciones && h.ediciones.respuestas) || {}).length;
+    const legible = h.estado !== "ilegible";
+    const avisos = (advertenciasDelEnsayo(e).get(h.id) || []).filter((a) => a.preguntas);
+    const lista = hojasDelEnsayo(e.id);
+    const pos = lista.findIndex((x) => x.id === h.id);
     visor.innerHTML = `<div class="modal-caja paes-visor-caja">
-      <div class="paes-visor-cab"><b>${esc(h.archivo)} · página ${h.pagina}</b><button type="button" class="secundario chico" data-accion="cerrar-visor">Cerrar ✕</button></div>
-      ${url ? `<img src="${url}" alt="Hoja de respuestas escaneada" />` : `<p class="ayuda">La imagen de esta hoja ya no está guardada.</p>`}
+      <div class="paes-visor-cab">
+        <div><b>Hoja ${pos + 1} de ${lista.length}</b> · ${alumno ? esc(L.nombreCompletoPaes(alumno)) : "<i>Sin identificar</i>"}<br><small>${esc(h.archivo)} · página ${h.pagina}${h.manual ? " · respuestas ingresadas a mano" : ""}</small></div>
+        <div class="paes-visor-botones">
+          ${legible && hayClave ? `<span class="paes-visor-puntaje"><b>${cor.correctas}</b> correctas · ${p == null ? "sin tabla" : `<b>${p}</b> puntos`}</span>` : ""}
+          <button type="button" class="secundario chico" data-accion="visor-ir" data-id="${pos > 0 ? esc(lista[pos - 1].id) : ""}" ${pos > 0 ? "" : "disabled"}>← Anterior</button>
+          <button type="button" class="secundario chico" data-accion="visor-ir" data-id="${pos < lista.length - 1 ? esc(lista[pos + 1].id) : ""}" ${pos < lista.length - 1 ? "" : "disabled"}>Siguiente →</button>
+          <button type="button" class="secundario chico" data-accion="deshacer" ${est.deshacer.length ? "" : "disabled"}>↩ Deshacer</button>
+          <button type="button" class="chico" data-accion="cerrar-visor">Cerrar ✕</button>
+        </div>
+      </div>
+      ${legible ? `<div class="paes-leyenda"><span><i style="background:${COLOR_MARCA.correcta}"></i>Correcta</span><span><i style="background:${COLOR_MARCA.incorrecta}"></i>Incorrecta</span><span><i style="background:${COLOR_MARCA.falto}"></i>La correcta que faltó</span><span><i style="background:${COLOR_MARCA.doble}"></i>Doble marca</span><span class="paes-leyenda-nota">Pulsa una burbuja o una letra para corregir. Lo que leyó la app se conserva${editadas ? ` · <b>${plural(editadas, "respuesta editada", "respuestas editadas")}</b>` : ""}.</span></div>` : `<p class="paes-nota" style="margin:0 0 10px;">La app no pudo leer esta hoja. Puedes volver a escanearla o <button type="button" class="chico" data-accion="ingresar-a-mano" data-id="${esc(h.id)}">✍ ingresar sus respuestas a mano</button></p>`}
+      ${avisos.length ? `<ul class="paes-advertencias">${avisos.map((a) => `<li>${esc(a.detalle)}</li>`).join("")}</ul>` : ""}
+      <div class="paes-visor-cuerpo">
+        <div class="paes-visor-imagen">${url ? `<img src="${url}" alt="Hoja de respuestas escaneada" />${legible && !h.manual ? svgDeHoja(h, e) : ""}` : `<p class="ayuda">La imagen de esta hoja ya no está guardada.</p>`}</div>
+        <div class="paes-pregs">${legible ? htmlPreguntas(h, e) : ""}</div>
+      </div>
     </div>`;
     visor.style.display = "flex";
+    visor.scrollTop = scroll.visor;
+    const nueva = visor.querySelector(".paes-pregs");
+    if (nueva) nueva.scrollTop = scroll.lista;
+  }
+
+  // Edición manual de una respuesta. letra: "A".."E", "" (sin respuesta) o null (volver a
+  // lo que leyó la app). Lo leído nunca se toca: la edición se guarda aparte.
+  async function editarRespuesta(hojaId, n, letra, opciones) {
+    const h = est.hojas.find((x) => x.id === hojaId);
+    if (!h) return;
+    if (!h.ediciones) h.ediciones = { respuestas: {} };
+    const eds = h.ediciones.respuestas;
+    const antes = eds[n];
+    const vigenteAntes = L.respuestaVigente(h, n);
+    // pulsar la alternativa que ya está elegida la deja sin respuesta
+    if (letra !== null && !(opciones && opciones.exacto) && vigenteAntes.estado === "ok" && vigenteAntes.letras === letra && letra !== "") letra = "";
+    if (letra === null) delete eds[n];
+    else eds[n] = letra;
+    const vigenteDespues = L.respuestaVigente(h, n);
+    if (vigenteAntes.estado === vigenteDespues.estado && vigenteAntes.letras === vigenteDespues.letras && antes === eds[n]) return;
+    if (!(opciones && opciones.sinHistorial)) est.deshacer.push({ tipo: "respuesta", hojaId, n, antes });
+    const texto = (r) => (r.estado === "ok" ? r.letras : r.estado === "doble" ? "doble marca (" + r.letras + ")" : "sin respuesta");
+    await guardar("hojas", h);
+    auditar(h.ensayoId, h.id, `respuesta de la pregunta ${n}${opciones && opciones.sinHistorial ? " (deshacer)" : ""}`, texto(vigenteAntes), texto(vigenteDespues));
+    if (est.visor) pintarVisor();
+    else pintar();
+  }
+
+  async function deshacerUltimo() {
+    const u = est.deshacer.pop();
+    if (!u) return;
+    if (u.tipo === "respuesta") {
+      await editarRespuesta(u.hojaId, u.n, u.antes === undefined ? null : u.antes, { sinHistorial: true, exacto: true });
+    } else if (u.tipo === "hoja") {
+      const h = est.hojas.find((x) => x.id === u.hojaId);
+      if (h) {
+        const ahora = {};
+        Object.keys(u.antes).forEach((k) => (ahora[k] = h[k]));
+        Object.assign(h, u.antes);
+        await guardar("hojas", h);
+        auditar(h.ensayoId, h.id, u.campo + " (deshacer)", JSON.stringify(ahora), JSON.stringify(u.antes));
+      }
+      if (est.visor) pintarVisor();
+      else pintar();
+    }
+    toast("Se deshizo el último cambio");
+  }
+
+  // historial de cambios del ensayo (auditoría): qué cambió, cuándo, de qué valor a cuál
+  async function verHistorial() {
+    const visor = raiz.querySelector("#paes-visor");
+    const e = ensayoActual();
+    if (!visor || !e) return;
+    let filas = [];
+    try {
+      filas = await PaesDB.porIndice("auditoria", "ensayoId", e.id);
+    } catch (err) {
+      console.error(err);
+    }
+    filas.sort((a, b) => (b.cuando || "").localeCompare(a.cuando || ""));
+    const hojas = hojasDelEnsayo(e.id);
+    const nHoja = (id) => {
+      const i = hojas.findIndex((x) => x.id === id);
+      return i >= 0 ? "Hoja " + (i + 1) : id ? "Hoja quitada" : "Ensayo";
+    };
+    const fecha = (iso) => {
+      const d = new Date(iso);
+      return isNaN(d) ? "" : d.toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    };
+    const corto = (v) => {
+      const s = v == null ? "" : String(v);
+      return s.length > 90 ? s.slice(0, 90) + "…" : s;
+    };
+    est.visor = null;
+    visor.innerHTML = `<div class="modal-caja paes-visor-caja">
+      <div class="paes-visor-cab"><div><b>Historial de cambios</b><br><small>${esc(etiquetaEnsayo(e))} · ${plural(filas.length, "cambio registrado", "cambios registrados")}. Lo que leyó la app nunca se borra: aquí queda cada edición con su valor anterior.</small></div>
+        <button type="button" class="chico" data-accion="cerrar-visor">Cerrar ✕</button></div>
+      ${filas.length ? `<div class="paes-tabla-scroll"><table class="paes-tabla"><thead><tr><th>Cuándo</th><th>Dónde</th><th>Qué cambió</th><th>Antes</th><th>Después</th></tr></thead><tbody>${filas.map((f) => `<tr><td style="white-space:nowrap;">${esc(fecha(f.cuando))}</td><td style="white-space:nowrap;">${esc(nHoja(f.hojaId))}</td><td>${esc(f.campo)}</td><td>${esc(corto(f.antes))}</td><td>${esc(corto(f.despues))}</td></tr>`).join("")}</tbody></table></div>` : `<p class="ayuda">Aún no hay cambios registrados en este ensayo.</p>`}
+    </div>`;
+    visor.style.display = "flex";
+    visor.scrollTop = 0;
   }
 
   // ============================================================ PASO 5 · resultados
@@ -1400,7 +1594,12 @@
       <div class="paes-cabecera">
         <div><h2 style="margin:0;">Resultados · ${esc(nombrePrueba(e))}</h2>
         <p class="ayuda" style="margin:4px 0 0;">${esc(c.colegio)} · ${esc(etiquetaCurso(c))}${e.forma ? " · Forma " + esc(e.forma) : ""}${e.fecha ? " · " + esc(PaesExcel.fechaCorta(e.fecha)) : ""}</p></div>
-        <div class="paes-cabecera-acciones"><button type="button" data-accion="descargar-excel">⬇ Descargar Excel</button></div>
+        <div class="paes-cabecera-acciones">
+          <button type="button" data-accion="informe-pdf" ${est.generando ? "disabled" : ""}>📄 Informe PDF</button>
+          <button type="button" data-accion="informe-word" ${est.generando ? "disabled" : ""}>📝 Informe Word</button>
+          <button type="button" class="secundario" data-accion="descargar-excel">⬇ Excel</button>
+          <label class="paes-filtro" title="Para uso interno: el informe muestra solo el RUT, sin nombres"><input type="checkbox" data-cambio="sin-nombres" ${est.sinNombres ? "checked" : ""} /> Informe sin nombres</label>
+        </div>
       </div>
       ${htmlAvisos(avisos, "amarillo")}
       <div class="paes-datos">
@@ -1433,7 +1632,90 @@
         ${res.noRindieron.length ? `<p class="ayuda">Están en la lista, pero no tienen hoja en este ensayo. No es un error y no se incluyen en los resultados.</p><ul class="paes-no-rindieron">${estudiantesOrdenados({ estudiantes: res.noRindieron }).map((s) => `<li>${esc(L.nombreCompletoPaes(s))} <small>${esc(L.formatearRutPaes(s.rut))}</small></li>`).join("")}</ul>` : `<p class="ayuda" style="margin:0;">Todos los estudiantes de la lista tienen hoja.</p>`}
       </div>
     </div>`;
+    h += htmlMejores(res) + htmlAnalisis(e, hojas) + htmlCombinada(c);
     return h;
+  }
+
+  // los cinco mejores puntajes (con empates en el quinto lugar)
+  function htmlMejores(res) {
+    const mejores = res.filas.filter((f) => f.puntaje != null && f.lugar <= 5);
+    if (!mejores.length) return "";
+    return `<div class="tarjeta"><h2 style="font-size:16px;">Los cinco mejores puntajes</h2>
+      <ol class="paes-mejores">${mejores.map((f) => `<li value="${f.lugar}"><b>${f.estudianteId ? esc(f.nombre) : "Sin identificar"}</b> <span>${f.puntaje} puntos · ${f.correctas} correctas</span></li>`).join("")}</ol></div>`;
+  }
+
+  // análisis por pregunta: % de aciertos, % de omisión y qué alternativa se marcó más
+  function htmlAnalisis(e, hojas) {
+    if (!e.clave.some((k) => k.r)) return "";
+    const an = L.analisisPorPregunta(e, hojas);
+    const extremos = L.preguntasExtremas(an, 5);
+    const dificiles = new Set(extremos.dificiles.map((a) => a.n)), faciles = new Set(extremos.faciles.map((a) => a.n));
+    const nAlt = e.alternativas || 4;
+    const letras = L.LETRAS_PAES.slice(0, nAlt).split("");
+    const lista = (ps) => ps.map((a) => `<b>${a.n}</b> (${numero(a.pctAciertos)} %)`).join(", ");
+    return `<div class="tarjeta"><h2 style="font-size:16px;">Análisis por pregunta</h2>
+      <p class="ayuda">Porcentajes sobre las ${plural(hojas.filter(vigente).length, "hoja contada", "hojas contadas")}. Con pocos estudiantes, uno solo mueve varios puntos el porcentaje.</p>
+      ${extremos.dificiles.length ? `<p class="paes-extremos"><span class="paes-chip rojo">Más difíciles</span> ${lista(extremos.dificiles)}</p><p class="paes-extremos"><span class="paes-chip verde">Más fáciles</span> ${lista(extremos.faciles)}</p>` : ""}
+      <details class="paes-detalle"><summary>Ver las ${e.clave.length} preguntas</summary>
+      <div class="paes-tabla-scroll"><table class="paes-tabla paes-analisis"><thead><tr><th>Pregunta</th><th>Clave</th><th>% aciertos</th><th>% omisión</th>${letras.map((l) => `<th>${l}</th>`).join("")}<th>Más marcada</th></tr></thead><tbody>
+      ${an.map((a) => `<tr class="${!a.valida ? "paes-no-valida" : dificiles.has(a.n) ? "paes-dificil" : faciles.has(a.n) ? "paes-facil" : ""}"><td class="num">${a.n}</td><td class="num"><b>${esc(a.clave || "—")}</b>${a.valida ? "" : " <small>(no válida)</small>"}</td><td class="num">${a.clave ? numero(a.pctAciertos) + " %" : "—"}</td><td class="num">${numero(a.pctOmision)} %</td>${letras.map((l) => `<td class="num${a.clave === l ? " es-clave" : ""}">${a.cuenta[l]}</td>`).join("")}<td class="num">${esc(a.masMarcada || "—")}</td></tr>`).join("")}
+      </tbody></table></div></details></div>`;
+  }
+
+  // todos los ensayos del curso lado a lado (por ejemplo, Competencia Lectora y M1)
+  function htmlCombinada(c) {
+    const ensayos = ensayosDelCurso(c.id).filter((e) => hojasDelEnsayo(e.id).some(vigente));
+    if (ensayos.length < 2) return "";
+    const comb = L.resultadosCombinados(ensayos.map((e) => ({ ensayo: e, hojas: hojasDelEnsayo(e.id) })), c.estudiantes);
+    if (!comb.filas.length) return "";
+    return `<div class="tarjeta"><h2 style="font-size:16px;">Vista combinada del curso</h2>
+      <p class="ayuda">Los ensayos del curso lado a lado, por orden alfabético. No se calcula un puntaje combinado: cada prueba se informa con su propia tabla.</p>
+      <div class="paes-tabla-scroll"><table class="paes-tabla paes-resultados"><thead><tr><th rowspan="2">Estudiante</th><th rowspan="2">RUT</th>${ensayos.map((e) => `<th colspan="2" class="grupo">${esc(etiquetaEnsayo(e))}</th>`).join("")}</tr>
+      <tr>${ensayos.map(() => `<th>Correctas</th><th>Puntaje</th>`).join("")}</tr></thead><tbody>
+      ${comb.filas.map((f) => `<tr><td>${esc(f.nombre)}</td><td class="rut">${esc(L.formatearRutPaes(f.rut))}</td>${f.celdas.map((x) => (x ? `<td class="num">${x.correctas}</td><td class="num puntaje">${x.puntaje == null ? `<span class="paes-falta">sin tabla</span>` : x.puntaje}</td>` : `<td class="num paes-vacio" colspan="2">no rindió</td>`)).join("")}</tr>`).join("")}
+      </tbody></table></div></div>`;
+  }
+
+  // informe para el orientador, en PDF o Word, con el estilo de los informes de Kuder
+  async function descargarInforme(formato) {
+    const c = cursoActual();
+    const e = ensayoActual();
+    if (!c || !e || est.generando) return;
+    const hojas = hojasDelEnsayo(e.id);
+    const datos = {
+      curso: c,
+      ensayo: e,
+      nombrePrueba: nombrePrueba(e),
+      etiquetaCurso: etiquetaCurso(c),
+      resultados: L.resultadosEnsayo(e, hojas, c.estudiantes),
+      analisis: L.analisisPorPregunta(e, hojas),
+      pendientes: contarEstados(e).revisar,
+      sinNombres: est.sinNombres,
+    };
+    const empezar = async () => {
+      est.generando = true;
+      pintar();
+      toast("Creando el informe…");
+      try {
+        const blob = formato === "pdf" ? await PaesInforme.pdf(datos) : await PaesInforme.word(datos);
+        const prueba = e.prueba === "OTRA" ? nombreSeguro(e.pruebaNombre) : e.prueba;
+        descargar(blob, `Informe_Ensayo_PAES_${prueba}${e.forma ? "_F" + nombreSeguro(e.forma) : ""}_${nombreSeguro(c.colegio)}_${nombreSeguro(etiquetaCurso(c))}${e.fecha ? "_" + e.fecha : ""}${est.sinNombres ? "_sin_nombres" : ""}.${formato === "pdf" ? "pdf" : "docx"}`);
+        toast("Informe descargado");
+      } catch (err) {
+        console.error(err);
+        toast("No se pudo crear el informe.");
+      }
+      est.generando = false;
+      pintar();
+    };
+    if (datos.pendientes) {
+      confirmar({
+        titulo: "Hay advertencias pendientes",
+        texto: `Quedan ${plural(datos.pendientes, "hoja con advertencias sin revisar", "hojas con advertencias sin revisar")} (paso 4). Puedes crear el informe igual, pero los resultados podrían cambiar cuando las revises.`,
+        textoBoton: "Crear el informe igual",
+        onConfirmar: empezar,
+      });
+    } else empezar();
   }
 
   async function descargarExcel() {
@@ -1455,7 +1737,7 @@
 
   function alClic(ev) {
     if (ev.target.id === "paes-visor") {
-      ev.target.style.display = "none";
+      cerrarVisor();
       return;
     }
     const paso = ev.target.closest("[data-paso]");
@@ -1607,7 +1889,35 @@
         verHoja(id);
         break;
       case "cerrar-visor":
-        raiz.querySelector("#paes-visor").style.display = "none";
+        cerrarVisor();
+        break;
+      case "visor-ir":
+        if (id) verHoja(id);
+        break;
+      case "resp":
+        editarRespuesta(id, Number(b.dataset.n), b.dataset.l);
+        break;
+      case "resp-leida":
+        editarRespuesta(id, Number(b.dataset.n), null);
+        break;
+      case "deshacer":
+        deshacerUltimo();
+        break;
+      case "historial":
+        verHistorial();
+        break;
+      case "ingresar-a-mano": {
+        const h = est.hojas.find((x) => x.id === id);
+        if (!h) break;
+        est.visor = id;
+        cambiarHoja(id, { estado: "ok", manual: true, revisada: false }, "hoja ilegible: respuestas ingresadas a mano", "Marca las respuestas mirando la imagen de la hoja");
+        break;
+      }
+      case "informe-pdf":
+        descargarInforme("pdf");
+        break;
+      case "informe-word":
+        descargarInforme("word");
         break;
       case "revisada": {
         const h = est.hojas.find((x) => x.id === id);
@@ -1666,6 +1976,10 @@
     if (t.dataset.cambio === "previa-curso") {
       est.previa.cursoElegido = t.value;
       pintar();
+      return;
+    }
+    if (t.dataset.cambio === "sin-nombres") {
+      est.sinNombres = t.checked;
       return;
     }
     if (t.dataset.cambio === "solo-revisar") {

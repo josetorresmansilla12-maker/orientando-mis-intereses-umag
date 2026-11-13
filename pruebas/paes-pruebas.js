@@ -129,6 +129,19 @@ function ejecutarPruebasPaes(opciones) {
 
   // ------------------------------------------------------------ advertencias
   titulo("Advertencias");
+  // etapa 3: preguntas extremas y vista combinada
+  const ext = L.preguntasExtremas(an, 2);
+  comprobar("preguntas extremas: hay más difíciles y más fáciles, sin repetir", ext.dificiles.length === 2 && ext.faciles.length === 2 && ext.dificiles[0].pctAciertos <= ext.faciles[0].pctAciertos);
+  const comb = L.resultadosCombinados([{ ensayo, hojas }, { ensayo, hojas: hojas.slice(0, 1) }], estudiantes);
+  comprobar("vista combinada: una fila por estudiante con hoja y una celda por ensayo", comb.filas.length >= 1 && comb.filas.every((f) => f.celdas.length === 2) && comb.filas.some((f) => f.celdas[1] === null));
+  // edición manual: pasa sobre lo leído sin modificarlo, y se puede volver atrás
+  const hEd = hoja("ed", "ABCD-");
+  hEd.ediciones = { respuestas: { 5: "A" } };
+  igual("edición manual: cuenta la respuesta editada", L.corregirHoja(hEd, clave5).correctas, 5);
+  igual("edición manual: lo leído queda intacto", hEd.lectura.resp, "ABCD-");
+  delete hEd.ediciones.respuestas[5];
+  igual("edición manual: al quitarla vuelve lo leído", L.corregirHoja(hEd, clave5).correctas, 4);
+
   const clave65 = Array.from({ length: 65 }, (_, i) => ({ n: i + 1, r: "ABCD"[i % 4], valida: true }));
   const ens65 = { clave: clave65, tabla: L.TABLAS_PAES.CL, alternativas: 4 };
   const tipos = (h) => L.advertenciasDeHoja(h, ens65).map((a) => a.tipo);

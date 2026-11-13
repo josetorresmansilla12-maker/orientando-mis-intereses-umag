@@ -398,3 +398,56 @@ Importante
 - No borres ni muevas las carpetas "css", "js", "assets" ni "vendor": la aplicación
   las necesita para funcionar. Si algún día necesitas mover la aplicación de lugar,
   mueve la carpeta completa, no solo el archivo index.html.
+
+
+ENSAYOS PAES (módulo aparte de los test vocacionales)
+=====================================================
+
+Arriba, en "1. Elige el test", el tercer botón es "Ensayos PAES". Sirve para
+corregir los ensayos de preparación tipo PAES (Competencia Lectora y Matemática 1)
+a partir de las hojas de respuesta escaneadas, sin ZipGrade ni planillas aparte.
+Sus datos se guardan solo en este computador y no se mezclan con los test.
+
+El trabajo va en cinco pasos:
+
+1. Curso y lista. Crea el curso (colegio, nivel, letra, año) y sube la lista
+   oficial en Excel o CSV, con nombre y RUT. La app deja el RUT sin puntos y con
+   guion, revisa el dígito verificador y muestra los nombres como "Nombres
+   Apellidos". Antes de confirmar puedes corregir cualquier fila.
+
+2. Ensayo, clave y tabla. Elige la prueba, la forma y la fecha. La clave se
+   importa (CSV o Excel) o se escribe. Cada pregunta tiene la casilla "válida":
+   desmárcala en las anuladas o de pilotaje y todo se recalcula. La tabla de
+   conversión (correctas -> puntaje) viene cargada y se puede editar.
+   Las claves no vienen con la aplicación: hay que importarlas en cada computador.
+
+3. Subir hojas. Arrastra uno o varios PDF del escáner (o imágenes), una hoja por
+   página. Da lo mismo si vienen torcidas, giradas o al revés. Si subes dos veces
+   el mismo archivo o la misma hoja, no se cuenta dos veces.
+
+4. Revisión. La app ya leyó, vinculó por RUT y corrigió. Aquí solo decides lo que
+   quedó en duda (en amarillo): a quién corresponde una hoja, una doble marca, una
+   marca muy tenue. El recorte muestra lo que el estudiante escribió a mano.
+   - "Ver y corregir respuestas" abre la hoja con lo leído encima: verde es
+     correcta, rojo incorrecta, azul la correcta que faltó y naranja doble marca.
+     Pulsa una burbuja o una letra para corregir; el puntaje cambia al instante.
+   - Lo que leyó la app nunca se borra. Cada cambio se puede deshacer y queda en
+     el "Historial de cambios", con el valor anterior.
+   - Una hoja que no se pudo leer se puede volver a escanear o ingresar a mano.
+   - Cuando termines con una hoja, márcala como revisada.
+
+5. Resultados. Tabla del curso de mayor a menor puntaje (los empates comparten
+   lugar), estadísticas, los cinco mejores, análisis por pregunta y, si el curso
+   tiene más de un ensayo, la vista combinada lado a lado.
+   - "Informe PDF" e "Informe Word": el informe para el orientador, con el mismo
+     estilo de los informes de Kuder. El Word se puede editar.
+   - "Informe sin nombres": muestra solo el RUT, para uso interno.
+   - "Excel": resultados, respuestas, análisis por pregunta y hojas por revisar.
+   - Si quedan advertencias sin revisar, la app avisa antes de crear el informe.
+
+Sobre los puntajes: son referenciales, no oficiales. El puntaje sale de buscar las
+correctas en la tabla de conversión. Si una hoja tiene más correctas que el máximo
+de la tabla, queda "sin tabla": la app no recorta ni inventa un puntaje.
+
+Los estudiantes de la lista que no tienen hoja aparecen como "No rindieron". No es
+un error y no entran en las estadísticas.

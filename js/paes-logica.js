@@ -708,6 +708,34 @@
     });
   }
 
+  // Las n preguntas válidas con menos y con más aciertos.
+  function preguntasExtremas(analisis, n) {
+    const validas = (analisis || []).filter((a) => a.valida && a.clave && a.pctAciertos != null);
+    if (validas.length < 2) return { dificiles: [], faciles: [] };
+    const k = Math.min(n || 5, Math.floor(validas.length / 2));
+    const asc = validas.slice().sort((a, b) => a.pctAciertos - b.pctAciertos || a.n - b.n);
+    const desc = validas.slice().sort((a, b) => b.pctAciertos - a.pctAciertos || a.n - b.n);
+    return { dificiles: asc.slice(0, k), faciles: desc.slice(0, k) };
+  }
+
+  // Varios ensayos de un curso lado a lado: una fila por estudiante con al menos una hoja,
+  // por orden alfabético. No calcula un puntaje combinado.
+  //   lista: [{ ensayo, hojas }]
+  function resultadosCombinados(lista, estudiantes) {
+    const porEnsayo = lista.map((x) => {
+      const mapa = new Map();
+      resultadosEnsayo(x.ensayo, x.hojas, estudiantes).filas.forEach((f) => {
+        if (f.estudianteId && !mapa.has(f.estudianteId)) mapa.set(f.estudianteId, { correctas: f.correctas, puntaje: f.puntaje, lugar: f.lugar });
+      });
+      return mapa;
+    });
+    const filas = (estudiantes || [])
+      .filter((e) => porEnsayo.some((m) => m.has(e.id)))
+      .sort((a, b) => (a.apellidos || "").localeCompare(b.apellidos || "", "es") || (a.nombres || "").localeCompare(b.nombres || "", "es"))
+      .map((e) => ({ estudianteId: e.id, nombre: nombreCompletoPaes(e), rut: e.rut, celdas: porEnsayo.map((m) => m.get(e.id) || null) }));
+    return { filas };
+  }
+
   // ================================================================ huellas
 
   // huella corta de un bloque de bytes (para saber si un archivo o una página ya se subió).
@@ -750,6 +778,8 @@
     advertenciasDeHoja,
     resultadosEnsayo,
     analisisPorPregunta,
+    preguntasExtremas,
+    resultadosCombinados,
     huellaDeBytes,
     medianaDe,
   };
