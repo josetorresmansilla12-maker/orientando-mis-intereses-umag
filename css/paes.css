@@ -348,3 +348,53 @@ body.modulo-paes .topbar-acciones { display: none !important; }
 .pinf-pie { margin: 6px 0 0 !important; }
 .pinf-numero { text-align: right; font-size: 10px; color: var(--texto-suave); padding: 6px 34px 0; }
 .pinf-tabla th.rut { color: white; }
+
+/* ---------- vistas del módulo ---------- */
+.paes-vistas { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.paes-vistas button { font-size: 13.5px; padding: 8px 14px; }
+.paes-subtitulo { font-size: 14px; color: var(--paes-oscuro); margin: 18px 0 8px; }
+
+/* clavijeros */
+.paes-clavijero-aplicado { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; background: var(--paes-fondo); border: 1px solid var(--paes-borde); border-radius: 9px; padding: 9px 12px; margin-bottom: 12px; }
+.paes-clavijero-aplicado label { font-size: 12px; font-weight: 700; color: var(--paes-oscuro); margin: 0; }
+.paes-clavijero-aplicado select { width: auto; flex: 1 1 220px; max-width: 420px; padding: 5px 8px; }
+.paes-uso { border-top: 1px solid var(--borde); padding-top: 8px; }
+.paes-uso summary { font-weight: 400; color: var(--texto); }
+
+/* resultados guardados */
+.paes-colegio h2 small { font-size: 12px; font-weight: 400; color: var(--texto-suave); margin-left: 6px; }
+.paes-res-curso { border: 1px solid var(--paes-borde); border-radius: 9px; padding: 8px 12px; margin-top: 8px; }
+.paes-res-curso summary { margin-bottom: 0; font-weight: 400; color: var(--texto); font-size: 14px; }
+.paes-res-curso[open] summary { margin-bottom: 8px; }
+.paes-res-fila { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 9px 0; border-top: 1px solid var(--borde); }
+.paes-res-fila b { display: block; font-size: 14.5px; color: var(--paes-oscuro); }
+.paes-res-fila small { color: var(--texto-suave); font-size: 12.5px; }
+
+/* importar cursos de Kuder */
+.paes-importar { border: 2px solid var(--paes); }
+.paes-importar-lista { max-height: 340px; overflow-y: auto; border: 1px solid var(--borde); border-radius: 9px; padding: 6px 12px; }
+.paes-importar-colegio { font-weight: 700; color: var(--paes-oscuro); font-size: 13.5px; margin: 8px 0 3px; }
+.paes-importar-fila { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 400; padding: 3px 0 3px 14px; margin: 0; cursor: pointer; }
+.paes-importar-fila input { width: auto; margin: 0; }
+
+/* editar carpetas */
+.paes-duplicado { border-left: 5px solid var(--paes-amarillo-borde); background: var(--paes-amarillo); }
+.paes-duplicado p { margin: 0; font-size: 13.5px; }
+.paes-carp-colegio { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.paes-carp-colegio span { font-size: 20px; }
+.paes-carp-colegio input { flex: 1 1 280px; max-width: 460px; font-size: 16px; font-weight: 700; color: var(--paes-oscuro); }
+.paes-carp-colegio small { color: var(--texto-suave); font-size: 12px; }
+.paes-carp-curso { border: 1px solid var(--paes-borde); border-radius: 9px; padding: 10px 12px; margin-top: 10px; background: var(--paes-fondo); }
+.paes-carp-campos { display: grid; grid-template-columns: 130px 70px 90px 1fr 1fr; gap: 10px; }
+@media (max-width: 860px) { .paes-carp-campos { grid-template-columns: 1fr 1fr; } }
+.paes-carp-campos label { font-size: 11.5px; font-weight: 700; color: var(--texto-suave); margin: 0; }
+.paes-carp-campos select, .paes-carp-campos input { margin-top: 3px; padding: 5px 8px; font-size: 13.5px; }
+.paes-carp-pie { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.paes-carp-pie small { color: var(--texto-suave); font-size: 12.5px; }
+
+/* revisión: identificar */
+.paes-linea input.paes-buscar { width: auto; flex: 0 1 210px; padding: 5px 8px; font-size: 13.5px; }
+.paes-sin-hoja { margin-top: 10px; border: 1px solid var(--paes-borde); border-radius: 9px; padding: 10px 12px; background: var(--paes-fondo); }
+.paes-agregar-manual { border: 1px dashed var(--paes); border-radius: 9px; padding: 10px 12px; margin-bottom: 8px; font-size: 13.5px; }
+.paes-agregar-manual .grid-form { grid-template-columns: repeat(3, 1fr); margin-top: 8px; }
+.paes-agregar-manual .acciones-form { margin-top: 10px; }

@@ -445,6 +445,38 @@ El trabajo va en cinco pasos:
    - "Excel": resultados, respuestas, análisis por pregunta y hojas por revisar.
    - Si quedan advertencias sin revisar, la app avisa antes de crear el informe.
 
+Arriba del módulo hay cuatro botones:
+
+- "Trabajar un curso": los cinco pasos de arriba.
+- "Resultados guardados": todo lo corregido, ordenado por colegio y curso. Al
+  abrir un curso (por ejemplo, 2° Medio A) aparecen sus pruebas (CL y M1), con
+  "Ver resultados" y la descarga del informe en PDF, Word y Excel de cada una.
+  Los resultados se guardan solos: no hay que apretar "guardar".
+- "Clavijeros subidos": las claves de respuestas guardadas en este computador
+  (normalmente una de CL y otra de M1). Aquí se suben clavijeros nuevos, se
+  despliega el mapa de cada uno para modificarlo y se ve a qué cursos y
+  estudiantes se les aplicó. Si modificas un clavijero, cambia en todos los
+  cursos que lo usan y sus puntajes se recalculan.
+  Al crear el ensayo de un curso eliges qué clavijero se le aplica; se puede
+  cambiar después en el paso 2. La clave que cargas dentro de un ensayo también
+  queda guardada como clavijero.
+- "Editar carpetas": ordena colegios y cursos, como en Kuder. Cambia el nombre de
+  un colegio (en todos sus cursos), corrige nivel, letra o año, pasa un curso a
+  otro colegio o fusiona dos cursos. Avisa si dos colegios parecen el mismo.
+
+Importar cursos de datos de Kuder: junto a "Nuevo curso". Marca los cursos de
+Kuder que quieras y la app crea un curso nuevo por cada uno, con sus nombres y
+RUT, separado de los que ya tienes. Los datos de Kuder no se tocan. Ojo: en
+Kuder el nombre viene en un solo campo, así que queda completo en "Nombres";
+si necesitas el orden por apellido, corrígelo en la lista del curso.
+
+En la revisión (paso 4) hay tres ayudas para identificar hojas:
+- "Estudiantes que aún no tienen hoja" despliega la lista de quienes faltan.
+- En cada hoja, el buscador encuentra al estudiante por nombre o por RUT. La
+  lista completa sigue disponible al lado.
+- "No está en la lista: agregar su nombre y RUT" agrega al estudiante a la lista
+  del curso y le asigna la hoja.
+
 Sobre los puntajes: son referenciales, no oficiales. El puntaje sale de buscar las
 correctas en la tabla de conversión. Si una hoja tiene más correctas que el máximo
 de la tabla, queda "sin tabla": la app no recorta ni inventa un puntaje.
