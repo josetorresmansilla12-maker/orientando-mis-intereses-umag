@@ -112,9 +112,12 @@
       }
     });
     if (actual.length) unidades.push(actual.join(" "));
-    if (unidades.length === 1) return { apellidos: "", nombres: tituloNombre(unidades[0]), seguro: false };
+    if (unidades.length === 1) return { apellidos: "", nombres: tituloNombre(unidades[0]), seguro: false, raro: true };
     const nAp = unidades.length >= 3 ? 2 : 1;
-    return { apellidos: tituloNombre(unidades.slice(0, nAp).join(" ")), nombres: tituloNombre(unidades.slice(nAp).join(" ")), seguro: false };
+    // "raro": la forma no es la habitual (dos apellidos y uno o dos nombres), así que la suposición es más débil
+    const partido = { apellidos: tituloNombre(unidades.slice(0, nAp).join(" ")), nombres: tituloNombre(unidades.slice(nAp).join(" ")), seguro: false };
+    if (unidades.length < 3 || unidades.length > 4) partido.raro = true;
+    return partido;
   }
 
   function nombreCompletoPaes(e) {
@@ -248,13 +251,16 @@
         curso: c.curso,
         nombreOriginal: c.nombreOriginal,
         nombreSeguro: c.partes.seguro,
+        nombreRaro: !!c.partes.raro,
       });
     });
     if (repetidos) avisos.push(`${repetidos} ${repetidos === 1 ? "fila repetía" : "filas repetían"} un RUT que ya estaba en la lista y no se ${repetidos === 1 ? "cargó" : "cargaron"} dos veces.`);
     const invalidos = estudiantes.filter((e) => e.rut && !e.rutValido).length;
     if (invalidos) avisos.push(`${invalidos} RUT ${invalidos === 1 ? "tiene" : "tienen"} el dígito verificador incorrecto: ${invalidos === 1 ? "revísalo" : "revísalos"} antes de confirmar.`);
-    const dudosos = estudiantes.filter((e) => !e.nombreSeguro).length;
-    if (dudosos) avisos.push(`En ${dudosos} ${dudosos === 1 ? "estudiante" : "estudiantes"} no se pudo distinguir con seguridad nombres de apellidos: ${dudosos === 1 ? "revísalo" : "revísalos"} en la vista previa.`);
+    const supuestos = estudiantes.filter((e) => !e.nombreSeguro).length;
+    const raros = estudiantes.filter((e) => !e.nombreSeguro && e.nombreRaro).length;
+    if (supuestos) avisos.push("La lista trae apellidos y nombres juntos en una sola columna. Se tomaron los dos primeros como apellidos y el resto como nombres. Esto no cambia los resultados: las hojas se vinculan por el RUT.");
+    if (raros) avisos.push(`${raros === 1 ? "Hay 1 nombre marcado" : "Hay " + raros + " nombres marcados"} en amarillo porque no ${raros === 1 ? "tiene" : "tienen"} la forma habitual (dos apellidos y uno o dos nombres): ${raros === 1 ? "revísalo" : "revísalos"}.`);
     const cursos = Array.from(new Set(estudiantes.map((e) => e.curso).filter(Boolean)));
     if (cursos.length > 1) avisos.push(`El archivo trae ${cursos.length} cursos distintos (${cursos.join(", ")}): elige cuál cargar.`);
     return { estudiantes, avisos, columnas: col, cursoDetectado: cursos.length === 1 ? cursos[0] : "", cursos };

@@ -528,7 +528,7 @@
     }
     h += `<div class="paes-tabla-scroll"><table class="paes-tabla"><thead><tr><th>N°</th><th>Nombres</th><th>Apellidos</th><th>RUT</th><th></th><th>Como venía en el archivo</th><th></th></tr></thead><tbody>`;
     filas.forEach((e, i) => {
-      h += `<tr class="${e.nombreSeguro ? "" : "paes-fila-duda"}"><td class="num">${i + 1}</td>
+      h += `<tr class="${!e.nombreSeguro && e.nombreRaro ? "paes-fila-duda" : ""}"><td class="num">${i + 1}</td>
         <td><input type="text" data-previa="nombres" data-i="${e.i}" value="${esc(e.nombres)}" /></td>
         <td><input type="text" data-previa="apellidos" data-i="${e.i}" value="${esc(e.apellidos)}" /></td>
         <td><input type="text" data-previa="rut" data-i="${e.i}" value="${esc(e.rut)}" /></td>
@@ -564,7 +564,7 @@
         avisos: r.avisos,
         cursos: r.cursos || [],
         cursoElegido: "",
-        estudiantes: r.estudiantes.map((e, i) => ({ i, nombres: e.nombres, apellidos: e.apellidos, rut: L.formatearRutPaes(e.rut), curso: e.curso, nombreOriginal: e.nombreOriginal, nombreSeguro: e.nombreSeguro })),
+        estudiantes: r.estudiantes.map((e, i) => ({ i, nombres: e.nombres, apellidos: e.apellidos, rut: L.formatearRutPaes(e.rut), curso: e.curso, nombreOriginal: e.nombreOriginal, nombreSeguro: e.nombreSeguro, nombreRaro: e.nombreRaro })),
       };
       est.editEst = null;
       pintar();

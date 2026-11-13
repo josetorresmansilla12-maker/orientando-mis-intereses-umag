@@ -34,6 +34,7 @@ function ejecutarPruebasPaes(opciones) {
   igual("apellido con partículas y nombre compuesto", L.separarNombre("De la Fuente Muñoz MARÍA DE LOS ÁNGELES"), { apellidos: "De la Fuente Muñoz", nombres: "María de los Ángeles", seguro: true });
   igual("todo en mayúsculas: dos apellidos primero, sin seguridad", L.separarNombre("GONZALEZ ROJAS ANA MARIA"), { apellidos: "Gonzalez Rojas", nombres: "Ana Maria", seguro: false });
   igual("con coma", L.separarNombre("Soto Vera, Ana"), { apellidos: "Soto Vera", nombres: "Ana", seguro: true });
+  igual("forma poco habitual: se marca para revisar", L.separarNombre("Soto Ana"), { apellidos: "Soto", nombres: "Ana", seguro: false, raro: true });
   igual("se muestra «Nombres Apellidos»", L.nombreCompletoPaes(L.separarNombre("Pérez Soto JUAN PABLO")), "Juan Pablo Pérez Soto");
 
   // ------------------------------------------------------------ lista del curso
