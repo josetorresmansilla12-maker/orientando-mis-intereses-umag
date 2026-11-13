@@ -439,13 +439,29 @@ El trabajo va en cinco pasos:
      sola; si no, buscas al estudiante (el buscador y la lista muestran a los
      estudiantes del colegio separados por curso) o lo agregas con nombre y RUT.
      Queda guardado como "Grupo disperso" del colegio.
-   - "Aplicar otro clavijero" (en "Resultados guardados"): toma un curso que ya
+   - "Agregar clavijero" (antes "Aplicar otro clavijero"): toma un curso que ya
      tiene su lista y le aplica otro clavijero (por ejemplo, ya rindió CL y ahora
      M1). Arriba, "Clavijeros aplicados" muestra qué clavijeros tiene cada curso.
    - Los nombres se muestran y ordenan como "Nombres Apellidos", igual que los
      escriben los estudiantes en la hoja.
    - En la revisión, al asignar o agregar a mano al estudiante de una hoja, la hoja
      sale de "por revisar" solo si ese era su único pendiente.
+   - Un Excel con varias hojas (o con varios cursos en una columna) se separa solo:
+     cada hoja crea un curso aparte, y antes de crear puedes quitar las que no
+     quieras o corregir el colegio, el nivel y la letra.
+   - Hojas de varios cursos en un mismo PDF: si el RUT de una hoja es de otro curso
+     del mismo colegio, la hoja se va sola a ese curso (si ese curso aún no tiene
+     el ensayo, se crea con la misma clave).
+   - Buscador de la revisión: al escribir letras (nombre), números (RUT) o un curso
+     ("4 b") aparecen debajo las opciones, del curso y de los otros cursos del
+     colegio. Al elegir a alguien de otro curso, la hoja pasa a ese curso.
+   - "Transferir a otro curso" (en cada hoja de la revisión): pasa la hoja, y al
+     estudiante que tenga asignado, al curso que elijas.
+   - "Traspasar todas las E a D" (arriba de la revisión): cambia por D todas las
+     respuestas marcadas en E del ensayo, con confirmación. Se puede deshacer.
+   - "Agregar clavijero" (en "Resultados guardados"): crea un ensayo nuevo con ese
+     clavijero solo en ese curso o en todos los cursos del colegio. Nunca borra los
+     resultados anteriores.
    - "Papelera": los cursos eliminados y los estudiantes quitados de una lista
      quedan ahí y se pueden recuperar (o eliminar para siempre). Al eliminar,
      aparece abajo durante 5 segundos el botón "Deshacer".
