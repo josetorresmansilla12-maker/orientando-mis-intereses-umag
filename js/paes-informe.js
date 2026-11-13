@@ -83,7 +83,7 @@
       })),
       noRindieron: d.resultados.noRindieron
         .slice()
-        .sort((a, b) => (a.apellidos || "").localeCompare(b.apellidos || "", "es"))
+        .sort((a, b) => L.nombreCompletoPaes(a).localeCompare(L.nombreCompletoPaes(b), "es"))
         .map((s) => (d.sinNombres ? L.formatearRutPaes(s.rut) || "Sin RUT" : L.nombreCompletoPaes(s))),
       dificiles: extremos.dificiles,
       faciles: extremos.faciles,

@@ -437,3 +437,13 @@ body.modulo-paes .topbar-acciones { display: none !important; }
 .paes-checks input { width: auto; margin: 0; }
 .paes-cierre { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; border: 2px solid var(--morado); }
 .paes-cierre > div:first-child { flex: 1; min-width: 260px; }
+
+/* papelera, deshacer, curso disperso y clavijeros aplicados */
+.paes-deshacer { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 3000; background: #2b2140; color: white; border-radius: 10px; padding: 11px 14px 13px 18px; display: flex; align-items: center; gap: 16px; font-size: 14px; box-shadow: 0 8px 26px rgba(0, 0, 0, 0.35); max-width: min(92vw, 640px); overflow: hidden; }
+.paes-deshacer button { background: white; color: #2b2140; border: 0; border-radius: 7px; padding: 7px 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.paes-deshacer i { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: #c9b6f2; transform-origin: left; animation: paes-deshacer-tiempo 5s linear forwards; }
+@keyframes paes-deshacer-tiempo { to { transform: scaleX(0); } }
+.paes-sin-hoja h4 { margin: 10px 0 4px; font-size: 13.5px; color: var(--morado-oscuro); }
+.paes-sin-hoja h4 small { font-weight: 400; color: var(--texto-suave); }
+.paes-res-pie { margin-top: 8px; align-items: center; }
+.paes-res-pie small { color: var(--texto-suave); font-size: 12px; }

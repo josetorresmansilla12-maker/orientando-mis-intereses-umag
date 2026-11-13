@@ -566,7 +566,8 @@
       else if (hoja.vinculo === "otro-curso") agregar("otro-curso", "Este RUT pertenece a un estudiante de otro curso.");
       else agregar("rut-sin-coincidencia", "El RUT marcado no está en la lista del curso.");
     }
-    if (estId === "invalido") agregar("rut-invalido", "El RUT marcado en la hoja no es válido (el dígito verificador no calza).");
+    // si una persona ya asignó la hoja a alguien, el RUT mal marcado deja de ser un pendiente
+    if (estId === "invalido" && !(hoja.estudianteId && hoja.asignacion && hoja.asignacion !== "exacta")) agregar("rut-invalido", "El RUT marcado en la hoja no es válido (el dígito verificador no calza).");
     if (o.duplicadaDeEstudiante) agregar("dos-hojas", "Hay dos hojas de este estudiante en el ensayo: elige cuál conservar.");
     const clave = (ensayo && ensayo.clave) || [];
     const nAlt = (ensayo && ensayo.alternativas) || 4;

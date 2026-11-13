@@ -432,6 +432,23 @@ El trabajo va en cinco pasos:
      (salvo los que tengan hoja allí) y pasan al curso nuevo.
    - En el paso 5, "Guardar y volver al inicio" deja la pantalla en blanco para
      ingresar más cursos. Lo anterior queda en "Resultados guardados".
+   - "Agregar curso disperso" (en "Ingresar cursos nuevos"): para cuando de un
+     colegio rindieron solo algunos estudiantes y no un curso completo. Escribes el
+     colegio, eliges la prueba y subes el PDF; no necesita lista. Las hojas pasan a
+     la revisión: si el RUT está en algún curso de ese colegio, la hoja se vincula
+     sola; si no, buscas al estudiante (el buscador y la lista muestran a los
+     estudiantes del colegio separados por curso) o lo agregas con nombre y RUT.
+     Queda guardado como "Grupo disperso" del colegio.
+   - "Aplicar otro clavijero" (en "Resultados guardados"): toma un curso que ya
+     tiene su lista y le aplica otro clavijero (por ejemplo, ya rindió CL y ahora
+     M1). Arriba, "Clavijeros aplicados" muestra qué clavijeros tiene cada curso.
+   - Los nombres se muestran y ordenan como "Nombres Apellidos", igual que los
+     escriben los estudiantes en la hoja.
+   - En la revisión, al asignar o agregar a mano al estudiante de una hoja, la hoja
+     sale de "por revisar" solo si ese era su único pendiente.
+   - "Papelera": los cursos eliminados y los estudiantes quitados de una lista
+     quedan ahí y se pueden recuperar (o eliminar para siempre). Al eliminar,
+     aparece abajo durante 5 segundos el botón "Deshacer".
 
 2. Ensayo, clave y tabla. Elige la prueba, la forma y la fecha. La clave se
    importa (CSV o Excel) o se escribe. Cada pregunta tiene la casilla "válida":
