@@ -22,8 +22,8 @@
   // Todo lo que dicen el PDF y el Word, ya en texto: así los dos informes coinciden.
   function contenido(d) {
     const e = d.ensayo, c = d.curso, st = d.resultados.estadisticas;
-    const fecha = e.fecha ? PaesExcel.fechaCorta(e.fecha) : "";
-    const partes = [d.nombrePrueba + (e.forma ? " (Forma " + e.forma + ")" : ""), d.etiquetaCurso, c.colegio, fecha].filter(Boolean);
+    // sin fecha: el informe no la necesita (sigue en la app y en el nombre del archivo)
+    const partes = [d.nombrePrueba + (e.forma ? " (Forma " + e.forma + ")" : ""), d.etiquetaCurso, c.colegio].filter(Boolean);
     const quien = (f) => {
       if (!f.estudianteId) return "Sin identificar (hoja pág. " + f.pagina + ")";
       return d.sinNombres ? L.formatearRutPaes(f.rut) || "Sin RUT" : f.nombre;
