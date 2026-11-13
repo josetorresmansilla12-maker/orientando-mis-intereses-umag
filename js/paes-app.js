@@ -1632,8 +1632,8 @@
         <div><h2 style="margin:0;">Resultados · ${esc(nombrePrueba(e))}</h2>
         <p class="ayuda" style="margin:4px 0 0;">${esc(c.colegio)} · ${esc(etiquetaCurso(c))}${e.forma ? " · Forma " + esc(e.forma) : ""}${e.fecha ? " · " + esc(PaesExcel.fechaCorta(e.fecha)) : ""}</p></div>
         <div class="paes-cabecera-acciones">
-          <button type="button" data-accion="informe-pdf" ${est.generando ? "disabled" : ""}>📄 Informe PDF</button>
-          <button type="button" data-accion="informe-word" ${est.generando ? "disabled" : ""}>📝 Informe Word</button>
+          <button type="button" data-accion="informe-pdf" title="Informe para el colegio, en una página" ${est.generando ? "disabled" : ""}>📄 Informe PDF</button>
+          <button type="button" data-accion="informe-word" title="Informe para el colegio, editable" ${est.generando ? "disabled" : ""}>📝 Informe Word</button>
           <button type="button" class="secundario" data-accion="descargar-excel">⬇ Excel</button>
           <label class="paes-filtro" title="Para uso interno: el informe muestra solo el RUT, sin nombres"><input type="checkbox" data-cambio="sin-nombres" ${est.sinNombres ? "checked" : ""} /> Informe sin nombres</label>
         </div>
@@ -1713,7 +1713,7 @@
       </tbody></table></div></div>`;
   }
 
-  // informe para el orientador, en PDF o Word, con el estilo de los informes de Kuder
+  // informe para el colegio, en PDF o Word, con el estilo de los informes de Kuder
   async function descargarInforme(formato) {
     const c = cursoActual();
     const e = ensayoActual();

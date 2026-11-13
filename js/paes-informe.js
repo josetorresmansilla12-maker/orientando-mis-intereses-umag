@@ -1,4 +1,9 @@
-// Ensayos PAES · informe del curso para el orientador, en PDF y en Word.
+// Ensayos PAES · informe del curso para el colegio, en PDF y en Word.
+//
+// El informe para el colegio cabe en una página (más, solo si la lista del curso es larga):
+// resumen, cifras, distribución y resultados por estudiante. El análisis por pregunta y la
+// desviación estándar quedan para el informe interno de Admisión (datos.interno = true),
+// que todavía no tiene botón en la app.
 //
 // El PDF usa el mismo motor y el mismo estilo de los informes de Kuder (js/report.js:
 // páginas carta de 794 px que se capturan como imagen). El Word se arma como .docx con
@@ -28,7 +33,13 @@
       (st.sinIdentificar ? ` (además hay ${plural(st.sinIdentificar, "hoja sin identificar", "hojas sin identificar")})` : "") +
       `. El puntaje promedio fue de ${num(st.promedio, 1)} puntos y la mediana, de ${num(st.mediana, st.mediana % 1 ? 1 : 0)}; ` +
       `el más alto fue ${num(st.maximo)} y el más bajo, ${num(st.minimo)}. ` +
-      `En promedio, los estudiantes respondieron bien ${num(st.correctasPromedio, 1)} de las ${st.preguntasValidas} preguntas válidas (${num(st.logroPromedio, 1)} % de logro).`;
+      `En promedio, los estudiantes respondieron bien ${num(st.correctasPromedio, 1)} de las ${st.preguntasValidas} preguntas válidas (${num(st.logroPromedio, 1)} % de logro).` +
+      (st.sinTabla ? ` ${st.sinTabla === 1 ? "Una hoja tiene" : st.sinTabla + " hojas tienen"} más correctas que el máximo de la tabla de conversión: no ${st.sinTabla === 1 ? "tiene" : "tienen"} puntaje y no ${st.sinTabla === 1 ? "entra" : "entran"} en el promedio de puntaje.` : "");
+    const resumenCorto =
+      `Rindieron el ensayo ${st.rindieron} de los ${plural(st.enLista, "estudiante", "estudiantes")} de la lista del curso` +
+      (st.sinIdentificar ? ` (además hay ${plural(st.sinIdentificar, "hoja sin identificar", "hojas sin identificar")})` : "") +
+      `. En promedio respondieron bien ${num(st.correctasPromedio, 1)} de las ${st.preguntasValidas} preguntas válidas (${num(st.logroPromedio, 1)} % de logro).` +
+      (st.sinTabla ? ` ${st.sinTabla === 1 ? "Una hoja tiene" : st.sinTabla + " hojas tienen"} más correctas que el máximo de la tabla de conversión y no ${st.sinTabla === 1 ? "entra" : "entran"} en el promedio de puntaje.` : "");
     const extremos = L.preguntasExtremas(d.analisis, 5);
     const nota =
       `Ensayo de preparación tipo PAES elaborado por la Universidad de Magallanes; no es una prueba oficial. El puntaje (100 a 1000) se obtiene con la tabla de conversión de la unidad ` +
@@ -36,12 +47,17 @@
       `Se contaron ${plural(st.preguntasValidas, "pregunta válida", "preguntas válidas")} de ${st.preguntas}` +
       (st.preguntas - st.preguntasValidas ? ` (${plural(st.preguntas - st.preguntasValidas, "anulada o de pilotaje", "anuladas o de pilotaje")})` : "") +
       `; las dobles marcas cuentan como incorrectas y las preguntas sin marcar, como omitidas (clave versión ${e.claveVersion || 1}). ` +
-      `La desviación estándar es poblacional: describe al grupo que rindió. Con grupos pequeños, un solo estudiante cambia varios puntos los porcentajes por pregunta.`;
+      `El logro es el porcentaje de preguntas válidas respondidas correctamente, sin descuento por respuestas incorrectas.` +
+      (d.interno ? ` La desviación estándar es poblacional: describe al grupo que rindió. Con grupos pequeños, un solo estudiante cambia varios puntos los porcentajes por pregunta.` : "");
+    const notaCorta =
+      `Ensayo de preparación tipo PAES elaborado por la Universidad de Magallanes; no es una prueba oficial. El puntaje (100 a 1000) se obtiene con la tabla de conversión de la unidad ` +
+      `y es referencial: no equivale a un puntaje oficial PAES ni permite predecirlo. Se contaron ${plural(st.preguntasValidas, "pregunta válida", "preguntas válidas")} de ${st.preguntas}; ` +
+      `las dobles marcas cuentan como incorrectas. El logro es el porcentaje de preguntas válidas respondidas correctamente.`;
     return {
       titulo: "Resultados del ensayo PAES",
       subtitulo: partes.join(" · "),
-      resumen,
-      nota,
+      resumen: d.interno ? resumen : resumenCorto,
+      nota: d.interno ? nota : notaCorta,
       pendientes: d.pendientes ? `Este informe se generó con ${plural(d.pendientes, "hoja con advertencias sin revisar", "hojas con advertencias sin revisar")}: los resultados podrían cambiar.` : "",
       stats: [
         ["Rindieron", `${st.rindieron} de ${st.enLista}`],
@@ -49,9 +65,9 @@
         ["Mediana", num(st.mediana, st.mediana % 1 ? 1 : 0)],
         ["Máximo", num(st.maximo)],
         ["Mínimo", num(st.minimo)],
-        ["Desv. estándar", num(st.desviacion, 1)],
         ["Logro promedio", num(st.logroPromedio, 1) + " %"],
-      ],
+      ].concat(d.interno ? [["Desv. estándar", num(st.desviacion, 1)]] : []),
+      interno: !!d.interno,
       tramos: st.tramos,
       mejores: d.resultados.filas.filter((f) => f.puntaje != null && f.lugar <= 5).map((f) => ({ lugar: f.lugar, quien: quien(f), puntaje: f.puntaje, correctas: f.correctas })),
       colQuien: d.sinNombres ? "RUT" : "Estudiante",
@@ -90,11 +106,21 @@
   function bloquesPdf(k) {
     const maxTramo = Math.max(1, ...k.tramos.map((t) => t.n));
     const bloques = [];
-    bloques.push({ html: `<div class="pinf-bloque"><p class="pinf-resumen">${esc(k.resumen)}</p>${k.pendientes ? `<p class="pinf-aviso">⚠ ${esc(k.pendientes)}</p>` : ""}
-      <div class="pinf-stats">${k.stats.map(([a, b]) => `<div class="pinf-stat"><b>${esc(b)}</b><span>${esc(a)}</span></div>`).join("")}</div></div>` });
-    bloques.push({ html: `<div class="pinf-bloque pinf-dos">
-      <div><h3>Distribución de puntajes</h3>${k.tramos.map((t) => `<div class="pinf-tramo"><span>${t.desde}–${t.hasta}</span><div class="pinf-barra"><div style="width:${(t.n / maxTramo) * 100}%"></div></div><b>${t.n}</b></div>`).join("")}</div>
-      <div><h3>Los cinco mejores puntajes</h3>${k.mejores.length ? `<table class="pinf-tabla"><tbody>${k.mejores.map((m) => `<tr><td class="num">${m.lugar}.°</td><td>${esc(m.quien)}</td><td class="num"><b>${m.puntaje}</b></td></tr>`).join("")}</tbody></table>` : `<p class="pinf-intro">Sin puntajes.</p>`}</div></div>` });
+    const htmlResumen = `<p class="pinf-resumen">${esc(k.resumen)}</p>${k.pendientes ? `<p class="pinf-aviso">⚠ ${esc(k.pendientes)}</p>` : ""}`;
+    const htmlStats = (columnas) => `<div class="pinf-stats" style="grid-template-columns:repeat(${columnas}, 1fr)">${k.stats.map(([a, b]) => `<div class="pinf-stat"><b>${esc(b)}</b><span>${esc(a)}</span></div>`).join("")}</div>`;
+    if (k.interno) {
+      bloques.push({ html: `<div class="pinf-bloque">${htmlResumen}${htmlStats(k.stats.length)}</div>` });
+      bloques.push({ html: `<div class="pinf-bloque pinf-dos">
+        <div><h3>Distribución de puntajes</h3>${k.tramos.map((t) => `<div class="pinf-tramo"><span>${t.desde}–${t.hasta}</span><div class="pinf-barra"><div style="width:${(t.n / maxTramo) * 100}%"></div></div><b>${t.n}</b></div>`).join("")}</div>
+        <div><h3>Los cinco mejores puntajes</h3>${k.mejores.length ? `<table class="pinf-tabla"><tbody>${k.mejores.map((m) => `<tr><td class="num">${m.lugar}.°</td><td>${esc(m.quien)}</td><td class="num"><b>${m.puntaje}</b></td></tr>`).join("")}</tbody></table>` : `<p class="pinf-intro">Sin puntajes.</p>`}</div></div>` });
+    } else {
+      // para el colegio: cifras y distribución lado a lado; los mejores puntajes son las primeras filas de la tabla
+      bloques.push({ html: `<div class="pinf-bloque">${htmlResumen}<div class="pinf-dos pinf-arriba">
+        <div><h3>Cifras del curso</h3>${htmlStats(3)}</div>
+        <div><h3>Distribución de puntajes <small>· estudiantes por tramo</small></h3>
+        <div class="pinf-histo">${k.tramos.map((t) => `<div class="pinf-col"><b>${t.n || ""}</b><div class="pinf-colbarra"><div style="height:${(t.n / maxTramo) * 100}%"></div></div><span>${t.desde}</span></div>`).join("")}</div>
+        <p class="pinf-eje">Cada columna es un tramo de 100 puntos (100 a 199, 200 a 299… 900 a 1000).</p></div></div></div>` });
+    }
     const cols = [{ titulo: "Lugar", clase: "num" }, { titulo: k.colQuien }];
     if (k.colQuien === "Estudiante") cols.push({ titulo: "RUT", clase: "rut" });
     cols.push({ titulo: "Correctas", clase: "num" }, { titulo: "Incorrectas", clase: "num" }, { titulo: "Omitidas", clase: "num" }, { titulo: "Logro", clase: "num" }, { titulo: "Puntaje", clase: "num fuerte" });
@@ -105,8 +131,8 @@
         filas: k.filas.map((f) => ({ celdas: [f.lugar, f.quien].concat(k.colQuien === "Estudiante" ? [f.rut] : [], [f.correctas, f.incorrectas, f.omitidas, f.logro, f.puntaje]) })),
       },
     });
-    if (k.noRindieron.length) bloques.push({ html: `<div class="pinf-bloque"><h3>No rindieron (${k.noRindieron.length})</h3><p class="pinf-intro">Están en la lista del curso, pero no tienen hoja en este ensayo.</p><p class="pinf-lista">${k.noRindieron.map(esc).join(" · ")}</p></div>` });
-    if (k.analisis.some((a) => a.clave)) {
+    if (k.noRindieron.length) bloques.push({ html: `<div class="pinf-bloque"><h3>No rindieron (${k.noRindieron.length}) <small>· están en la lista del curso, pero no tienen hoja en este ensayo</small></h3><p class="pinf-lista">${k.noRindieron.map(esc).join(" · ")}</p></div>` });
+    if (k.interno && k.analisis.some((a) => a.clave)) {
       const lista = (ps) => ps.map((a) => `${a.n} (${num(a.pctAciertos)} %)`).join(", ");
       const dif = new Set(k.dificiles.map((a) => a.n)), fac = new Set(k.faciles.map((a) => a.n));
       bloques.push({
@@ -127,14 +153,28 @@
   }
 
   // reparte los bloques en páginas carta midiendo cada página real; las tablas se cortan entre filas
+  // El informe para el colegio prueba primero el tamaño normal y, si no cabe en una página,
+  // dos tamaños más apretados; si aun así no cabe (lista larga), usa las páginas que hagan falta.
   function paginar(k) {
+    if (k.interno) return paginarCon(k, "");
+    let primera = null;
+    for (const densidad of ["", "densa", "muy-densa"]) {
+      const paginas = paginarCon(k, densidad);
+      if (paginas.length === 1) return paginas;
+      if (!primera) primera = paginas;
+    }
+    return primera;
+  }
+
+  function paginarCon(k, densidad) {
+    const cuerpo = (piezas) => `<div class="pinf-cuerpo ${densidad}">${piezas.join("")}</div>`;
     const cabecera = (i) =>
       i === 0
         ? construirBanner(k.titulo, k.subtitulo)
         : `<div class="pinf-continua"><b>${esc(k.titulo)}</b> · ${esc(k.subtitulo)}</div>`;
     const paginas = [];
     let actual = [];
-    const alto = (piezas) => medirAlturaFragmento(cabecera(paginas.length) + `<div class="pinf-cuerpo">${piezas.join("")}</div>`);
+    const alto = (piezas) => medirAlturaFragmento(cabecera(paginas.length) + cuerpo(piezas));
     const cerrar = () => {
       paginas.push(actual);
       actual = [];
@@ -169,7 +209,7 @@
     return paginas.map((piezas, i) => {
       const nodo = document.createElement("div");
       nodo.className = "informe-page pinf";
-      nodo.innerHTML = cabecera(i) + `<div class="pinf-cuerpo">${piezas.join("")}</div><div class="pinf-numero">Página ${i + 1} de ${paginas.length}</div>`;
+      nodo.innerHTML = cabecera(i) + cuerpo(piezas) + (paginas.length > 1 ? `<div class="pinf-numero">Página ${i + 1} de ${paginas.length}</div>` : "");
       return nodo;
     });
   }
@@ -243,7 +283,7 @@
     c += parrafo("Resumen", { negrita: true, tam: 13, color: MORADO, titulo: true, antes: 120 });
     c += parrafo(k.resumen);
     if (k.pendientes) c += parrafo("⚠ " + k.pendientes, { cursiva: true, color: "8A5A00" });
-    c += tabla([k.stats.map((s) => s[0]), k.stats.map((s) => s[1])], k.stats.map(() => Math.floor(9360 / k.stats.length)), { centradas: [0, 1, 2, 3, 4, 5, 6], negritas: [0, 1, 2, 3, 4, 5, 6], tam: 9 });
+    c += tabla([k.stats.map((s) => s[0]), k.stats.map((s) => s[1])], k.stats.map(() => Math.floor(9360 / k.stats.length)), { centradas: k.stats.map((_, i) => i), negritas: k.stats.map((_, i) => i), tam: 9 });
     c += parrafo("Resultados del curso, de mayor a menor puntaje", { negrita: true, tam: 13, color: MORADO, titulo: true, antes: 200 });
     const conRut = k.colQuien === "Estudiante";
     c += tabla(
@@ -253,7 +293,7 @@
     );
     c += parrafo("Distribución de puntajes", { negrita: true, tam: 13, color: MORADO, titulo: true, antes: 200 });
     c += tabla([["Tramo de puntaje", "Estudiantes"]].concat(k.tramos.map((t) => [`${t.desde} a ${t.hasta}`, t.n])), [3000, 1800], { centradas: [1] });
-    if (k.mejores.length) {
+    if (k.interno && k.mejores.length) {
       c += parrafo("Los cinco mejores puntajes", { negrita: true, tam: 13, color: MORADO, titulo: true, antes: 200 });
       c += tabla([["Lugar", k.colQuien, "Correctas", "Puntaje"]].concat(k.mejores.map((m) => [m.lugar, m.quien, m.correctas, m.puntaje])), [800, 4400, 1300, 1300], { centradas: [0, 2, 3], negritas: [3] });
     }
@@ -261,7 +301,7 @@
       c += parrafo(`No rindieron (${k.noRindieron.length})`, { negrita: true, tam: 13, color: MORADO, titulo: true, antes: 200 });
       c += parrafo("Están en la lista del curso, pero no tienen hoja en este ensayo: " + k.noRindieron.join(" · ") + ".");
     }
-    if (k.analisis.some((a) => a.clave)) {
+    if (k.interno && k.analisis.some((a) => a.clave)) {
       const lista = (ps) => ps.map((a) => `${a.n} (${num(a.pctAciertos)} %)`).join(", ");
       c += parrafo("Análisis por pregunta", { negrita: true, tam: 13, color: MORADO, titulo: true, antes: 200 });
       c += parrafo(`Porcentajes sobre ${plural(k.hojasContadas, "hoja", "hojas")}. Más difíciles: ${lista(k.dificiles) || "—"}. Más fáciles: ${lista(k.faciles) || "—"}.`);
