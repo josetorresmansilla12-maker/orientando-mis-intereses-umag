@@ -439,9 +439,14 @@ El trabajo va en cinco pasos:
      sola; si no, buscas al estudiante (el buscador y la lista muestran a los
      estudiantes del colegio separados por curso) o lo agregas con nombre y RUT.
      Queda guardado como "Grupo disperso" del colegio.
-   - "Agregar clavijero" (antes "Aplicar otro clavijero"): toma un curso que ya
-     tiene su lista y le aplica otro clavijero (por ejemplo, ya rindió CL y ahora
-     M1). Arriba, "Clavijeros aplicados" muestra qué clavijeros tiene cada curso.
+   - "Agregar ensayos PDF" (en "Resultados guardados", dentro de cada curso):
+     primero eliges los PDF y después el clavijero que les corresponde. La app
+     muestra cuáles clavijeros ya están aplicados a ese curso: si eliges uno de
+     esos, los PDF se suman a ese ensayo; si eliges otro, se crea el ensayo. No
+     borra lo ya corregido.
+   - "Ensayos aplicados" (arriba en "Resultados guardados"): por cada ensayo,
+     primero Competencia Lectora y después Matemática, qué clavijero se aplicó y a
+     qué cursos.
    - Los nombres se muestran y ordenan como "Nombres Apellidos", igual que los
      escriben los estudiantes en la hoja.
    - En la revisión, al asignar o agregar a mano al estudiante de una hoja, la hoja
@@ -459,9 +464,8 @@ El trabajo va en cinco pasos:
      estudiante que tenga asignado, al curso que elijas.
    - "Traspasar todas las E a D" (arriba de la revisión): cambia por D todas las
      respuestas marcadas en E del ensayo, con confirmación. Se puede deshacer.
-   - "Agregar clavijero" (en "Resultados guardados"): crea un ensayo nuevo con ese
-     clavijero solo en ese curso o en todos los cursos del colegio. Nunca borra los
-     resultados anteriores.
+   - "Agregar clavijero" está solo en "Clavijeros subidos": ahí se sube un
+     clavijero nuevo.
    - Varias pruebas en un mismo curso (CL, M1...): cada prueba tiene sus propias
      hojas y su propio clavijero. En el paso 3, antes de subir, eliges "¿De qué
      prueba son los PDF que vas a subir?": una que el curso ya tiene u "Otra
@@ -487,8 +491,8 @@ El trabajo va en cinco pasos:
      está abierta. Quitar un archivo de hojas o eliminar un ensayo no se puede
      deshacer.
    - "Exportar" (en "Clavijeros subidos"): descarga el clavijero en Excel para
-     pasárselo a otra persona de la unidad, que lo sube con "Subir un clavijero
-     nuevo". Contiene las respuestas correctas: no lo compartas fuera de la unidad.
+     pasárselo a otra persona de la unidad, que lo sube con "Agregar
+     clavijero". Contiene las respuestas correctas: no lo compartas fuera de la unidad.
    - "Papelera": los cursos eliminados y los estudiantes quitados de una lista
      quedan ahí y se pueden recuperar (o eliminar para siempre). Al eliminar,
      aparece abajo durante 5 segundos el botón "Deshacer".

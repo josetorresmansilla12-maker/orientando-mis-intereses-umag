@@ -50,7 +50,7 @@
     vista: "curso", // "curso" (los cinco pasos), "resultados", "clavijeros" o "carpetas"
     clavijeros: [], // claves de respuestas guardadas, que se aplican a los ensayos
     clvAbierto: null, // clavijero desplegado en «Clavijeros subidos»
-    clvForm: false, // formulario «Subir un clavijero nuevo»
+    clvForm: false, // formulario «Agregar clavijero»
     importar: null, // selección de cursos de Kuder por importar: Set de claves
     verSinHoja: false, // revisión: lista de estudiantes sin hoja desplegada
     agregarEn: null, // revisión: hoja en la que se agrega a mano un estudiante
@@ -61,7 +61,8 @@
     resMezcla: false, // «Resultados guardados»: pruebas juntas (true) o por separado
     fusionarEn: null, // «Resultados guardados»: curso con el cuadro «Fusionar» abierto
     transferirEn: null, // revisión: hoja con el cuadro «Transferir a otro curso» abierto
-    otroClv: null, // «Resultados guardados»: curso al que se le aplica otro clavijero
+    otroClv: null, // «Resultados guardados»: curso con el cuadro «Agregar ensayos PDF» abierto
+    pdfPendientes: null, // PDF ya elegidos, a la espera de su clavijero: { cursoId, archivos }
     enBlanco: false, // paso 1 vacío, listo para ingresar cursos nuevos aunque ya existan otros
     tanda: [], // cursos que se están trabajando juntos (ids)
     listas: null, // listas recién leídas, cada una va a crear un curso nuevo
@@ -242,8 +243,7 @@
     "ingresar-a-mano": "Ingresar respuestas a mano",
     resp: "Corregir una respuesta",
     "resp-leida": "Volver una respuesta a lo leído",
-    "res-aplicar-otro": "Agregar prueba a un curso",
-    "res-aplicar-colegio": "Agregar prueba a todo el colegio",
+    "res-corregir-pdf": "Agregar ensayos PDF a un curso",
     "papelera-restaurar-curso": "Recuperar curso de la papelera",
     "papelera-restaurar-est": "Recuperar estudiante de la papelera",
     "papelera-purgar-curso": "Eliminar curso para siempre",
@@ -3075,7 +3075,7 @@
     let h = `<div class="tarjeta">
       <div class="paes-cabecera"><div><h2 style="margin:0;">Clavijeros subidos</h2>
       <p class="ayuda" style="margin:4px 0 0;">Las claves de respuestas guardadas en este computador. Normalmente hay una por prueba: Competencia Lectora (CL) y Matemática 1 (M1). Al crear el ensayo de un curso eliges cuál se le aplica.</p></div>
-      <div class="paes-cabecera-acciones"><button type="button" data-accion="clv-nuevo">📤 Subir un clavijero nuevo</button></div></div>`;
+      <div class="paes-cabecera-acciones"><button type="button" data-accion="clv-nuevo">➕ Agregar clavijero</button></div></div>`;
     if (est.clvForm) {
       h += `<div class="paes-pegar">
         <div class="grid-form">
@@ -3161,7 +3161,7 @@
     toast(`Clavijero «${k.nombre}» guardado: ${plural(leido.clave.length, "respuesta", "respuestas")}${leido.avisos.length ? " · " + leido.avisos[0] : ""} (${origen})`);
   }
 
-  // descarga un clavijero en Excel; el archivo se puede volver a subir en «Subir un clavijero nuevo»
+  // descarga un clavijero en Excel; el archivo se puede volver a subir en «Agregar clavijero»
   function exportarClavijero(id) {
     const k = est.clavijeros.find((x) => x.id === id);
     if (!k) return;
@@ -3235,7 +3235,7 @@
       <button type="button" class="${est.resMezcla ? "secundario " : ""}chico" data-accion="res-modo" data-modo="separado">Ver por separado</button>
       <button type="button" class="${est.resMezcla ? "" : "secundario "}chico" data-accion="res-modo" data-modo="mezcla">🔀 Mezclar datos (pruebas juntas)</button>
       <small>${est.resMezcla ? "Cada curso muestra una sola tabla con sus pruebas lado a lado, por estudiante. No se calcula un puntaje combinado." : "Cada prueba del curso se muestra en su propia fila."}</small></div>`;
-    h += htmlCursosParecidos() + htmlClavijerosAplicados();
+    h += htmlCursosParecidos() + htmlEnsayosAplicados();
     porColegio().forEach((g) => {
       h += `<div class="tarjeta paes-colegio"><h2 style="font-size:17px;">🏫 ${esc(g.colegio)} <small>${plural(g.cursos.length, "curso", "cursos")}</small></h2>`;
       g.cursos.forEach((c) => {
@@ -3264,7 +3264,7 @@
         });
         if (est.resMezcla) h += htmlCombinada(c, true);
         h += est.fusionarEn === c.id ? htmlFusionar(c) : "";
-        h += est.otroClv === c.id ? htmlOtroClavijero(c) : `<div class="acciones-form paes-res-pie"><button type="button" class="secundario chico" data-accion="res-otro-clavijero" data-curso="${esc(c.id)}">➕ Agregar otra prueba (subir sus PDF)</button><small>Para un curso que ya rindió una prueba y ahora rindió otra (por ejemplo, CL y después M1). No borra lo ya corregido.</small>
+        h += est.otroClv === c.id ? htmlAgregarPdf(c) : `<div class="acciones-form paes-res-pie"><button type="button" class="chico" data-accion="res-agregar-pdf" data-curso="${esc(c.id)}" ${est.lectura ? "disabled" : ""}>📄 Agregar ensayos PDF</button><small>Subes los PDF y después eliges el clavijero que les corresponde. No borra lo ya corregido.</small>
           ${est.cursos.length > 1 ? `<button type="button" class="secundario chico" data-accion="fusionar" data-curso="${esc(c.id)}">🔗 Fusionar con otro curso</button>` : ""}</div>`;
         h += `</details>`;
       });
@@ -3336,80 +3336,86 @@
     });
   }
 
-  // qué clavijero usa cada ensayo de un curso, en texto
-  function clavijerosDelCurso(c) {
-    return ensayosDelCurso(c.id).map((e) => {
-      const k = clavijeroDe(e);
-      const n = hojasDelEnsayo(e.id).filter(vigente).length;
-      return { ensayo: e, texto: `${k ? "«" + k.nombre + "»" : e.clave.some((q) => q.r) ? "clave propia" : "sin clave todavía"} · ${nombrePrueba(e)}`, hojas: n };
-    });
-  }
-
-  function htmlClavijerosAplicados() {
-    let filas = "";
-    porColegio().forEach((g) => {
-      g.cursos.forEach((c) => {
-        const lista = clavijerosDelCurso(c);
-        filas += `<tr><td>${esc(g.colegio)}</td><td>${esc(etiquetaCurso(c))} · ${esc(c.anio)}</td><td>${lista.length ? lista.map((x) => `<span class="paes-chip ${x.hojas ? "verde" : "gris"}" title="${x.hojas ? plural(x.hojas, "hoja corregida", "hojas corregidas") : "aún sin hojas"}">${esc(x.texto)}${x.hojas ? " · " + x.hojas : ""}</span>`).join(" ") : `<span class="ayuda">ninguno todavía</span>`}</td>
-          <td class="acciones"><button type="button" class="secundario chico" data-accion="res-otro-clavijero" data-curso="${esc(c.id)}">➕ Agregar otra prueba</button></td></tr>`;
+  // «Ensayos aplicados»: por ensayo (primero Competencia Lectora, después Matemática), qué
+  // clavijero se aplicó y a qué cursos. Así se distingue, por ejemplo, la forma del primer
+  // semestre de la del segundo.
+  function htmlEnsayosAplicados() {
+    const orden = (e) => (e.prueba === "CL" ? 0 : e.prueba === "M1" ? 1 : 2);
+    const grupos = new Map(); // prueba -> Map(clavijero o clave -> [{ curso, ensayo, hojas }])
+    ordenarCursos(est.cursos).forEach((c) => {
+      ensayosDelCurso(c.id).forEach((e) => {
+        const prueba = nombrePrueba(e);
+        if (!grupos.has(prueba)) grupos.set(prueba, { orden: orden(e), clase: clasePrueba(e), sigla: siglaPrueba(e), claves: new Map() });
+        const k = clavijeroDe(e);
+        const etiqueta = k ? `Clavijero «${k.nombre}»${k.forma ? " · Forma " + k.forma : ""}` : e.clave.some((q) => q.r) ? "Clave propia del curso (sin clavijero guardado)" : "Sin clave todavía";
+        const claves = grupos.get(prueba).claves;
+        if (!claves.has(etiqueta)) claves.set(etiqueta, { conClavijero: !!k, usos: [] });
+        claves.get(etiqueta).usos.push({ curso: c, ensayo: e, hojas: hojasDelEnsayo(e.id).filter(vigente).length });
       });
     });
-    return `<div class="tarjeta"><h2 style="font-size:16px;">Clavijeros aplicados</h2>
-      <p class="ayuda">Qué clavijero tiene aplicado cada curso y cuántas hojas se corrigieron con él.</p>
-      <div class="paes-tabla-scroll"><table class="paes-tabla"><thead><tr><th>Colegio</th><th>Curso</th><th>Clavijeros aplicados</th><th></th></tr></thead><tbody>${filas}</tbody></table></div></div>`;
+    let cuerpo = "";
+    Array.from(grupos.entries())
+      .sort((a, b) => a[1].orden - b[1].orden || a[0].localeCompare(b[0], "es"))
+      .forEach(([prueba, g]) => {
+        cuerpo += `<div class="paes-ens-grupo"><h3><span class="paes-pill ${g.clase}"><b>${esc(g.sigla)}</b>${esc(prueba)}</span></h3>`;
+        Array.from(g.claves.entries())
+          .sort((a, b) => Number(b[1].conClavijero) - Number(a[1].conClavijero) || a[0].localeCompare(b[0], "es"))
+          .forEach(([etiqueta, x]) => {
+            const total = x.usos.reduce((a, u) => a + u.hojas, 0);
+            cuerpo += `<div class="paes-ens-clave"><div class="paes-ens-clave-cab"><b>🔑 ${esc(etiqueta)}</b><small>${plural(x.usos.length, "curso", "cursos")} · ${plural(total, "hoja corregida", "hojas corregidas")}</small></div>
+              <div>${x.usos.map((u) => `<span class="paes-chip ${u.hojas ? "verde" : "gris"}" title="${esc(etiquetaEnsayo(u.ensayo))}">${esc(nombreCurso(u.curso))} · ${u.hojas ? plural(u.hojas, "hoja", "hojas") : "sin hojas"}${u.ensayo.fecha ? " · " + esc(PaesExcel.fechaCorta(u.ensayo.fecha)) : ""}</span>`).join(" ")}</div></div>`;
+          });
+        cuerpo += `</div>`;
+      });
+    return `<div class="tarjeta"><h2 style="font-size:16px;">Ensayos aplicados</h2>
+      <p class="ayuda">Por cada ensayo, qué clavijero se aplicó y a qué cursos. Primero Competencia Lectora y después Matemática.</p>
+      ${cuerpo || `<p class="ayuda" style="margin:0;">Aún no se ha aplicado ningún ensayo.</p>`}</div>`;
   }
 
-  function htmlOtroClavijero(c) {
-    if (!est.clavijeros.length) {
-      return `<div class="paes-agregar-manual"><b>Aplicar otro clavijero a ${esc(etiquetaCurso(c))}</b><p class="ayuda" style="margin:6px 0;">Aún no hay clavijeros guardados. Súbelo primero en «Clavijeros subidos».</p>
-        <div class="acciones-form"><button type="button" class="chico" data-vista="clavijeros">Ir a Clavijeros subidos</button><button type="button" class="secundario chico" data-accion="res-otro-clavijero" data-curso="">Cancelar</button></div></div>`;
+  // «Agregar ensayos PDF»: primero se eligen los PDF y después el clavijero que les corresponde
+  function htmlAgregarPdf(c) {
+    const p = est.pdfPendientes && est.pdfPendientes.cursoId === c.id ? est.pdfPendientes : null;
+    const cancelar = `<button type="button" class="secundario chico" data-accion="res-agregar-pdf" data-curso="">Cancelar</button>`;
+    const entrada = `<input type="file" data-archivo="res-pdf" accept=".pdf,image/*" multiple style="display:none;" />`;
+    if (!p) {
+      return `<div class="paes-agregar-manual" id="paes-otro-clv"><b>📄 Agregar ensayos PDF · ${esc(nombreCurso(c))}</b>
+        <p class="ayuda" style="margin:6px 0;">Paso 1 de 2: elige los PDF del escáner (una hoja por página). Después eliges el clavijero que les corresponde.</p>
+        ${entrada}<div class="acciones-form"><button type="button" class="chico" data-accion="res-elegir-pdf" ${est.lectura ? "disabled" : ""}>📄 Elegir los PDF…</button>${cancelar}</div></div>`;
     }
-    const usados = new Set(ensayosDelCurso(c.id).map((e) => e.clavijeroId).filter(Boolean));
-    const delColegio = c.disperso ? [c] : [c].concat(otrosDelColegio(c));
-    return `<div class="paes-agregar-manual" id="paes-otro-clv"><b>Agregar otra prueba · ${esc(c.colegio)} · ${esc(etiquetaCurso(c))}</b>
-      <p class="ayuda" style="margin:6px 0;">Se crea un ensayo nuevo con ese clavijero y la misma lista del curso. Los resultados anteriores no se tocan. Después subes las hojas de esa prueba.</p>
-      <div class="grid-form">
-        <div class="campo-ancho"><label>Clavijero *</label><select id="paes-otro-clv-sel">${est.clavijeros.map((k) => `<option value="${esc(k.id)}">${esc(k.nombre)} · ${esc(nombrePruebaDe(k))}${usados.has(k.id) ? " (este curso ya lo tiene)" : ""}</option>`).join("")}</select></div>
-        <div><label>Fecha de aplicación</label><input type="date" id="paes-otro-clv-fecha" value="${hoyIso()}" /></div>
-      </div>
-      <div class="acciones-form">
-        <button type="button" class="chico" data-accion="res-aplicar-otro" data-curso="${esc(c.id)}">Aplicar solo a ${esc(etiquetaCurso(c))}</button>
-        ${delColegio.length > 1 ? `<button type="button" class="chico" data-accion="res-aplicar-colegio" data-curso="${esc(c.id)}">Aplicar a todo el colegio (${delColegio.length} cursos)</button>` : ""}
-        <button type="button" class="secundario chico" data-accion="res-otro-clavijero" data-curso="">Cancelar</button></div>
-      ${delColegio.length > 1 ? `<p class="ayuda" style="margin:6px 0 0;">«Todo el colegio»: ${esc(delColegio.map(etiquetaCurso).join(", "))}. Quedan enlazados: subes las hojas de todos juntas y cada una se va a su curso por el RUT.</p>` : ""}</div>`;
+    const aplicados = new Map(ensayosDelCurso(c.id).filter((e) => e.clavijeroId).map((e) => [e.clavijeroId, hojasDelEnsayo(e.id).filter(vigente).length]));
+    const lista = `<ul class="paes-no-rindieron" style="margin:6px 0;">${p.archivos.map((a) => `<li>📄 ${esc(a.name)}</li>`).join("")}</ul>`;
+    if (!est.clavijeros.length) {
+      return `<div class="paes-agregar-manual" id="paes-otro-clv"><b>📄 Agregar ensayos PDF · ${esc(nombreCurso(c))}</b>${lista}
+        <p class="ayuda" style="margin:6px 0;">Aún no hay clavijeros guardados. Agrégalo primero en «Clavijeros subidos» y después vuelve a subir estos PDF.</p>
+        <div class="acciones-form"><button type="button" class="chico" data-vista="clavijeros">Ir a Clavijeros subidos</button>${cancelar}</div></div>`;
+    }
+    return `<div class="paes-agregar-manual" id="paes-otro-clv"><b>📄 Agregar ensayos PDF · ${esc(nombreCurso(c))}</b>
+      <p class="ayuda" style="margin:6px 0 0;">${plural(p.archivos.length, "archivo elegido", "archivos elegidos")}:</p>${lista}
+      <p class="ayuda" style="margin:6px 0;">Paso 2 de 2: elige el clavijero que corresponde a estos PDF. Se usa la lista del curso y lo ya corregido no cambia.</p>
+      <div class="paes-checks paes-clv-opciones">${est.clavijeros.slice().sort((a, b) => a.prueba.localeCompare(b.prueba) || a.nombre.localeCompare(b.nombre, "es")).map((k, i) => `<label><input type="radio" name="paes-pdf-clv" value="${esc(k.id)}" ${i === 0 ? "checked" : ""} /> <span class="paes-pill ${clasePrueba(k)}"><b>${esc(siglaPrueba(k))}</b>${esc(k.nombre)}</span>${aplicados.has(k.id) ? `<span class="paes-chip verde">✔ ya aplicado a este curso · ${plural(aplicados.get(k.id), "hoja", "hojas")}: los PDF se suman a ese ensayo</span>` : `<span class="paes-chip gris">aún no aplicado a este curso</span>`}</label>`).join("")}</div>
+      <div class="grid-form" style="margin-top:8px;"><div><label>Fecha de aplicación</label><input type="date" id="paes-otro-clv-fecha" value="${hoyIso()}" /></div></div>
+      ${entrada}<div class="acciones-form"><button type="button" class="chico" data-accion="res-corregir-pdf" data-curso="${esc(c.id)}" ${est.lectura ? "disabled" : ""}>Corregir estos PDF con ese clavijero →</button>
+        <button type="button" class="secundario chico" data-accion="res-elegir-pdf">Cambiar los PDF…</button>${cancelar}</div></div>`;
   }
 
-  // crea el ensayo con ese clavijero en un curso o en todos los cursos del colegio; nunca toca los ensayos que ya existen
-  async function aplicarOtroClavijero(cursoId, todoElColegio) {
+  // lee los PDF elegidos en el ensayo del clavijero indicado (lo crea si el curso aún no lo tiene)
+  async function corregirPdfPendientes(cursoId) {
     const c = est.cursos.find((x) => x.id === cursoId);
-    const sel = raiz.querySelector("#paes-otro-clv-sel");
-    const k = sel ? est.clavijeros.find((x) => x.id === sel.value) : null;
-    if (!c || !k) return;
-    const fecha = raiz.querySelector("#paes-otro-clv-fecha").value || "";
-    const cursos = (todoElColegio && !c.disperso ? [c].concat(otrosDelColegio(c)) : [c]).filter((x) => !ensayosDelCurso(x.id).some((e) => e.clavijeroId === k.id));
-    if (!cursos.length) {
-      toast(todoElColegio ? "Todos los cursos del colegio ya tienen ese clavijero." : "Este curso ya tiene ese clavijero: sus resultados están más arriba.");
+    const p = est.pdfPendientes;
+    const marcado = raiz.querySelector('input[name="paes-pdf-clv"]:checked');
+    const k = marcado ? est.clavijeros.find((x) => x.id === marcado.value) : null;
+    if (!c || !p || p.cursoId !== cursoId || !p.archivos.length || est.lectura) return;
+    if (!k) {
+      toast("Elige el clavijero que corresponde a estos PDF.");
       return;
     }
-    // si otros cursos del colegio ya lo tenían, los nuevos se enlazan con ellos
-    const previo = todoElColegio ? est.ensayos.find((e) => e.clavijeroId === k.id && e.grupoId && otrosDelColegio(c).concat([c]).some((x) => x.id === e.cursoId)) : null;
-    const grupoId = cursos.length > 1 || previo ? (previo ? previo.grupoId : PaesDB.nuevoId("g")) : null;
-    const creados = [];
-    for (const x of cursos) {
-      const e = await crearEnsayoCon(x, { prueba: k.prueba, pruebaNombre: k.pruebaNombre, fecha, clavijero: k });
-      if (grupoId) {
-        e.grupoId = grupoId;
-        await guardar("ensayos", e);
-      }
-      creados.push(e);
-    }
-    const primero = creados.find((e) => e.cursoId === c.id) || creados[0];
-    Object.assign(est, { otroClv: null, enBlanco: false, cursoId: primero.cursoId, ensayoId: primero.id, vista: "curso", paso: "hojas", formCurso: null, formEnsayo: false, resumenLectura: null });
-    if (creados.length > 1) est.tanda = creados.map((e) => e.cursoId);
-    else if (!est.tanda.includes(primero.cursoId)) est.tanda = [];
+    let e = ensayosDelCurso(c.id).find((x) => x.clavijeroId === k.id);
+    if (!e) e = await crearEnsayoCon(c, { prueba: k.prueba, pruebaNombre: k.pruebaNombre, fecha: raiz.querySelector("#paes-otro-clv-fecha").value || "", clavijero: k });
+    Object.assign(est, { otroClv: null, pdfPendientes: null, enBlanco: false, cursoId: c.id, ensayoId: e.id, vista: "curso", paso: "hojas", formCurso: null, formEnsayo: false, resumenLectura: null, otraPrueba: false, moverArchivo: null });
+    if (!est.tanda.includes(c.id)) est.tanda = [];
     pintar();
     global.scrollTo({ top: 0 });
-    toast(creados.length > 1 ? `Clavijero «${k.nombre}» aplicado a ${creados.length} cursos: sube las hojas de todos juntas` : `Clavijero «${k.nombre}» aplicado a ${etiquetaCurso(c)}: ahora sube sus hojas`);
+    await subirHojas(p.archivos);
   }
 
   // ============================================================ PAPELERA Y DESHACER
@@ -3993,17 +3999,22 @@
         }
         elegirArchivo("disperso");
         break;
-      case "res-otro-clavijero":
+      case "res-agregar-pdf":
         est.otroClv = b.dataset.curso || null;
-        if (est.otroClv) est.cursoId = est.otroClv, (est.enBlanco = false);
+        est.pdfPendientes = null;
+        if (est.otroClv) Object.assign(est, { cursoId: est.otroClv, enBlanco: false, fusionarEn: null });
         pintar();
         if (est.otroClv) {
-          const caja = raiz.querySelector("#paes-otro-clv") || raiz.querySelector(".paes-agregar-manual");
+          const caja = raiz.querySelector("#paes-otro-clv");
           if (caja) caja.scrollIntoView({ block: "center" });
+          elegirArchivo("res-pdf"); // se abre de inmediato el selector de archivos
         }
         break;
-      case "res-aplicar-otro":
-        aplicarOtroClavijero(b.dataset.curso);
+      case "res-elegir-pdf":
+        elegirArchivo("res-pdf");
+        break;
+      case "res-corregir-pdf":
+        corregirPdfPendientes(b.dataset.curso);
         break;
       case "papelera-restaurar-curso":
         restaurarCurso(id);
@@ -4220,9 +4231,6 @@
       case "e-a-d":
         traspasarEaD();
         break;
-      case "res-aplicar-colegio":
-        aplicarOtroClavijero(b.dataset.curso, true);
-        break;
       case "mover-hoja":
         moverHoja(id, b.dataset.curso);
         break;
@@ -4371,6 +4379,16 @@
       if (t.dataset.archivo === "lista") leerArchivoLista(archivos[0]);
       if (t.dataset.archivo === "listas") leerListasNuevas(archivos);
       if (t.dataset.archivo === "disperso") crearDisperso(archivos);
+      if (t.dataset.archivo === "res-pdf" && est.otroClv) {
+        const validos = archivos.filter((a) => /\.pdf$/i.test(a.name) || /^image\//.test(a.type) || /\.(jpe?g|png|webp|bmp|gif)$/i.test(a.name));
+        if (!validos.length) toast("Esos archivos no son PDF ni imágenes.");
+        else {
+          est.pdfPendientes = { cursoId: est.otroClv, archivos: validos };
+          pintar();
+          const caja = raiz.querySelector("#paes-otro-clv");
+          if (caja) caja.scrollIntoView({ block: "center" });
+        }
+      }
       if (t.dataset.archivo === "clave") importarClave(archivos[0]);
       if (t.dataset.archivo === "tabla") importarTabla(archivos[0]);
       if (t.dataset.archivo === "hojas") subirHojas(archivos);

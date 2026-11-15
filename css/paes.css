@@ -502,3 +502,13 @@ body.modulo-paes .topbar-acciones { display: none !important; }
 .paes-res-meta { color: var(--texto-suave); font-size: 12.5px; margin: 0 8px 0 4px; }
 .paes-res-mezcla { margin: 10px 0; padding: 10px 12px; border: 1px solid var(--borde); border-radius: 9px; background: white; }
 .paes-parecidos { border: 2px solid #e0b24a; }
+
+/* ensayos aplicados (por ensayo y clavijero) y «Agregar ensayos PDF» */
+.paes-ens-grupo { border-top: 1px solid var(--borde); padding: 10px 0 4px; }
+.paes-ens-grupo h3 { margin: 0 0 6px; font-size: 14px; }
+.paes-ens-grupo h3 .paes-pill { font-size: 14px; padding: 4px 14px 4px 5px; }
+.paes-ens-clave { margin: 0 0 8px 8px; padding: 7px 10px; background: var(--lila-fondo); border-radius: 8px; }
+.paes-ens-clave-cab { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 5px; font-size: 13.5px; }
+.paes-ens-clave-cab small { color: var(--texto-suave); }
+.paes-ens-clave .paes-chip { margin: 0 4px 4px 0; display: inline-block; }
+.paes-clv-opciones label { flex-wrap: wrap; padding: 5px 0; }
