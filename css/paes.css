@@ -26,8 +26,8 @@ body.modulo-paes .topbar-acciones { display: none !important; }
 .test-btn.activo[data-modulo="paes"] .test-btn-texto b { color: var(--paes-oscuro); }
 
 #modulo-paes h2 { color: var(--paes-oscuro); }
-#modulo-paes button:not(.secundario):not(.peligro):not(.paes-paso):not(.paes-recorte):not(.paes-alt):not(.paes-sug) { background: var(--paes); border-color: var(--paes); }
-#modulo-paes button:not(.secundario):not(.peligro):not(.paes-paso):not(.paes-recorte):not(.paes-alt):not(.paes-sug):hover { background: var(--paes-oscuro); }
+#modulo-paes button:not(.secundario):not(.peligro):not(.paes-paso):not(.paes-recorte):not(.paes-alt):not(.paes-sug):not(.paes-prueba-btn) { background: var(--paes); border-color: var(--paes); }
+#modulo-paes button:not(.secundario):not(.peligro):not(.paes-paso):not(.paes-recorte):not(.paes-alt):not(.paes-sug):not(.paes-prueba-btn):hover { background: var(--paes-oscuro); }
 #modulo-paes button.secundario { color: var(--paes-oscuro); border-color: var(--paes); }
 #modulo-paes button.secundario:hover { background: var(--paes-fondo); }
 #modulo-paes button:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -439,7 +439,7 @@ body.modulo-paes .topbar-acciones { display: none !important; }
 .paes-cierre > div:first-child { flex: 1; min-width: 260px; }
 
 /* papelera, deshacer, curso disperso y clavijeros aplicados */
-.paes-deshacer { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 3000; background: #2b2140; color: white; border-radius: 10px; padding: 11px 14px 13px 18px; display: flex; align-items: center; gap: 16px; font-size: 14px; box-shadow: 0 8px 26px rgba(0, 0, 0, 0.35); max-width: min(92vw, 640px); overflow: hidden; }
+.paes-deshacer { position: fixed; left: 50%; bottom: 74px; transform: translateX(-50%); z-index: 3000; background: #2b2140; color: white; border-radius: 10px; padding: 11px 14px 13px 18px; display: flex; align-items: center; gap: 16px; font-size: 14px; box-shadow: 0 8px 26px rgba(0, 0, 0, 0.35); max-width: min(92vw, 640px); overflow: hidden; }
 .paes-deshacer button { background: white; color: #2b2140; border: 0; border-radius: 7px; padding: 7px 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
 .paes-deshacer i { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: #c9b6f2; transform-origin: left; animation: paes-deshacer-tiempo 5s linear forwards; }
 @keyframes paes-deshacer-tiempo { to { transform: scaleX(0); } }
@@ -464,3 +464,41 @@ body.modulo-paes .topbar-acciones { display: none !important; }
 #modulo-paes .paes-sugerencias button.paes-sug { background: white; color: var(--texto); border: 0; border-top: 1px solid #f0edf7; border-radius: 0; text-align: left; font-weight: 400; box-shadow: none; }
 #modulo-paes .paes-sugerencias button.paes-sug:hover, #modulo-paes .paes-sugerencias button.paes-sug:focus { background: #efe9fb; }
 #modulo-paes .paes-sugerencias button.paes-sug.curso { color: var(--paes-oscuro); }
+
+/* acciones: deshacer y rehacer, fijos abajo */
+.paes-acciones-barra { position: fixed; right: 18px; bottom: 16px; z-index: 2900; display: flex; gap: 6px; background: white; border: 1px solid var(--borde); border-radius: 999px; padding: 6px 8px; box-shadow: 0 6px 22px rgba(40, 20, 80, 0.22); }
+.paes-acciones-barra button { border: 0; background: var(--paes, var(--morado)); color: white; border-radius: 999px; padding: 8px 16px; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.paes-acciones-barra button[data-que="rehacer"], .paes-acciones-barra button.ver { background: var(--lila-fondo); color: var(--morado-oscuro); }
+.paes-acciones-barra button:disabled { opacity: 0.4; cursor: default; }
+#modulo-paes { padding-bottom: 70px; }
+
+/* pruebas del curso: botones grandes y píldoras */
+.paes-pruebas-fila { display: flex; flex-wrap: wrap; gap: 10px; }
+#modulo-paes button.paes-prueba-btn { display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: center; text-align: left; background: white; color: var(--texto); border: 2px solid var(--borde); border-radius: 12px; padding: 9px 14px; min-width: 210px; cursor: pointer; font-weight: 400; }
+#modulo-paes button.paes-prueba-btn b { grid-row: span 2; font-size: 20px; min-width: 44px; text-align: center; border-radius: 9px; padding: 6px 8px; color: white; background: #6b6480; }
+#modulo-paes button.paes-prueba-btn.cl b { background: #1f6fb5; }
+#modulo-paes button.paes-prueba-btn.m1 b { background: #c9631a; }
+#modulo-paes button.paes-prueba-btn.nueva b { background: #eeebf5; color: var(--morado-oscuro); }
+#modulo-paes button.paes-prueba-btn span { font-weight: 700; font-size: 14px; }
+#modulo-paes button.paes-prueba-btn small { color: var(--texto-suave); font-size: 12px; grid-column: 2; }
+#modulo-paes button.paes-prueba-btn.activa { border-color: var(--paes, var(--morado)); background: var(--paes-fondo, var(--lila-fondo)); box-shadow: 0 0 0 3px rgba(60, 100, 200, 0.14); }
+#modulo-paes button.paes-prueba-btn:disabled { opacity: 0.55; cursor: default; }
+.paes-pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 3px 11px 3px 4px; font-size: 12.5px; font-weight: 600; background: #efedf4; color: #4a4460; margin: 0 6px 4px 0; vertical-align: middle; }
+.paes-pill b { border-radius: 999px; padding: 2px 9px; color: white; background: #6b6480; font-size: 12.5px; }
+.paes-pill.cl { background: #e3eefa; color: #174f82; } .paes-pill.cl b { background: #1f6fb5; }
+.paes-pill.m1 { background: #fbeadb; color: #8a4310; } .paes-pill.m1 b { background: #c9631a; }
+.paes-pill.vacia { background: white; border: 1px dashed #c9c4d6; color: var(--texto-suave); } .paes-pill.vacia b { background: #b9b4c7; }
+
+/* lista oficial, resultados con pruebas visibles y fusión */
+.paes-lista-opciones { display: flex; flex-direction: column; gap: 6px; background: var(--lila-fondo); border: 1px solid var(--borde); border-radius: 9px; padding: 10px 12px; margin: 0 0 10px; }
+.paes-lista-opciones label, .paes-lista-oficial { display: flex; align-items: baseline; gap: 7px; font-weight: 400; font-size: 13.5px; margin: 0; cursor: pointer; flex-wrap: wrap; }
+.paes-lista-opciones input, .paes-lista-oficial input { width: auto; margin: 0; }
+.paes-lista-opciones small { color: var(--texto-suave); }
+.paes-lista-oficial { margin-top: 8px; }
+.paes-res-modo { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 18px; }
+.paes-res-modo small { color: var(--texto-suave); flex-basis: 100%; font-size: 12.5px; }
+.paes-res-curso summary { line-height: 2; }
+.paes-res-nombre { font-size: 15.5px; }
+.paes-res-meta { color: var(--texto-suave); font-size: 12.5px; margin: 0 8px 0 4px; }
+.paes-res-mezcla { margin: 10px 0; padding: 10px 12px; border: 1px solid var(--borde); border-radius: 9px; background: white; }
+.paes-parecidos { border: 2px solid #e0b24a; }

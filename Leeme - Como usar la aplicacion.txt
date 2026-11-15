@@ -462,6 +462,33 @@ El trabajo va en cinco pasos:
    - "Agregar clavijero" (en "Resultados guardados"): crea un ensayo nuevo con ese
      clavijero solo en ese curso o en todos los cursos del colegio. Nunca borra los
      resultados anteriores.
+   - Varias pruebas en un mismo curso (CL, M1...): cada prueba tiene sus propias
+     hojas y su propio clavijero. En el paso 3, antes de subir, eliges "¿De qué
+     prueba son los PDF que vas a subir?": una que el curso ya tiene u "Otra
+     prueba", con un clavijero ya guardado (no hay que subirlo de nuevo).
+   - Si subiste PDF a la prueba equivocada: en "Archivos subidos", "Cambiar de
+     prueba" pasa esas hojas a la prueba correcta del mismo curso, sin perder a
+     quién están asignadas ni las correcciones. Si las hojas calzan mucho mejor
+     con el clavijero de otra prueba, la app lo avisa y ofrece pasarlas.
+   - Si cargas en el paso 2 una clave muy distinta de la que ya tiene el ensayo,
+     la app pregunta antes: lo más probable es que sea de otra prueba.
+   - Lista oficial o provisoria: al cargar una lista marcas si es la oficial. Al
+     cargar otro archivo eliges "Sumar" o "Reemplazar la lista". Al reemplazar,
+     quien no viene en la lista nueva queda en la papelera; si tiene una hoja, se
+     conserva marcado "fuera de la lista".
+   - "Resultados guardados": cada curso muestra sus pruebas como etiquetas de
+     color (CL, M1). "Mezclar datos" muestra las pruebas juntas por estudiante y
+     "Ver por separado", cada una en su fila. "Fusionar con otro curso" junta dos
+     cursos en uno (por ejemplo, el mismo curso cargado una vez para CL y otra
+     para M1); si dos cursos comparten estudiantes, la app propone fusionarlos.
+   - "Acciones" y los botones "Deshacer" y "Rehacer" (abajo a la derecha):
+     Deshacer devuelve la última acción a como estaba; Rehacer vuelve a aplicar
+     lo recién deshecho. Se guardan las últimas 10 acciones, solo mientras la app
+     está abierta. Quitar un archivo de hojas o eliminar un ensayo no se puede
+     deshacer.
+   - "Exportar" (en "Clavijeros subidos"): descarga el clavijero en Excel para
+     pasárselo a otra persona de la unidad, que lo sube con "Subir un clavijero
+     nuevo". Contiene las respuestas correctas: no lo compartas fuera de la unidad.
    - "Papelera": los cursos eliminados y los estudiantes quitados de una lista
      quedan ahí y se pueden recuperar (o eliminar para siempre). Al eliminar,
      aparece abajo durante 5 segundos el botón "Deshacer".
