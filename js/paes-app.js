@@ -541,6 +541,9 @@
     document.querySelectorAll('.test-btn[data-modulo="paes"]').forEach((b) => b.addEventListener("click", activar));
     document.querySelectorAll(".test-btn[data-test]").forEach((b) => b.addEventListener("click", desactivar, true));
     raiz.addEventListener("click", alClic);
+    raiz.addEventListener("pointerdown", alBajarEnEditor);
+    raiz.addEventListener("pointerover", alPasarEnEditor);
+    global.addEventListener("pointerup", alSoltarEnEditor);
     raiz.addEventListener("change", alCambiar);
     raiz.addEventListener("input", alEscribir);
     raiz.addEventListener("keydown", (ev) => {
@@ -767,9 +770,10 @@
       htmlVistas() +
       (est.vista === "curso"
         ? (est.importar ? htmlImportarKuder() : "") + htmlContexto() + htmlPasos() + `<div id="paes-panel">${htmlPanel()}</div>`
-        : `<div id="paes-panel">${est.vista === "resultados" ? htmlVistaResultados() : est.vista === "clavijeros" ? htmlVistaClavijeros() : est.vista === "papelera" ? htmlVistaPapelera() : est.vista === "acciones" ? htmlVistaAcciones() : est.vista === "config" ? htmlVistaConfig() : htmlVistaCarpetas()}</div>`) +
+        : `<div id="paes-panel">${est.vista === "resultados" ? htmlVistaResultados() : est.vista === "clavijeros" ? htmlVistaClavijeros() : est.vista === "papelera" ? htmlVistaPapelera() : est.vista === "acciones" ? htmlVistaAcciones() : est.vista === "config" ? htmlVistaConfig() : est.vista === "editor" ? htmlVistaEditor() : htmlVistaCarpetas()}</div>`) +
       `<div id="paes-visor" class="modal-overlay" style="display:none;"></div>`;
     global.scrollTo(0, y);
+    if (est.vista === "editor") refrescarEditor();
     cargarImagenes();
     actualizarConteo();
     pintarBarraAcciones();
@@ -2013,7 +2017,10 @@
 
   // Lee los archivos y guarda cada hoja apenas se lee. Corre de a una página, cediendo el
   // turno a la pantalla entre hoja y hoja: la app sigue respondiendo mientras tanto.
-  async function subirHojas(archivos) {
+  // opciones (Editor de PDF): { paginas: Map(archivo → [números de página]), fijo: true } lee solo
+  // esas páginas y deja cada hoja en este curso aunque su RUT sea de otro
+  async function subirHojas(archivos, opciones) {
+    const o = opciones || {};
     const ensayo = ensayoActual();
     const curso = cursoActual();
     if (!ensayo || !curso || est.lectura) return;
@@ -2046,14 +2053,15 @@
           resumen.avisos.push(`«${archivo.name}» no se pudo abrir: ${err && err.message ? err.message : "archivo dañado o protegido"}`);
           continue;
         }
-        if ((ensayo.archivos || []).some((a) => a.huella === abierto.huella)) {
+        if (!o.paginas && (ensayo.archivos || []).some((a) => a.huella === abierto.huella)) {
           resumen.avisos.push(`«${archivo.name}» ya se había subido a este ensayo: no se cargó de nuevo.`);
           await abierto.cerrar();
           continue;
         }
-        progreso.total += abierto.paginas;
+        const nums = o.paginas ? (o.paginas.get(archivo) || []).filter((n) => n >= 1 && n <= abierto.paginas) : Array.from({ length: abierto.paginas }, (_, i) => i + 1);
+        progreso.total += nums.length;
         let completo = true;
-        for (let p = 1; p <= abierto.paginas; p++) {
+        for (const p of nums) {
           if (progreso.cancelar) {
             completo = false;
             break;
@@ -2107,7 +2115,7 @@
               resumen.repetidas++;
             } else {
               const v = vincular(hoja, curso);
-              if (!hoja.estudianteId && v.tipo === "otro-curso") {
+              if (!hoja.estudianteId && v.tipo === "otro-curso" && !o.fijo) {
                 // el RUT es de otro curso que se corrige junto con este, o del mismo colegio: la hoja se va sola a ese curso
                 const posibles = v.otroCurso.map((o) => est.cursos.find((k) => k.id === o.cursoId)).filter(Boolean);
                 const cursoDestino = posibles.find((k) => hermanos(ensayo).some((x) => x.cursoId === k.id)) || posibles.find((k) => normColegio(k.colegio) === normColegio(curso.colegio)) || null;
@@ -2134,8 +2142,8 @@
           resumen.leidas++;
         }
         await abierto.cerrar();
-        if (completo) {
-          ensayo.archivos = (ensayo.archivos || []).concat([{ nombre: archivo.name, huella: abierto.huella, paginas: abierto.paginas, fecha: new Date().toISOString() }]);
+        if (completo && !(ensayo.archivos || []).some((a) => a.huella === abierto.huella)) {
+          ensayo.archivos = (ensayo.archivos || []).concat([{ nombre: archivo.name, huella: abierto.huella, paginas: nums.length, fecha: new Date().toISOString() }]);
           await PaesDB.poner("ensayos", ensayo);
         }
       }
@@ -2982,6 +2990,242 @@
     } else empezar();
   }
 
+  // ============================================================ EDITOR DE PDF
+  // Un escaneo con varios cursos en una sola pila: se muestran las hojas en el orden del
+  // escáner, se elige un curso y se marcan sus hojas (pinchando o arrastrando); al finalizar,
+  // cada grupo de hojas se corrige en su curso con el clavijero elegido.
+
+  const COLORES_EDITOR = ["#1f6fb5", "#c62828", "#2e7d32", "#b26a00", "#6a3fb5", "#00838f", "#ad1457", "#5d4037", "#455a64", "#827717"];
+  const editorVacio = (previo) => ({ archivos: [], hojas: [], cargando: null, colegio: previo ? previo.colegio : "", cursos: previo ? previo.cursos : [], activo: null, clavijeroId: previo ? previo.clavijeroId : null, fecha: hoyIso(), resultado: null, corrigiendo: null, ultimo: null });
+  function editor() {
+    if (!est.editor) est.editor = editorVacio();
+    return est.editor;
+  }
+  const etiquetaEd = (x) => `${x.nivel}${x.letra ? " " + x.letra : ""}${x.anio && x.anio !== new Date().getFullYear() ? " (" + x.anio + ")" : ""}`;
+  const colorEd = (ed, key) => COLORES_EDITOR[Math.max(0, ed.cursos.findIndex((x) => x.key === key)) % COLORES_EDITOR.length];
+
+  // al elegir el colegio aparecen sus cursos ya guardados; los agregados a mano se conservan
+  function fijarColegioEditor(texto) {
+    const ed = editor();
+    const limpio = String(texto || "").replace(/\s+/g, " ").trim();
+    const suyos = est.cursos.filter((c) => !c.disperso && limpio && normColegio(c.colegio) === normColegio(limpio));
+    ed.colegio = suyos.length ? suyos[0].colegio : limpio;
+    ed.cursos = ordenarCursos(suyos)
+      .map((c) => ({ key: c.id, cursoId: c.id, nivel: c.nivel, letra: c.letra || "", anio: c.anio }))
+      .concat(ed.cursos.filter((x) => !x.cursoId && !suyos.some((c) => c.nivel === x.nivel && (c.letra || "").toUpperCase() === x.letra)));
+    const claves = new Set(ed.cursos.map((x) => x.key));
+    ed.hojas.forEach((h) => {
+      if (h.curso && !claves.has(h.curso)) h.curso = null;
+    });
+    if (ed.activo !== "borrar" && !claves.has(ed.activo)) ed.activo = null;
+  }
+
+  async function cargarEditor(archivos) {
+    const ed = editor();
+    const validos = archivos.filter((a) => /\.pdf$/i.test(a.name) || /^image\//.test(a.type) || /\.(jpe?g|png|webp|bmp|gif)$/i.test(a.name));
+    if (!validos.length) return toast("Esos archivos no son PDF ni imágenes.");
+    if (ed.cargando) return;
+    ed.resultado = null;
+    ed.cargando = { hecho: 0, total: 0, archivo: "" };
+    pintar();
+    for (const archivo of validos) {
+      const indice = ed.archivos.length;
+      ed.archivos.push(archivo);
+      try {
+        await PaesPdf.miniaturas(archivo, 260, async (url, pagina, total) => {
+          ed.hojas.push({ archivo: indice, pagina, url, curso: null });
+          Object.assign(ed.cargando, { hecho: pagina, total, archivo: archivo.name });
+          const el = raiz.querySelector("#paes-ed-carga");
+          if (el) el.innerHTML = htmlCargaEditor();
+          await ceder();
+        });
+      } catch (err) {
+        console.error(err);
+        toast(`«${archivo.name}» no se pudo abrir.`);
+      }
+    }
+    ed.cargando = null;
+    pintar();
+  }
+  function htmlCargaEditor() {
+    const g = editor().cargando;
+    if (!g) return "";
+    const pct = g.total ? Math.round((g.hecho / g.total) * 100) : 0;
+    return `<div class="paes-progreso"><div class="paes-progreso-texto"><b>Cargando hoja ${g.hecho} de ${g.total || "…"}</b> <span>${esc(g.archivo)}</span></div><div class="paes-barra"><div style="width:${pct}%"></div></div></div>`;
+  }
+
+  function htmlVistaEditor() {
+    const ed = editor();
+    const entrada = `<input type="file" data-archivo="editor-pdf" accept=".pdf,image/*" multiple style="display:none;" />`;
+    let h = `<div class="tarjeta"><h2>✂️ Editor de PDF</h2>
+      <p class="ayuda" style="margin-bottom:0;">Para un escaneo que trae <b>varios cursos en una sola pila</b>. Se muestran las hojas en el mismo orden en que salieron del escáner; eliges un curso y marcas sus hojas, y al finalizar cada grupo se corrige en su curso con el clavijero que elijas.</p></div>`;
+    if (ed.resultado) h += htmlResultadoEditor();
+    if (!ed.hojas.length) {
+      return h + `<div class="tarjeta">${entrada}<div id="paes-ed-carga">${htmlCargaEditor()}</div>
+        ${ed.cargando ? "" : `<div class="acciones-form"><button type="button" data-accion="ed-elegir">📄 Elegir el PDF escaneado…</button></div><p class="ayuda" style="margin:8px 0 0;">Puedes elegir más de un PDF: sus hojas quedan una tras otra.</p>`}</div>`;
+    }
+    const ocupado = !!(est.lectura || ed.cargando || ed.corrigiendo);
+    const chip = (key, texto, extra) => `<button type="button" class="secundario paes-ed-chip${ed.activo === key ? " activo" : ""}" data-accion="ed-activar" data-key="${esc(key)}" style="--c:${key === "borrar" ? "#6b6480" : colorEd(ed, key)}" ${ocupado ? "disabled" : ""}><i></i>${texto} <small data-ed-cuenta="${esc(key)}"></small>${extra || ""}</button>`;
+    h += `<div class="tarjeta"><h2 style="font-size:16px;">1 · Colegio y cursos</h2>
+      <div class="grid-form"><div><label>Colegio *</label><input type="text" data-cambio="ed-colegio" list="paes-ed-colegios" value="${esc(ed.colegio)}" placeholder="Escribe o elige el colegio" autocomplete="off" ${ocupado ? "disabled" : ""} /><datalist id="paes-ed-colegios">${colegiosConocidos().map((n) => `<option value="${esc(n)}"></option>`).join("")}</datalist></div></div>
+      ${ed.colegio ? `<p class="ayuda" style="margin:10px 0 6px;">Pincha un curso para dejarlo <b>activo</b>: todo lo que marques después en las hojas queda en ese curso.</p>
+        <div class="paes-ed-chips">${ed.cursos.map((x) => chip(x.key, esc(etiquetaEd(x)) + (x.cursoId ? "" : " · nuevo"))).join("")}${ed.cursos.length ? chip("borrar", "🧽 Quitar del curso") : ""}</div>
+        <div class="paes-ed-nuevo"><span>Agregar un curso:</span><select id="paes-ed-nivel" ${ocupado ? "disabled" : ""}>${NIVELES.filter((n) => n !== NIVEL_DISPERSO).map((n) => `<option>${n}</option>`).join("")}</select><input type="text" id="paes-ed-letra" maxlength="3" placeholder="Letra" style="width:80px;" ${ocupado ? "disabled" : ""} /><button type="button" class="secundario chico" data-accion="ed-agregar-curso" ${ocupado ? "disabled" : ""}>➕ Agregar curso</button></div>` : `<p class="ayuda" style="margin:10px 0 0;">Escribe el colegio (o elige uno ya guardado) para ver y agregar sus cursos.</p>`}</div>`;
+    h += `<div class="tarjeta"><h2 style="font-size:16px;">2 · Hojas, en el orden del escáner <small id="paes-ed-resumen" style="font-weight:400;"></small></h2>
+      <p class="ayuda">Con un curso activo: <b>pincha</b> una hoja, o <b>arrastra</b> desde la primera hasta la última hoja del curso (también sirve pinchar la primera y, con Mayúsculas, la última). Pinchar de nuevo una hoja del curso activo la saca.</p>
+      <div class="paes-ed-hojas${ocupado ? " ocupado" : ""}">${ed.hojas.map((x, i) => `<div class="paes-ed-hoja" data-i="${i}"><img src="${x.url}" alt="Hoja ${i + 1}" draggable="false" /><b>${i + 1}</b><span></span></div>`).join("")}</div>
+      ${entrada}<div id="paes-ed-carga">${htmlCargaEditor()}</div>
+      <div class="acciones-form" style="margin-top:10px;"><button type="button" class="secundario chico" data-accion="ed-elegir" ${ocupado ? "disabled" : ""}>➕ Agregar otro PDF</button><button type="button" class="secundario chico" data-accion="ed-limpiar" ${ocupado ? "disabled" : ""}>Quitar todas las hojas y empezar de nuevo</button></div></div>`;
+    const clvs = est.clavijeros.slice().sort((a, b) => a.prueba.localeCompare(b.prueba) || a.nombre.localeCompare(b.nombre, "es"));
+    h += `<div class="tarjeta"><h2 style="font-size:16px;">3 · Clavijero y finalizar</h2>
+      ${clvs.length ? `<p class="ayuda">Elige con qué clavijero se corrigen estas hojas (por ejemplo, Competencia Lectora o M1). Si el curso ya tiene ese ensayo, las hojas se suman a él; si no, se crea. Lo ya corregido no cambia.</p>
+        <div class="paes-checks paes-clv-opciones">${clvs.map((k) => `<label><input type="radio" name="paes-ed-clv" data-cambio="ed-clv" value="${esc(k.id)}" ${ed.clavijeroId === k.id ? "checked" : ""} ${ocupado ? "disabled" : ""} /> <span class="paes-pill ${clasePrueba(k)}"><b>${esc(siglaPrueba(k))}</b>${esc(k.nombre)}</span></label>`).join("")}</div>
+        <div class="grid-form" style="margin-top:8px;"><div><label>Fecha de aplicación</label><input type="date" data-cambio="ed-fecha" value="${esc(ed.fecha || "")}" ${ocupado ? "disabled" : ""} /></div></div>` : `<p class="ayuda">Aún no hay clavijeros guardados. Agrégalo en «Clavijeros subidos» y vuelve: las hojas marcadas se conservan mientras no cierres la app.</p><div class="acciones-form"><button type="button" class="secundario chico" data-vista="clavijeros">Ir a Clavijeros subidos</button></div>`}
+      ${ed.corrigiendo ? `<p class="paes-ed-avance"><b>Curso ${ed.corrigiendo.n} de ${ed.corrigiendo.de}</b> · ${esc(ed.corrigiendo.curso)}</p>` : ""}
+      <div id="paes-progreso">${htmlProgreso()}</div>
+      <div class="acciones-form" style="margin-top:10px;"><button type="button" id="paes-ed-finalizar" data-accion="ed-finalizar">Finalizar</button><small id="paes-ed-faltan" class="ayuda" style="margin:0;"></small></div></div>`;
+    return h;
+  }
+
+  function htmlResultadoEditor() {
+    const r = editor().resultado;
+    return `<div class="tarjeta paes-ed-listo"><h2 style="font-size:16px;">✔ Hojas corregidas · ${esc(r.colegio)} · <span class="paes-pill ${r.clase}"><b>${esc(r.sigla)}</b>${esc(r.clavijero)}</span></h2>
+      <div class="paes-tabla-scroll"><table class="paes-tabla"><thead><tr><th>Curso</th><th>Hojas leídas</th><th>Identificadas</th><th>Por identificar</th><th>Ilegibles</th><th>Repetidas</th><th></th></tr></thead><tbody>
+      ${r.filas.map((f) => `<tr><td><b>${esc(f.curso)}</b></td><td class="num">${f.leidas}</td><td class="num">${f.exactas}</td><td class="num">${f.pendientes ? `<span class="paes-falta">${f.pendientes}</span>` : 0}</td><td class="num">${f.ilegibles}</td><td class="num">${f.repetidas}</td><td><button type="button" class="secundario chico" data-accion="res-ver" data-curso="${esc(f.cursoId)}" data-ensayo="${esc(f.ensayoId)}" data-ir="revision">Revisar hojas</button> <button type="button" class="secundario chico" data-accion="res-ver" data-curso="${esc(f.cursoId)}" data-ensayo="${esc(f.ensayoId)}">Ver resultados</button></td></tr>`).join("")}
+      </tbody></table></div>
+      ${r.avisos.length ? htmlAvisos(r.avisos, "amarillo") : ""}
+      <p class="ayuda" style="margin:8px 0 0;">Para cargar la otra prueba de los mismos cursos (por ejemplo M1), elige abajo el nuevo PDF: el colegio y los cursos quedan listos.</p></div>`;
+  }
+
+  // pone al día colores, etiquetas y contadores sin volver a pintar las miniaturas
+  function refrescarEditor(previa) {
+    const ed = est.editor;
+    if (!ed || est.vista !== "editor") return;
+    const porKey = new Map(ed.cursos.map((x) => [x.key, x]));
+    raiz.querySelectorAll(".paes-ed-hoja").forEach((el) => {
+      const i = Number(el.dataset.i);
+      const x = ed.hojas[i];
+      if (!x) return;
+      const cu = x.curso ? porKey.get(x.curso) : null;
+      el.classList.toggle("asignada", !!cu);
+      el.classList.toggle("previa", !!previa && i >= previa[0] && i <= previa[1]);
+      el.style.setProperty("--c", cu ? colorEd(ed, cu.key) : "transparent");
+      el.querySelector("span").textContent = cu ? etiquetaEd(cu) : "";
+    });
+    const cuenta = new Map();
+    ed.hojas.forEach((x) => x.curso && cuenta.set(x.curso, (cuenta.get(x.curso) || 0) + 1));
+    raiz.querySelectorAll("[data-ed-cuenta]").forEach((el) => {
+      const n = cuenta.get(el.dataset.edCuenta);
+      el.textContent = el.dataset.edCuenta === "borrar" ? "" : n ? `· ${plural(n, "hoja", "hojas")}` : "· sin hojas";
+    });
+    const asignadas = ed.hojas.filter((x) => x.curso).length;
+    const sin = ed.hojas.length - asignadas;
+    const res = raiz.querySelector("#paes-ed-resumen");
+    if (res) res.textContent = `· ${plural(ed.hojas.length, "hoja", "hojas")}, ${asignadas} con curso`;
+    const btn = raiz.querySelector("#paes-ed-finalizar");
+    const faltan = raiz.querySelector("#paes-ed-faltan");
+    if (btn) {
+      const ocupado = !!(est.lectura || ed.cargando || ed.corrigiendo);
+      btn.disabled = ocupado || !asignadas || !ed.clavijeroId;
+      btn.textContent = asignadas ? `Finalizar: corregir ${plural(asignadas, "hoja", "hojas")} en ${plural(cuenta.size, "curso", "cursos")}` : "Finalizar";
+      if (faltan) faltan.textContent = !asignadas ? "Marca al menos una hoja en un curso." : !ed.clavijeroId ? "Falta elegir el clavijero." : sin ? `${plural(sin, "hoja queda", "hojas quedan")} sin curso y no se ${sin === 1 ? "corrige" : "corrigen"}.` : "Todas las hojas tienen curso.";
+    }
+  }
+
+  // marcar hojas: pinchar, arrastrar de la primera a la última, o Mayúsculas + clic
+  let trazoEditor = null;
+  const rangoDeTrazo = () => [Math.min(trazoEditor.desde, trazoEditor.hasta), Math.max(trazoEditor.desde, trazoEditor.hasta)];
+  function alBajarEnEditor(ev) {
+    const el = ev.target.closest && ev.target.closest(".paes-ed-hoja");
+    const ed = est.editor;
+    if (!el || !ed || est.vista !== "editor" || ev.button > 0) return;
+    if (est.lectura || ed.cargando || ed.corrigiendo) return;
+    ev.preventDefault();
+    if (ed.activo == null) return toast(ed.colegio ? "Primero pincha un curso (o agrégalo) y después marca sus hojas." : "Primero escribe el colegio y elige un curso.");
+    const i = Number(el.dataset.i);
+    trazoEditor = { desde: ev.shiftKey && ed.ultimo != null ? ed.ultimo : i, hasta: i };
+    refrescarEditor(rangoDeTrazo());
+  }
+  function alPasarEnEditor(ev) {
+    if (!trazoEditor) return;
+    const el = ev.target.closest && ev.target.closest(".paes-ed-hoja");
+    if (!el) return;
+    trazoEditor.hasta = Number(el.dataset.i);
+    refrescarEditor(rangoDeTrazo());
+  }
+  function alSoltarEnEditor() {
+    const ed = est.editor;
+    if (!trazoEditor || !ed) return;
+    const [a, b] = rangoDeTrazo();
+    const una = a === b;
+    for (let i = a; i <= b; i++) {
+      const x = ed.hojas[i];
+      if (!x) continue;
+      if (ed.activo === "borrar" || (una && x.curso === ed.activo)) x.curso = null;
+      else x.curso = ed.activo;
+    }
+    ed.ultimo = trazoEditor.hasta;
+    trazoEditor = null;
+    refrescarEditor();
+  }
+
+  async function finalizarEditor() {
+    const ed = editor();
+    const k = est.clavijeros.find((x) => x.id === ed.clavijeroId);
+    if (est.lectura || ed.corrigiendo || ed.cargando) return;
+    if (!k) return toast("Elige el clavijero con que se corrigen estas hojas.");
+    const grupos = ed.cursos.map((cu) => ({ cu, hojas: ed.hojas.filter((x) => x.curso === cu.key) })).filter((g) => g.hojas.length);
+    if (!grupos.length) return toast("Marca al menos una hoja en un curso.");
+    const resultado = { colegio: ed.colegio, clavijero: k.nombre, sigla: siglaPrueba(k), clase: clasePrueba(k), filas: [], avisos: [] };
+    const hechas = new Set();
+    let detenido = false;
+    for (let n = 0; n < grupos.length && !detenido; n++) {
+      const g = grupos[n];
+      let c = g.cu.cursoId ? est.cursos.find((x) => x.id === g.cu.cursoId) : null;
+      if (!c) {
+        c = { id: PaesDB.nuevoId("c"), colegio: ed.colegio, nivel: g.cu.nivel, letra: g.cu.letra, anio: g.cu.anio || new Date().getFullYear(), estudiantes: [], creado: new Date().toISOString() };
+        est.cursos.push(c);
+        await guardar("cursos", c);
+        ed.hojas.forEach((x) => {
+          if (x.curso === g.cu.key) x.curso = c.id;
+        });
+        if (ed.activo === g.cu.key) ed.activo = c.id;
+        Object.assign(g.cu, { key: c.id, cursoId: c.id });
+      }
+      let e = ensayosDelCurso(c.id).find((x) => x.clavijeroId === k.id);
+      if (!e) e = await crearEnsayoCon(c, { prueba: k.prueba, pruebaNombre: k.pruebaNombre, fecha: ed.fecha || "", clavijero: k });
+      const paginas = new Map();
+      g.hojas.forEach((x) => {
+        const f = ed.archivos[x.archivo];
+        if (!paginas.has(f)) paginas.set(f, []);
+        paginas.get(f).push(x.pagina);
+      });
+      Object.assign(est, { enBlanco: false, cursoId: c.id, ensayoId: e.id, resumenLectura: null });
+      ed.corrigiendo = { n: n + 1, de: grupos.length, curso: etiquetaCurso(c) };
+      await subirHojas(Array.from(paginas.keys()), { paginas, fijo: true });
+      const r = est.resumenLectura || { leidas: 0, exactas: 0, pendientes: 0, ilegibles: 0, repetidas: 0, avisos: [] };
+      resultado.filas.push({ curso: etiquetaCurso(c), cursoId: c.id, ensayoId: e.id, leidas: r.leidas, exactas: r.exactas, pendientes: r.pendientes, ilegibles: r.ilegibles, repetidas: r.repetidas });
+      detenido = (r.avisos || []).some((a) => /Detuviste|interrumpió/.test(a));
+      (r.avisos || []).forEach((a) => resultado.avisos.push(`${etiquetaCurso(c)}: ${a}`));
+      if (!detenido) g.hojas.forEach((x) => hechas.add(x));
+    }
+    est.resumenLectura = null;
+    ed.corrigiendo = null;
+    ed.resultado = resultado;
+    if (detenido) {
+      // lo que no alcanzó a corregirse sigue marcado, para finalizar de nuevo
+      ed.hojas = ed.hojas.filter((x) => !hechas.has(x) || !x.curso);
+    } else {
+      const previo = { colegio: ed.colegio, cursos: [], clavijeroId: null };
+      est.editor = Object.assign(editorVacio(previo), { resultado });
+      fijarColegioEditor(previo.colegio);
+    }
+    est.vista = "editor";
+    pintar();
+    global.scrollTo({ top: 0 });
+    toast(detenido ? "La corrección se detuvo: lo ya leído quedó guardado" : "Hojas corregidas y guardadas en sus cursos");
+  }
+
   // ============================================================ CONFIGURACIÓN
 
   function htmlVistaConfig() {
@@ -3059,7 +3303,7 @@
     }
     // no se puede deshacer: el historial de acciones queda vacío
     Object.assign(diario, { hechas: [], deshechas: [], pendiente: null });
-    Object.assign(est, { cursos: [], ensayos: [], hojas: [], papelera: [], cursoId: null, ensayoId: null, enBlanco: true, tanda: [], paso: "curso", cfgBorrar: false, cfgInformes: null, otroClv: null, verCurso: null, editarEn: null, fusionarEn: null, previa: null, listas: null });
+    Object.assign(est, { cursos: [], ensayos: [], hojas: [], papelera: [], cursoId: null, ensayoId: null, enBlanco: true, tanda: [], paso: "curso", cfgBorrar: false, cfgInformes: null, editor: null, otroClv: null, verCurso: null, editarEn: null, fusionarEn: null, previa: null, listas: null });
     await cargarDatos();
     pintar();
     pintarBarraAcciones();
@@ -3118,7 +3362,7 @@
 
   function htmlVistas() {
     const b = (id, texto) => `<button type="button" class="${est.vista === id ? "" : "secundario"}" data-vista="${id}">${texto}</button>`;
-    return `<div class="paes-vistas">${b("curso", "📝 Trabajar un curso")}${b("resultados", "📁 Resultados guardados")}${b("clavijeros", `🔑 Clavijeros subidos${est.clavijeros.length ? " (" + est.clavijeros.length + ")" : ""}`)}${b("carpetas", "🗂 Editar carpetas")}${b("papelera", `🗑 Papelera${cuentaPapelera() ? " (" + cuentaPapelera() + ")" : ""}`)}${b("acciones", `🕓 Acciones${diario.hechas.length ? " (" + diario.hechas.length + ")" : ""}`)}${b("config", "⚙️ Configuración")}</div>`;
+    return `<div class="paes-vistas">${b("curso", "📝 Trabajar un curso")}${b("resultados", "📁 Resultados guardados")}${b("clavijeros", `🔑 Clavijeros subidos${est.clavijeros.length ? " (" + est.clavijeros.length + ")" : ""}`)}${b("carpetas", "🗂 Editar carpetas")}${b("papelera", `🗑 Papelera${cuentaPapelera() ? " (" + cuentaPapelera() + ")" : ""}`)}${b("acciones", `🕓 Acciones${diario.hechas.length ? " (" + diario.hechas.length + ")" : ""}`)}${b("editor", "✂️ Editor de PDF")}${b("config", "⚙️ Configuración")}</div>`;
   }
 
   // cursos agrupados por colegio
@@ -4031,6 +4275,20 @@
   // cambios de formulario de las vistas nuevas; devuelve true si se hizo cargo
   function alCambiarExtras(t) {
     const d = t.dataset;
+    if (d.cambio === "ed-colegio") {
+      fijarColegioEditor(t.value);
+      pintar();
+      return true;
+    }
+    if (d.cambio === "ed-clv") {
+      editor().clavijeroId = t.value;
+      refrescarEditor();
+      return true;
+    }
+    if (d.cambio === "ed-fecha") {
+      editor().fecha = t.value;
+      return true;
+    }
     if (d.cambio === "inf-curso" || d.cambio === "inf-colegio") {
       const sel = est.cfgInformes;
       if (!sel) return true;
@@ -4516,6 +4774,40 @@
         pintar();
         break;
       }
+      // ---- editor de PDF
+      case "ed-elegir": {
+        const entrada = raiz.querySelector('[data-archivo="editor-pdf"]');
+        if (entrada) entrada.click();
+        break;
+      }
+      case "ed-activar":
+        editor().activo = editor().activo === b.dataset.key ? null : b.dataset.key;
+        raiz.querySelectorAll(".paes-ed-chip").forEach((x) => x.classList.toggle("activo", x.dataset.key === editor().activo));
+        break;
+      case "ed-agregar-curso": {
+        const ed = editor();
+        const nivel = raiz.querySelector("#paes-ed-nivel").value;
+        const letra = raiz.querySelector("#paes-ed-letra").value.replace(/\s+/g, "").toUpperCase();
+        if (!ed.colegio) {
+          toast("Primero escribe el colegio.");
+          break;
+        }
+        let cu = ed.cursos.find((x) => x.nivel === nivel && (x.letra || "").toUpperCase() === letra && (!x.cursoId || x.anio === new Date().getFullYear()));
+        if (!cu) {
+          cu = { key: PaesDB.nuevoId("n"), cursoId: null, nivel, letra, anio: new Date().getFullYear() };
+          ed.cursos.push(cu);
+        }
+        ed.activo = cu.key;
+        pintar();
+        break;
+      }
+      case "ed-limpiar":
+        est.editor = Object.assign(editorVacio({ colegio: editor().colegio, cursos: editor().cursos, clavijeroId: editor().clavijeroId }), {});
+        pintar();
+        break;
+      case "ed-finalizar":
+        finalizarEditor();
+        break;
       // ---- configuración
       case "cfg-informes":
         est.cfgInformes = new Set(est.cursos.filter((c) => ensayosConHojas([c]).length).map((c) => c.id));
@@ -4647,6 +4939,10 @@
       if (t.dataset.archivo === "lista") leerArchivoLista(archivos[0]);
       if (t.dataset.archivo === "listas") leerListasNuevas(archivos);
       if (t.dataset.archivo === "disperso") crearDisperso(archivos);
+      if (t.dataset.archivo === "editor-pdf") {
+        cargarEditor(archivos);
+        t.value = "";
+      }
       if (t.dataset.archivo === "res-pdf" && est.otroClv) {
         const validos = archivos.filter((a) => /\.pdf$/i.test(a.name) || /^image\//.test(a.type) || /\.(jpe?g|png|webp|bmp|gif)$/i.test(a.name));
         if (!validos.length) toast("Esos archivos no son PDF ni imágenes.");

@@ -559,3 +559,26 @@ body.modulo-paes .topbar-acciones { display: none !important; }
 .paes-inf-curso { display: block; padding: 3px 0 3px 26px; cursor: pointer; font-weight: 400; margin: 0; }
 .paes-inf-curso small { color: var(--texto-suave); }
 .paes-inf-curso.sin { opacity: 0.55; cursor: default; }
+
+/* Editor de PDF: hojas en el orden del escáner, marcadas por curso */
+.paes-ed-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+#modulo-paes button.paes-ed-chip { display: inline-flex; align-items: center; gap: 7px; background: white; color: var(--texto); border: 2px solid #d6d2e0; border-radius: 999px; padding: 6px 14px 6px 8px; font-size: 13.5px; font-weight: 600; }
+#modulo-paes button.paes-ed-chip i { width: 16px; height: 16px; border-radius: 50%; background: var(--c); display: inline-block; }
+#modulo-paes button.paes-ed-chip small { font-weight: 400; color: var(--texto-suave); }
+#modulo-paes button.paes-ed-chip:hover { background: #f6f5fa; }
+#modulo-paes button.paes-ed-chip.activo { border-color: var(--c); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 28%, transparent); background: color-mix(in srgb, var(--c) 10%, white); }
+.paes-ed-nuevo { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--texto-suave); }
+.paes-ed-nuevo select { width: auto; }
+.paes-ed-hojas { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; user-select: none; -webkit-user-select: none; }
+.paes-ed-hojas.ocupado { opacity: 0.6; pointer-events: none; }
+.paes-ed-hoja { position: relative; border: 3px solid #dcd8e6; border-radius: 7px; background: white; cursor: pointer; overflow: hidden; line-height: 0; }
+.paes-ed-hoja img { width: 100%; display: block; pointer-events: none; }
+.paes-ed-hoja > b { position: absolute; top: 3px; left: 3px; background: rgba(40, 36, 56, 0.82); color: white; font-size: 12px; line-height: 1.3; border-radius: 5px; padding: 1px 6px; }
+.paes-ed-hoja > span { position: absolute; left: 0; right: 0; bottom: 0; background: var(--c); color: white; font-size: 11.5px; font-weight: 700; line-height: 1.5; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 3px; }
+.paes-ed-hoja > span:empty { display: none; }
+.paes-ed-hoja.asignada { border-color: var(--c); }
+.paes-ed-hoja.previa { outline: 3px solid #1b1730; outline-offset: 1px; }
+.paes-ed-hoja:hover { border-color: #8f88a8; }
+.paes-ed-hoja.asignada:hover { border-color: var(--c); }
+.paes-ed-avance { margin: 10px 0 0; font-size: 13.5px; }
+.paes-ed-listo { border-left: 5px solid #2e7d32; }

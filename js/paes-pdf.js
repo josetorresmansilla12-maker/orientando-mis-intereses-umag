@@ -113,6 +113,55 @@
     };
   }
 
+  // Miniaturas de todas las páginas de un archivo, en su orden (Editor de PDF). Avisa de a
+  // una con alAvanzar(urlDeLaImagen, numeroDePagina, totalDePaginas).
+  async function miniaturas(archivo, ancho, alAvanzar) {
+    const bytes = new Uint8Array(await archivo.arrayBuffer());
+    const canvas = document.createElement("canvas");
+    const ctxDe = (w, h) => {
+      canvas.width = Math.max(1, Math.round(w));
+      canvas.height = Math.max(1, Math.round(h));
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      return ctx;
+    };
+    if (esPdf(archivo)) {
+      const pdfjs = await cargarPdfJs();
+      const doc = await pdfjs.getDocument({ data: bytes, isEvalSupported: false }).promise;
+      try {
+        for (let i = 1; i <= doc.numPages; i++) {
+          const pag = await doc.getPage(i);
+          const base = pag.getViewport({ scale: 1 });
+          const vista = pag.getViewport({ scale: ancho / base.width });
+          const ctx = ctxDe(vista.width, vista.height);
+          await pag.render({ canvasContext: ctx, viewport: vista, intent: "print" }).promise;
+          pag.cleanup();
+          await alAvanzar(canvas.toDataURL("image/jpeg", 0.6), i, doc.numPages);
+        }
+      } finally {
+        canvas.width = canvas.height = 1;
+        await doc.destroy();
+      }
+      return;
+    }
+    const url = URL.createObjectURL(new Blob([bytes], { type: archivo.type || "image/jpeg" }));
+    try {
+      const img = await new Promise((ok, mal) => {
+        const i = new Image();
+        i.onload = () => ok(i);
+        i.onerror = () => mal(new Error(`No se pudo abrir «${archivo.name}».`));
+        i.src = url;
+      });
+      const ctx = ctxDe(ancho, (img.naturalHeight * ancho) / img.naturalWidth);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      await alAvanzar(canvas.toDataURL("image/jpeg", 0.6), 1, 1);
+    } finally {
+      URL.revokeObjectURL(url);
+      canvas.width = canvas.height = 1;
+    }
+  }
+
   function blobDeGris(img, calidad) {
     const canvas = document.createElement("canvas");
     canvas.width = img.ancho;
@@ -158,5 +207,5 @@
     return { legible: r.legible, lectura, imagenes };
   }
 
-  global.PaesPdf = { cargarPdfJs, abrirArchivo, huellaDePagina, leerPagina, blobDeGris };
+  global.PaesPdf = { cargarPdfJs, abrirArchivo, miniaturas, huellaDePagina, leerPagina, blobDeGris };
 })(window);

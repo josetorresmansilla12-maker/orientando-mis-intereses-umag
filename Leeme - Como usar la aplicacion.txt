@@ -451,6 +451,14 @@ El trabajo va en cinco pasos:
      muestra cuáles clavijeros ya están aplicados a ese curso: si eliges uno de
      esos, los PDF se suman a ese ensayo; si eliges otro, se crea el ensayo. No
      borra lo ya corregido.
+   - Pestaña "✂️ Editor de PDF": para un escaneo que trae varios cursos en una
+     sola pila. Muestra las hojas en el orden del escáner. Escribes o eliges el
+     colegio, pinchas un curso (o lo agregas) y marcas sus hojas pinchando o
+     arrastrando de la primera a la última; después eliges el siguiente curso y
+     marcas las suyas. Al final eliges el clavijero (por ejemplo CL o M1) y
+     "Finalizar": cada grupo de hojas se corrige en su curso. Para la otra prueba
+     de los mismos cursos, cargas el otro PDF: el colegio y los cursos quedan listos.
+     Cada hoja queda en el curso que marcaste, aunque su RUT sea de otro curso.
    - Pestaña "⚙️ Configuración":
      * "📦 Descargar informes": abre una ventana para marcar colegios y cursos
        (con "Seleccionar todos" y "Desmarcar todos") y descarga un solo ZIP con el
