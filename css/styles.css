@@ -1544,15 +1544,15 @@ details.correccion-dejados > table.lista { border-radius: 0; box-shadow: none; }
   border: none;
   background: transparent;
   color: var(--texto-suave);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 400;
   line-height: 1;
-  opacity: 0.45;
+  opacity: 0.9;
   vertical-align: baseline;
 }
 .btn-lapiz:hover,
 .btn-lapiz:focus-visible { opacity: 1; color: var(--morado); background: var(--lila-fondo); }
-tr:hover .btn-lapiz { opacity: 0.8; }
+tr:hover .btn-lapiz { opacity: 1; }
 .mda-campos { grid-template-columns: 2fr 1fr; }
 #modal-datos-alumno .modal-caja { max-width: 520px; }
 
@@ -1612,7 +1612,7 @@ tr.marcado-visual:hover > td.celda-marca { opacity: 1; }
 .mx-colegio-nombre:hover { border-color: var(--morado-claro); background: white; }
 .mx-colegio-nombre:focus { border-style: solid; border-color: var(--morado); background: white; outline: none; }
 .mx-lapiz { color: var(--texto-suave); font-weight: 400; font-size: 13px; margin-left: -2px; }
-details.grupo-colegio > summary .btn-lapiz-colegio { color: white; opacity: 0.7; }
+details.grupo-colegio > summary .btn-lapiz-colegio { color: white; opacity: 1; }
 details.grupo-colegio > summary .btn-lapiz-colegio:hover,
 details.grupo-colegio > summary .btn-lapiz-colegio:focus-visible { opacity: 1; color: white; background: rgba(255, 255, 255, 0.2); }
 #modal-renombrar-colegio .modal-caja { max-width: 480px; }

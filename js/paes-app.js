@@ -767,7 +767,7 @@
       htmlVistas() +
       (est.vista === "curso"
         ? (est.importar ? htmlImportarKuder() : "") + htmlContexto() + htmlPasos() + `<div id="paes-panel">${htmlPanel()}</div>`
-        : `<div id="paes-panel">${est.vista === "resultados" ? htmlVistaResultados() : est.vista === "clavijeros" ? htmlVistaClavijeros() : est.vista === "papelera" ? htmlVistaPapelera() : est.vista === "acciones" ? htmlVistaAcciones() : htmlVistaCarpetas()}</div>`) +
+        : `<div id="paes-panel">${est.vista === "resultados" ? htmlVistaResultados() : est.vista === "clavijeros" ? htmlVistaClavijeros() : est.vista === "papelera" ? htmlVistaPapelera() : est.vista === "acciones" ? htmlVistaAcciones() : est.vista === "config" ? htmlVistaConfig() : htmlVistaCarpetas()}</div>`) +
       `<div id="paes-visor" class="modal-overlay" style="display:none;"></div>`;
     global.scrollTo(0, y);
     cargarImagenes();
@@ -1178,7 +1178,7 @@
           ${chipLista(c)}
           ${c.estudiantes.length ? `<button type="button" class="secundario chico" data-accion="lista-oficial">${c.listaOficial === true ? "Marcar como provisoria" : "Marcar como oficial"}</button>` : ""}
           <button type="button" class="chico" data-accion="nuevo-curso">➕ Ingresar nuevo curso</button>
-          <button type="button" class="secundario chico" data-accion="editar-curso" title="Cambia el colegio, el nivel, la letra o el año de ESTE curso">✏ Editar datos de este curso</button>
+          <button type="button" class="secundario chico" data-accion="editar-curso" title="Cambia el colegio, el nivel, la letra o el año de ESTE curso">✏️ Editar datos de este curso</button>
           <button type="button" class="chico peligro" data-accion="eliminar-curso">🗑 Eliminar curso</button>
         </div>
       </div>
@@ -1219,7 +1219,7 @@
         if (est.editEst === e.id) h += htmlFilaEdicion(e, i + 1);
         else {
           h += `<tr><td class="num">${i + 1}</td><td>${esc(e.nombres)}</td><td>${esc(e.apellidos)}</td><td class="rut">${esc(L.formatearRutPaes(e.rut))}</td><td>${insigniaRut(e.rut)}${e.fueraDeLista ? ` <span class="paes-chip amarillo" title="Tiene una hoja, pero no viene en la lista que reemplazó a la anterior">fuera de la lista</span>` : ""}</td>
-            <td class="acciones"><button type="button" class="secundario chico" data-accion="editar-estudiante" data-id="${esc(e.id)}">✏</button>
+            <td class="acciones"><button type="button" class="secundario chico" data-accion="editar-estudiante" data-id="${esc(e.id)}">✏️</button>
             <button type="button" class="chico peligro" data-accion="eliminar-estudiante" data-id="${esc(e.id)}" title="Quitar de la lista">🗑</button></td></tr>`;
         }
       });
@@ -2865,13 +2865,26 @@
       </tbody></table></div></div>`;
   }
 
-  // informe para el colegio, en PDF o Word, con el estilo de los informes de Kuder
-  async function descargarInforme(formato) {
-    const c = cursoActual();
-    const e = ensayoActual();
-    if (!c || !e || est.generando) return;
+  // ---- nombres de los archivos: "4to A Colegio Alfa Informe Ensayo PAES …", igual que
+  // en el resto de la app (js/report.js: nombreEstandar)
+  function textoArchivo(t) {
+    return L.sinTildes(String(t || "")).replace(/[^A-Za-z0-9 .,()&'-]+/g, " ").replace(/\s+/g, " ").trim();
+  }
+  function inicioArchivo(cursos, tipo) {
+    const lista = cursos.map((c) => ({ curso: c.nivel, letra: c.letra, colegio: c.colegio }));
+    if (typeof nombreEstandar === "function") return nombreEstandar(lista, lista, tipo);
+    const colegios = [...new Set(cursos.map((c) => c.colegio))];
+    return [cursos.length === 1 ? textoArchivo(etiquetaCurso(cursos[0])) : "", textoArchivo(colegios.length === 1 ? colegios[0] : "Varios colegios"), textoArchivo(tipo)].filter(Boolean).join(" ");
+  }
+  // "4to A Colegio Alfa Informe Ensayo PAES Competencia Lectora Forma A 2026-04-10"
+  function nombreArchivoEnsayo(c, e, tipo) {
+    const detalle = [nombrePrueba(e), e.forma ? "Forma " + e.forma : "", e.fecha || ""].filter(Boolean).join(" ");
+    return inicioArchivo([c], `${tipo} ${detalle}`);
+  }
+
+  function datosDeInforme(c, e, conNombres) {
     const hojas = hojasDelEnsayo(e.id);
-    const datos = {
+    return {
       curso: cursoParaResultados(c, [e]),
       ensayo: e,
       nombrePrueba: nombrePrueba(e),
@@ -2879,16 +2892,23 @@
       resultados: L.resultadosEnsayo(e, hojas, cursoParaResultados(c, [e]).estudiantes),
       analisis: L.analisisPorPregunta(e, hojas),
       pendientes: contarEstados(e).revisar,
-      sinNombres: est.sinNombres,
+      sinNombres: conNombres ? false : est.sinNombres,
     };
+  }
+
+  // informe para el colegio, en PDF o Word, con el estilo de los informes de Kuder
+  async function descargarInforme(formato) {
+    const c = cursoActual();
+    const e = ensayoActual();
+    if (!c || !e || est.generando) return;
+    const datos = datosDeInforme(c, e);
     const empezar = async () => {
       est.generando = true;
       pintar();
       toast("Creando el informe…");
       try {
         const blob = formato === "pdf" ? await PaesInforme.pdf(datos) : await PaesInforme.word(datos);
-        const prueba = e.prueba === "OTRA" ? nombreSeguro(e.pruebaNombre) : e.prueba;
-        descargar(blob, `Informe_Ensayo_PAES_${prueba}${e.forma ? "_F" + nombreSeguro(e.forma) : ""}_${nombreSeguro(c.colegio)}_${nombreSeguro(etiquetaCurso(c))}${e.fecha ? "_" + e.fecha : ""}${est.sinNombres ? "_sin_nombres" : ""}.${formato === "pdf" ? "pdf" : "docx"}`);
+        descargar(blob, `${nombreArchivoEnsayo(c, e, "Informe Ensayo PAES")}${est.sinNombres ? " (sin nombres)" : ""}.${formato === "pdf" ? "pdf" : "docx"}`);
         toast("Informe descargado");
       } catch (err) {
         console.error(err);
@@ -2907,14 +2927,186 @@
     } else empezar();
   }
 
+  // un ZIP con el informe PDF (para el colegio, con nombres) de cada ensayo con hojas de los cursos elegidos
+  function ensayosConHojas(cursos) {
+    const pares = [];
+    ordenarCursos(cursos).forEach((c) =>
+      ordenPruebas(ensayosDelCurso(c.id)).forEach((e) => {
+        if (hojasDelEnsayo(e.id).some(vigente)) pares.push({ c, e });
+      })
+    );
+    return pares;
+  }
+  function descargarZipInformes(cursosElegidos, alTerminar) {
+    if (est.generando) return;
+    const pares = ensayosConHojas(cursosElegidos);
+    if (!pares.length) return toast("Los cursos marcados aún no tienen ensayos con hojas leídas.");
+    if (typeof JSZip === "undefined") return toast("No se pudo preparar el ZIP en este navegador.");
+    const pendientes = pares.reduce((n, x) => n + contarEstados(x.e).revisar, 0);
+    const empezar = async () => {
+      est.generando = true;
+      pintar();
+      try {
+        const zip = new JSZip();
+        const usados = new Map();
+        let hechos = 0;
+        for (const { c, e } of pares) {
+          toast(`Creando los informes… ${++hechos} de ${pares.length}`);
+          const blob = await PaesInforme.pdf(datosDeInforme(c, e, true));
+          let nombre = nombreArchivoEnsayo(c, e, "Informe Ensayo PAES");
+          const veces = usados.get(nombre.toLowerCase()) || 0;
+          usados.set(nombre.toLowerCase(), veces + 1);
+          if (veces > 0) nombre += ` (${veces + 1})`;
+          zip.file(`${nombre}.pdf`, blob);
+          await ceder();
+        }
+        const cursos = [...new Set(pares.map((x) => x.c))];
+        const contenido = await zip.generateAsync({ type: "blob" });
+        descargar(contenido, `${inicioArchivo(cursos, "Informes Ensayo PAES")} (${plural(pares.length, "informe", "informes")}).zip`);
+        toast(`ZIP descargado con ${plural(pares.length, "informe PDF", "informes PDF")}`);
+        if (alTerminar) alTerminar();
+      } catch (err) {
+        console.error(err);
+        toast("No se pudo crear el ZIP con los informes.");
+      }
+      est.generando = false;
+      pintar();
+    };
+    if (pendientes) {
+      confirmar({
+        titulo: "Hay advertencias pendientes",
+        texto: `En los cursos marcados quedan ${plural(pendientes, "hoja con advertencias sin revisar", "hojas con advertencias sin revisar")}. Puedes crear los informes igual, pero los resultados podrían cambiar cuando las revises.`,
+        textoBoton: "Crear los informes igual",
+        onConfirmar: empezar,
+      });
+    } else empezar();
+  }
+
+  // ============================================================ CONFIGURACIÓN
+
+  function htmlVistaConfig() {
+    const nCursos = est.cursos.length + est.papelera.length;
+    let h = `<div class="tarjeta"><h2>⚙️ Configuración</h2>
+      <p class="ayuda" style="margin-bottom:0;">Descarga de informes y borrado de los datos de los Ensayos PAES guardados en este computador.</p></div>
+      <div class="tarjeta"><h2 style="font-size:16px;">📦 Descargar informes</h2>
+        <p class="ayuda">Eliges los colegios y cursos, y se descarga <b>un solo archivo ZIP</b> con el informe PDF de resultados de cada prueba de cada curso marcado.</p>
+        <div class="acciones-form"><button type="button" data-accion="cfg-informes" ${est.generando ? "disabled" : ""}>📦 Descargar informes</button></div></div>
+      <div class="tarjeta paes-cfg-peligro"><h2 style="font-size:16px;">🗑 Eliminar todos los datos</h2>
+        <p class="ayuda">Borra de este computador <b>todos</b> los cursos, listas, ensayos, hojas leídas y resultados de los Ensayos PAES, incluida la papelera. No toca los test vocacionales (Kuder y 8° básico).</p>`;
+    if (!est.cfgBorrar) h += `<div class="acciones-form"><button type="button" class="peligro" data-accion="cfg-borrar">🗑 Eliminar todos los datos</button></div>`;
+    else
+      h += `<div class="paes-cfg-confirmar">
+        <p><b>Esto no se puede deshacer.</b> Se van a borrar ${plural(nCursos, "curso", "cursos")}${est.papelera.length ? ` (${est.papelera.length} en la papelera)` : ""}, ${plural(est.ensayos.length, "ensayo", "ensayos")} y ${plural(est.hojas.length, "hoja leída", "hojas leídas")}. Si necesitas conservar algo, descarga antes los informes o el Excel.</p>
+        <label class="paes-filtro"><input type="checkbox" id="paes-cfg-clv" /> Borrar también los ${plural(est.clavijeros.length, "clavijero guardado", "clavijeros guardados")}</label>
+        <label for="paes-cfg-palabra">Para confirmar, escribe <b>ELIMINAR</b>:</label>
+        <input type="text" id="paes-cfg-palabra" autocomplete="off" spellcheck="false" style="max-width:220px;" />
+        <div class="acciones-form"><button type="button" class="peligro" data-accion="cfg-borrar-si">Eliminar todo definitivamente</button><button type="button" class="secundario" data-accion="cfg-borrar-no">Cancelar</button></div></div>`;
+    h += `</div>`;
+    if (est.cfgInformes) h += htmlModalInformes();
+    return h;
+  }
+
+  // ventana para elegir de qué colegios y cursos se descargan los informes
+  function htmlModalInformes() {
+    const sel = est.cfgInformes;
+    let cuerpo = "";
+    porColegio().forEach((g, k) => {
+      const filas = g.cursos.map((c) => {
+        const n = ensayosConHojas([c]).length;
+        return `<label class="paes-inf-curso${n ? "" : " sin"}"><input type="checkbox" data-cambio="inf-curso" data-col="${k}" data-curso="${esc(c.id)}" ${n ? "" : "disabled"} ${sel.has(c.id) ? "checked" : ""} /> <b>${esc(etiquetaCurso(c))}</b> <small>${esc(c.anio)} · ${n ? plural(n, "informe", "informes") + " · " + ordenPruebas(ensayosDelCurso(c.id)).filter((e) => hojasDelEnsayo(e.id).some(vigente)).map((e) => esc(siglaPrueba(e))).join(", ") : "sin resultados todavía"}</small></label>`;
+      });
+      cuerpo += `<div class="paes-inf-colegio"><label class="paes-inf-cab"><input type="checkbox" data-cambio="inf-colegio" data-col="${k}" /> 🏫 ${esc(g.colegio)}</label>${filas.join("")}</div>`;
+    });
+    return `<div class="modal-overlay paes-inf-modal" style="display:flex;"><div class="modal-caja paes-inf-caja">
+      <h3>📦 Descargar informes</h3>
+      <p class="ayuda">Marca los colegios o los cursos. Se descarga un solo ZIP con todos los PDF.</p>
+      <div class="acciones-form"><button type="button" class="secundario chico" data-accion="inf-todos">☑ Seleccionar todos</button><button type="button" class="secundario chico" data-accion="inf-ninguno">☐ Desmarcar todos</button></div>
+      <div class="paes-inf-lista">${cuerpo || `<p class="ayuda">Aún no hay cursos.</p>`}</div>
+      <div class="acciones-form"><button type="button" id="paes-inf-descargar" data-accion="inf-descargar">Descargar ZIP</button><button type="button" class="secundario" data-accion="inf-cerrar">Cancelar</button></div>
+    </div></div>`;
+  }
+  // actualiza las casillas de colegio y el botón sin volver a pintar toda la ventana
+  function refrescarModalInformes() {
+    const sel = est.cfgInformes;
+    if (!sel) return;
+    raiz.querySelectorAll('[data-cambio="inf-curso"]').forEach((x) => (x.checked = sel.has(x.dataset.curso)));
+    raiz.querySelectorAll('[data-cambio="inf-colegio"]').forEach((x) => {
+      const suyos = Array.from(raiz.querySelectorAll(`[data-cambio="inf-curso"][data-col="${x.dataset.col}"]:not(:disabled)`));
+      const marcados = suyos.filter((y) => y.checked).length;
+      x.disabled = !suyos.length;
+      x.checked = suyos.length > 0 && marcados === suyos.length;
+      x.indeterminate = marcados > 0 && marcados < suyos.length;
+    });
+    const n = ensayosConHojas(est.cursos.filter((c) => sel.has(c.id))).length;
+    const btn = raiz.querySelector("#paes-inf-descargar");
+    if (btn) {
+      btn.disabled = !n || est.generando;
+      btn.textContent = n ? `Descargar ZIP (${plural(n, "informe PDF", "informes PDF")})` : "Descargar ZIP";
+    }
+  }
+
+  async function eliminarTodosLosDatos(conClavijeros) {
+    try {
+      await PaesDB.vaciar(["cursos", "ensayos", "hojas", "imagenes", "auditoria"]);
+      if (conClavijeros) {
+        est.clavijeros = [];
+        await PaesDB.borrar("ajustes", "clavijeros");
+      }
+    } catch (err) {
+      console.error(err);
+      toast("No se pudieron eliminar los datos.");
+      return;
+    }
+    // no se puede deshacer: el historial de acciones queda vacío
+    Object.assign(diario, { hechas: [], deshechas: [], pendiente: null });
+    Object.assign(est, { cursos: [], ensayos: [], hojas: [], papelera: [], cursoId: null, ensayoId: null, enBlanco: true, tanda: [], paso: "curso", cfgBorrar: false, cfgInformes: null, otroClv: null, verCurso: null, editarEn: null, fusionarEn: null, previa: null, listas: null });
+    await cargarDatos();
+    pintar();
+    pintarBarraAcciones();
+    toast("Se eliminaron todos los datos de los Ensayos PAES");
+  }
+
+  // ---- Resultados guardados: «Ver curso» y «Editar resultados»
+  function ordenPruebas(ensayos) {
+    const peso = (e) => (e.prueba === "CL" ? 0 : e.prueba === "M1" ? 1 : 2);
+    return ensayos.slice().sort((a, b) => peso(a) - peso(b) || String(a.fecha || "").localeCompare(String(b.fecha || "")));
+  }
+  function htmlVerCurso(c) {
+    const ensayos = ordenPruebas(ensayosDelCurso(c.id)).filter((e) => hojasDelEnsayo(e.id).some(vigente));
+    if (!ensayos.length) return `<div class="paes-ver-curso"><p class="ayuda" style="margin:0;">Este curso aún no tiene hojas leídas.</p></div>`;
+    return `<div class="paes-ver-curso">${ensayos
+      .map((e) => {
+        const res = L.resultadosEnsayo(e, hojasDelEnsayo(e.id), cursoParaResultados(c, [e]).estudiantes);
+        const st = res.estadisticas;
+        const pend = contarEstados(e).revisar;
+        return `<div class="paes-ver-prueba ${clasePrueba(e)}">
+          <div class="paes-ver-banner"><b>${esc(siglaPrueba(e))}</b><span>${esc(nombrePrueba(e))}<small>${e.forma ? "Forma " + esc(e.forma) + " · " : ""}${e.fecha ? esc(PaesExcel.fechaCorta(e.fecha)) + " · " : ""}rindieron ${st.rindieron} de ${st.enLista} · promedio ${numero(st.promedio, 1)}${pend ? ` · ${pend} por revisar` : ""}</small></span>
+            <button type="button" class="secundario chico" data-accion="res-ver" data-curso="${esc(c.id)}" data-ensayo="${esc(e.id)}">Abrir resultados completos</button></div>
+          <div class="paes-tabla-scroll"><table class="paes-tabla paes-resultados"><thead><tr><th>N°</th><th>Estudiante</th><th>RUT</th><th>Correctas</th><th>Puntaje</th></tr></thead><tbody>
+          ${res.filas.map((f, i) => `<tr><td class="num">${i + 1}</td><td>${f.estudianteId ? esc(f.nombre) : `<span class="paes-falta">Sin identificar</span>`}</td><td class="rut">${esc(L.formatearRutPaes(f.rut) || "")}</td><td class="num">${f.correctas}</td><td class="num puntaje">${f.puntaje == null ? `<span class="paes-falta">sin tabla</span>` : f.puntaje}</td></tr>`).join("")}
+          </tbody></table></div></div>`;
+      })
+      .join("")}</div>`;
+  }
+  function htmlEditarResultados(c) {
+    const ensayos = ordenPruebas(ensayosDelCurso(c.id)).filter((e) => hojasDelEnsayo(e.id).some(vigente));
+    return `<div class="paes-editar-res"><b>✏️ ¿Qué ensayo quieres editar?</b>
+      <div class="paes-editar-res-lista">${ensayos
+        .map((e) => {
+          const n = hojasDelEnsayo(e.id).filter(vigente).length, pend = contarEstados(e).revisar;
+          return `<button type="button" class="paes-prueba-btn ${clasePrueba(e)}" data-accion="res-ver" data-curso="${esc(c.id)}" data-ensayo="${esc(e.id)}" data-ir="revision"><b>${esc(siglaPrueba(e))}</b><span>${esc(nombrePrueba(e))}</span><small>${e.forma ? "Forma " + esc(e.forma) + " · " : ""}${plural(n, "hoja", "hojas")}${pend ? " · " + pend + " por revisar" : ""}</small></button>`;
+        })
+        .join("")}</div>
+      <small>Te lleva a las hojas escaneadas de ese ensayo, para corregir respuestas, RUT o a quién pertenece cada hoja.</small></div>`;
+  }
+
   async function descargarExcel() {
     const c = cursoActual();
     const e = ensayoActual();
     if (!c || !e) return;
     try {
       const blob = await PaesExcel.excelDeEnsayo({ ensayo: e, curso: cursoParaResultados(c, [e]), hojas: hojasDelEnsayo(e.id), nombrePrueba: nombrePrueba(e), etiquetaCurso: etiquetaCurso(c), advertencias: advertenciasDelEnsayo(e) });
-      const prueba = e.prueba === "OTRA" ? nombreSeguro(e.pruebaNombre) : e.prueba;
-      descargar(blob, `Ensayo_PAES_${prueba}${e.forma ? "_F" + nombreSeguro(e.forma) : ""}_${nombreSeguro(c.colegio)}_${nombreSeguro(etiquetaCurso(c))}${e.fecha ? "_" + e.fecha : ""}.xlsx`);
+      descargar(blob, `${nombreArchivoEnsayo(c, e, "Resultados Ensayo PAES")}.xlsx`);
       toast("Excel descargado");
     } catch (err) {
       console.error(err);
@@ -2926,7 +3118,7 @@
 
   function htmlVistas() {
     const b = (id, texto) => `<button type="button" class="${est.vista === id ? "" : "secundario"}" data-vista="${id}">${texto}</button>`;
-    return `<div class="paes-vistas">${b("curso", "📝 Trabajar un curso")}${b("resultados", "📁 Resultados guardados")}${b("clavijeros", `🔑 Clavijeros subidos${est.clavijeros.length ? " (" + est.clavijeros.length + ")" : ""}`)}${b("carpetas", "🗂 Editar carpetas")}${b("papelera", `🗑 Papelera${cuentaPapelera() ? " (" + cuentaPapelera() + ")" : ""}`)}${b("acciones", `🕓 Acciones${diario.hechas.length ? " (" + diario.hechas.length + ")" : ""}`)}</div>`;
+    return `<div class="paes-vistas">${b("curso", "📝 Trabajar un curso")}${b("resultados", "📁 Resultados guardados")}${b("clavijeros", `🔑 Clavijeros subidos${est.clavijeros.length ? " (" + est.clavijeros.length + ")" : ""}`)}${b("carpetas", "🗂 Editar carpetas")}${b("papelera", `🗑 Papelera${cuentaPapelera() ? " (" + cuentaPapelera() + ")" : ""}`)}${b("acciones", `🕓 Acciones${diario.hechas.length ? " (" + diario.hechas.length + ")" : ""}`)}${b("config", "⚙️ Configuración")}</div>`;
   }
 
   // cursos agrupados por colegio
@@ -3241,7 +3433,10 @@
       g.cursos.forEach((c) => {
         const ensayos = ensayosDelCurso(c.id);
         const conHojas = ensayos.filter((e) => hojasDelEnsayo(e.id).some(vigente));
-        h += `<details class="paes-detalle paes-res-curso" ${est.cursoId === c.id || g.cursos.length === 1 ? "open" : ""}><summary><b class="paes-res-nombre">${esc(etiquetaCurso(c))}</b> <span class="paes-res-meta">${esc(c.anio)} · ${plural(c.estudiantes.length, "estudiante", "estudiantes")}${c.listaOficial === false ? " · lista provisoria" : ""}</span> ${pildorasDePruebas(c)}</summary>`;
+        h += `<details class="paes-detalle paes-res-curso" ${est.cursoId === c.id || g.cursos.length === 1 || est.verCurso === c.id || est.editarEn === c.id ? "open" : ""}><summary><b class="paes-res-nombre">${esc(etiquetaCurso(c))}</b> <span class="paes-res-meta">${esc(c.anio)} · ${plural(c.estudiantes.length, "estudiante", "estudiantes")}${c.listaOficial === false ? " · lista provisoria" : ""}</span> ${pildorasDePruebas(c)}
+          <span class="paes-res-botones"><button type="button" class="${est.verCurso === c.id ? "" : "secundario "}chico" data-accion="res-ver-curso" data-curso="${esc(c.id)}">👁 ${est.verCurso === c.id ? "Ocultar curso" : "Ver curso"}</button><button type="button" class="${est.editarEn === c.id ? "" : "secundario "}chico" data-accion="res-editar" data-curso="${esc(c.id)}">✏️ Editar resultados</button></span></summary>`;
+        if (est.editarEn === c.id) h += htmlEditarResultados(c);
+        if (est.verCurso === c.id) h += htmlVerCurso(c);
         if (!ensayos.length) h += `<p class="ayuda" style="margin:0 0 8px;">Este curso aún no tiene ensayos.</p><div class="acciones-form"><button type="button" class="secundario chico" data-accion="res-ver" data-curso="${esc(c.id)}" data-ensayo="" data-ir="ensayo">Crear su primer ensayo →</button></div>`;
         ensayos.forEach((e) => {
           const hojas = hojasDelEnsayo(e.id);
@@ -3253,7 +3448,7 @@
           const st = L.resultadosEnsayo(e, hojas, cursoParaResultados(c, [e]).estudiantes).estadisticas;
           const pend = contarEstados(e).revisar;
           const attrs = `data-curso="${esc(c.id)}" data-ensayo="${esc(e.id)}"`;
-          h += `<div class="paes-res-fila"><div><b>${esc(nombrePrueba(e))}</b>
+          h += `<div class="paes-res-fila ${clasePrueba(e)}"><div><b>${esc(nombrePrueba(e))}</b>
             <small>${e.forma ? "Forma " + esc(e.forma) + " · " : ""}${e.fecha ? esc(PaesExcel.fechaCorta(e.fecha)) + " · " : ""}rindieron ${st.rindieron} de ${st.enLista} · promedio ${numero(st.promedio, 1)}${pend ? ` · <span class="paes-falta">${pend} por revisar</span>` : ""}</small></div>
             <div class="paes-cabecera-acciones">
               <button type="button" class="chico" data-accion="res-ver" ${attrs}>Ver resultados</button>
@@ -3789,7 +3984,7 @@
 
   function htmlAgregarManual(x) {
     if (est.agregarEn !== x.id) {
-      return `<div class="paes-candidatos"><button type="button" class="secundario chico" data-accion="agregar-manual" data-id="${esc(x.id)}">➕ No está en la lista: agregar su nombre y RUT</button></div>`;
+      return `<div class="paes-candidatos"><button type="button" class="secundario chico paes-celeste" data-accion="agregar-manual" data-id="${esc(x.id)}">➕ No está en la lista: agregar su nombre y RUT</button></div>`;
     }
     const estado = L.estadoDelId(x.lectura.id);
     const rut = estado === "valido" ? L.formatearRutPaes(x.lectura.id) : "";
@@ -3836,6 +4031,14 @@
   // cambios de formulario de las vistas nuevas; devuelve true si se hizo cargo
   function alCambiarExtras(t) {
     const d = t.dataset;
+    if (d.cambio === "inf-curso" || d.cambio === "inf-colegio") {
+      const sel = est.cfgInformes;
+      if (!sel) return true;
+      const cajas = d.cambio === "inf-curso" ? [t] : Array.from(raiz.querySelectorAll(`[data-cambio="inf-curso"][data-col="${d.col}"]:not(:disabled)`));
+      cajas.forEach((x) => (t.checked ? sel.add(x.dataset.curso) : sel.delete(x.dataset.curso)));
+      refrescarModalInformes();
+      return true;
+    }
     if (d.importar) {
       if (!est.importar) return true;
       if (t.checked) est.importar.add(d.importar);
@@ -3952,7 +4155,7 @@
     const vista = ev.target.closest("[data-vista]");
     if (vista) {
       est.vista = vista.dataset.vista;
-      Object.assign(est, { importar: null, clvForm: false, formCurso: null, formEnsayo: false, otroClv: null, formDisperso: false });
+      Object.assign(est, { importar: null, clvForm: false, formCurso: null, formEnsayo: false, otroClv: null, formDisperso: false, cfgInformes: null, cfgBorrar: false, verCurso: null, editarEn: null });
       pintar();
       global.scrollTo({ top: 0 });
       return;
@@ -4289,6 +4492,71 @@
         pintar();
         global.scrollTo({ top: 0 });
         break;
+      case "res-ver-curso":
+        ev.preventDefault();
+        est.verCurso = est.verCurso === b.dataset.curso ? null : b.dataset.curso;
+        est.editarEn = null;
+        pintar();
+        break;
+      case "res-editar": {
+        ev.preventDefault();
+        const con = ensayosDelCurso(b.dataset.curso).filter((e) => hojasDelEnsayo(e.id).some(vigente));
+        if (!con.length) {
+          toast("Este curso aún no tiene hojas leídas para editar.");
+          break;
+        }
+        if (con.length === 1) {
+          Object.assign(est, { enBlanco: false, cursoId: b.dataset.curso, ensayoId: con[0].id, vista: "curso", paso: "revision", editarEn: null });
+          pintar();
+          global.scrollTo({ top: 0 });
+          break;
+        }
+        est.editarEn = est.editarEn === b.dataset.curso ? null : b.dataset.curso;
+        est.verCurso = null;
+        pintar();
+        break;
+      }
+      // ---- configuración
+      case "cfg-informes":
+        est.cfgInformes = new Set(est.cursos.filter((c) => ensayosConHojas([c]).length).map((c) => c.id));
+        pintar();
+        refrescarModalInformes();
+        break;
+      case "inf-todos":
+      case "inf-ninguno":
+        if (!est.cfgInformes) break;
+        est.cfgInformes = new Set(b.dataset.accion === "inf-todos" ? est.cursos.filter((c) => ensayosConHojas([c]).length).map((c) => c.id) : []);
+        refrescarModalInformes();
+        break;
+      case "inf-cerrar":
+        est.cfgInformes = null;
+        pintar();
+        break;
+      case "inf-descargar": {
+        const sel = est.cfgInformes;
+        if (!sel || !sel.size) break;
+        descargarZipInformes(est.cursos.filter((c) => sel.has(c.id)), () => (est.cfgInformes = null));
+        break;
+      }
+      case "cfg-borrar":
+        est.cfgBorrar = true;
+        pintar();
+        break;
+      case "cfg-borrar-no":
+        est.cfgBorrar = false;
+        pintar();
+        break;
+      case "cfg-borrar-si": {
+        const palabra = raiz.querySelector("#paes-cfg-palabra");
+        const clv = raiz.querySelector("#paes-cfg-clv");
+        if (!palabra || palabra.value.trim().toUpperCase() !== "ELIMINAR") {
+          toast("Para confirmar, escribe ELIMINAR en el cuadro.");
+          if (palabra) palabra.focus();
+          break;
+        }
+        eliminarTodosLosDatos(!!(clv && clv.checked));
+        break;
+      }
       case "res-informe":
         est.cursoId = b.dataset.curso;
         est.enBlanco = false;

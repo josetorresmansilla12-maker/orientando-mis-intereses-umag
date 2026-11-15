@@ -400,15 +400,15 @@ function construirPaginasResultadosKuder(estudiante) {
 
 // ==================== armado + descarga ====================
 
-// "01 - Nombre Alumno - Segundo C - Colegio.pdf" (ver nombreArchivoNumerado en
+// "2do C Colegio Informe Kuder - 01 - Nombre Alumno.pdf" (ver nombreArchivoNumerado en
 // js/report.js). Si el test quedó mal traspasado, lleva su suma entre paréntesis al
-// final, por ejemplo "... - Colegio (44 de 45).pdf" (no se puede usar "44/45": la barra
+// final, por ejemplo "... - Nombre Alumno (44 de 45).pdf" (no se puede usar "44/45": la barra
 // no está permitida en nombres de archivo).
 function nombreArchivoInformeIndividualKuder(estudiante) {
   const traspaso = analizarTraspasoKuder(estudiante.puntajes);
   // los revisados y dejados así ("✓ Dejar así") ya no llevan la marca
   const marca = traspaso.estado === "ok" || traspasoDejadoAsiKuder(estudiante) ? "" : ` (${traspaso.total} de ${SUMA_ESPERADA_KUDER})`;
-  return nombreArchivoNumerado(estudiante, numeracionEnGrupoKuder(estudiante), marca);
+  return nombreArchivoNumerado(estudiante, numeracionEnGrupoKuder(estudiante), marca, "Informe Kuder");
 }
 
 // nota de texto que va dentro del ZIP cuando hay tests mal traspasados: quiénes son,
@@ -471,7 +471,7 @@ async function descargarInformeIndividualKuder(estudiante) {
   storeKuder.registrarInformeGenerado();
 }
 
-// el ZIP de un curso se llama igual que su carpeta: "KUDER_Colegio_2do_Medio_C_2026.zip"
+// el ZIP de un curso se llama igual que su carpeta: "2do C Colegio Informes Kuder 2026.zip"
 function nombreZipInformesIndividualesKuder(estudiantes) {
   return `${nombreCarpetaCurso("KUDER", estudiantes)}.zip`;
 }

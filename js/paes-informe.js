@@ -32,13 +32,12 @@
       `Rindieron el ensayo ${st.rindieron} de los ${plural(st.enLista, "estudiante", "estudiantes")} de la lista del curso` +
       (st.sinIdentificar ? ` (además hay ${plural(st.sinIdentificar, "hoja sin identificar", "hojas sin identificar")})` : "") +
       `. El puntaje promedio fue de ${num(st.promedio, 1)} puntos y la mediana, de ${num(st.mediana, st.mediana % 1 ? 1 : 0)}; ` +
-      `el más alto fue ${num(st.maximo)} y el más bajo, ${num(st.minimo)}. ` +
-      `En promedio, los estudiantes respondieron bien ${num(st.correctasPromedio, 1)} de las ${st.preguntasValidas} preguntas válidas (${num(st.logroPromedio, 1)} % de logro).` +
+      `el más alto fue ${num(st.maximo)} y el más bajo, ${num(st.minimo)}.` +
       (st.sinTabla ? ` ${st.sinTabla === 1 ? "Una hoja tiene" : st.sinTabla + " hojas tienen"} más correctas que el máximo de la tabla de conversión: no ${st.sinTabla === 1 ? "tiene" : "tienen"} puntaje y no ${st.sinTabla === 1 ? "entra" : "entran"} en el promedio de puntaje.` : "");
     const resumenCorto =
       `Rindieron el ensayo ${st.rindieron} de los ${plural(st.enLista, "estudiante", "estudiantes")} de la lista del curso` +
       (st.sinIdentificar ? ` (además hay ${plural(st.sinIdentificar, "hoja sin identificar", "hojas sin identificar")})` : "") +
-      `. En promedio respondieron bien ${num(st.correctasPromedio, 1)} de las ${st.preguntasValidas} preguntas válidas (${num(st.logroPromedio, 1)} % de logro).` +
+      `.` +
       (st.sinTabla ? ` ${st.sinTabla === 1 ? "Una hoja tiene" : st.sinTabla + " hojas tienen"} más correctas que el máximo de la tabla de conversión y no ${st.sinTabla === 1 ? "entra" : "entran"} en el promedio de puntaje.` : "");
     const extremos = L.preguntasExtremas(d.analisis, 5);
     const nota =

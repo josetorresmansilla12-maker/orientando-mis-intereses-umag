@@ -121,6 +121,13 @@
     });
   }
 
+  // deja vacíos los almacenes indicados («Eliminar todos los datos», en Configuración)
+  function vaciar(almacenes) {
+    return transaccion(almacenes, "readwrite", (tx) => {
+      almacenes.forEach((almacen) => tx.objectStore(almacen).clear());
+    });
+  }
+
   function registrarAuditoria(entrada) {
     return transaccion(["auditoria"], "readwrite", (tx) => {
       tx.objectStore("auditoria").add(Object.assign({ cuando: new Date().toISOString() }, entrada));
@@ -131,5 +138,5 @@
     return prefijo + "-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
   }
 
-  global.PaesDB = { abrir, todos, obtener, porIndice, poner, ponerVarios, borrar, borrarEnsayo, borrarHojas, registrarAuditoria, nuevoId };
+  global.PaesDB = { abrir, todos, obtener, porIndice, poner, ponerVarios, borrar, borrarEnsayo, borrarHojas, vaciar, registrarAuditoria, nuevoId };
 })(window);

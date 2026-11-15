@@ -33,7 +33,7 @@ const TESTS = {
     nombreArchivoIndividual: nombreArchivoInforme,
     descargarMasivo: descargarInformesMasivo,
     agregarInformesACarpeta: agregarInformesACarpeta,
-    prefijoCarpetas: "8VO", // carpetas y ZIP: 8VO_Colegio_8vo_A_2026
+    prefijoCarpetas: "8VO", // carpetas y ZIP: "8vo A Colegio Informes Intereses 2026"
     configGrupal: CONFIG_GRUPAL_OCTAVO, // informe grupal para orientadores (js/kuder-report.js)
     exportarExcel: exportarExcel,
   },
@@ -60,7 +60,7 @@ const TESTS = {
     descargarMasivo: descargarInformesMasivoKuder,
     descargarVariosCursos: descargarCarpetasDeCursosKuder,
     agregarInformesACarpeta: agregarInformesACarpetaKuder,
-    prefijoCarpetas: "KUDER", // carpetas y ZIP: KUDER_Colegio_2do_Medio_C_2026
+    prefijoCarpetas: "KUDER", // carpetas y ZIP: "2do C Colegio Informes Kuder 2026"
     configGrupal: CONFIG_GRUPAL_KUDER,
     exportarExcel: exportarExcelKuder,
   },
@@ -418,7 +418,7 @@ function datosDeCorreccion(estudiante, puntajesNuevos, dejarAsi) {
 
 // nombre del estudiante en las listas, con un lápiz chico para editar su nombre y RUT
 function nombreConLapizHtml(estudiante) {
-  return `<strong>${escaparHtml(estudiante.nombre)}</strong><button type="button" class="btn-lapiz" title="Editar nombre y RUT" aria-label="Editar nombre y RUT" onclick="abrirDatosAlumno('${estudiante.id}')">✎</button>`;
+  return `<strong>${escaparHtml(estudiante.nombre)}</strong><button type="button" class="btn-lapiz" title="Editar nombre y RUT" aria-label="Editar nombre y RUT" onclick="abrirDatosAlumno('${estudiante.id}')">✏️</button>`;
 }
 
 function botonDejarAsiHtml(estudiante) {
@@ -1360,7 +1360,7 @@ function renderEstudiantes() {
     // cursos que quedan desplegados (para saber cómo parte el botón "Minimizar alumnos")
     const cursosAbiertos = [...porCurso.keys()].filter((k) => grupoAbierto(claveGrupoCurso(colegio, k), soloUnCurso)).length;
     html += `<details class="grupo-colegio" data-grupo="${escaparHtml(claveCol)}" ${grupoAbierto(claveCol, abrirSoloUno) ? "open" : ""}>
-      <summary>🏫 ${escaparHtml(colegio)}<button type="button" class="btn-lapiz btn-lapiz-colegio" data-colegio="${escaparHtml(colegio)}" title="Cambiar el nombre del colegio" aria-label="Cambiar el nombre del colegio">✎</button> <span class="chip">${porCurso.size} ${porCurso.size === 1 ? "curso" : "cursos"}</span><span class="chip">${totalColegio} ${totalColegio === 1 ? "estudiante" : "estudiantes"}</span>${chipTraspasoHtml([...porCurso.values()].flat())}</summary>
+      <summary>🏫 ${escaparHtml(colegio)}<button type="button" class="btn-lapiz btn-lapiz-colegio" data-colegio="${escaparHtml(colegio)}" title="Cambiar el nombre del colegio" aria-label="Cambiar el nombre del colegio">✏️</button> <span class="chip">${porCurso.size} ${porCurso.size === 1 ? "curso" : "cursos"}</span><span class="chip">${totalColegio} ${totalColegio === 1 ? "estudiante" : "estudiantes"}</span>${chipTraspasoHtml([...porCurso.values()].flat())}</summary>
       <div class="grupo-colegio-cont">
         <div class="grupo-colegio-acciones">
           <button type="button" class="chico" id="${idSeguro("zipcol", colegio)}" title="Un ZIP con todos los informes de este colegio, con una carpeta por curso (curso y letra)">⬇ Descargar todos los informes del colegio (ZIP por curso)</button>
@@ -2594,7 +2594,7 @@ function accionDescargarTodosLosCursos(lista, btn) {
     colegios.push({ original: colegio, nCursos: porCurso.size, cursos: [] });
     html += `
       <div class="mx-colegio">
-        <div class="mx-colegio-titulo">🏫 <input type="text" class="mx-colegio-nombre" data-k="${k}" value="${escaparHtml(colegio)}" placeholder="Nombre del colegio" spellcheck="false" title="Haz clic para cambiar el nombre del colegio" aria-label="Nombre del colegio" /><span class="mx-lapiz" aria-hidden="true">✎</span>
+        <div class="mx-colegio-titulo">🏫 <input type="text" class="mx-colegio-nombre" data-k="${k}" value="${escaparHtml(colegio)}" placeholder="Nombre del colegio" spellcheck="false" title="Haz clic para cambiar el nombre del colegio" aria-label="Nombre del colegio" /><span class="mx-lapiz" aria-hidden="true">✏️</span>
           <span class="mx-zip">archivo: <span class="mx-zip-nombre">${escaparHtml(nombreZipVariosCursos(c.prefijoCarpetas, delColegio, porCurso.size))}</span></span></div>
         <table class="lista mx-tabla">
           <thead><tr><th style="width:110px;">Curso</th><th>Nombre de la carpeta <span class="mx-editable">(puedes corregirlo)</span></th><th style="width:150px;">Archivos</th></tr></thead>
@@ -2649,7 +2649,7 @@ function accionDescargarTodosLosCursos(lista, btn) {
       const k = Number(inp.dataset.k);
       const nombre = nombreColegioEscrito(k);
       const conNombre = (e) => ({ ...e, colegio: nombre });
-      inp.closest(".mx-colegio").querySelector(".mx-zip-nombre").textContent = nombreZipVariosCursos(c.prefijoCarpetas, [{ colegio: nombre }], colegios[k].nCursos);
+      inp.closest(".mx-colegio").querySelector(".mx-zip-nombre").textContent = nombreZipVariosCursos(c.prefijoCarpetas, colegios[k].cursos.flatMap((i) => cursos[i].estudiantes).map(conNombre), colegios[k].nCursos);
       colegios[k].cursos.forEach((i) => {
         const curso = cursos[i];
         curso.propuesta = nombreCarpetaCurso(c.prefijoCarpetas, curso.estudiantes.map(conNombre));
@@ -2746,12 +2746,13 @@ async function descargarTodosLosCursos(lista, btn, nombresCarpeta = new Map()) {
 
 // "Cursos fusionados": todos los informes de un colegio en una sola carpeta, sin una
 // carpeta por curso, para imprimirlos de una vez y entregar la carpeta. Cada archivo
-// parte con su curso ("1ro Medio A - 01 - Nombre - Colegio.pdf"): así el explorador de
+// parte con su curso ("1ero A Colegio Informe Kuder - 01 - Nombre.pdf"): así el explorador de
 // archivos los deja curso por curso y, dentro de cada curso, en orden alfabético y con
 // el mismo N° que lleva impreso cada informe (cada curso mantiene su propia numeración).
 
-function nombreCarpetaFusionada(prefijo, colegio) {
-  return `${prefijo}_${limpiarParaCarpeta(colegio) || "SinColegio"}_todos_los_cursos_${anioParaArchivo()}`;
+// "1ero 2do Colegio Alfa Informes Kuder (todos los cursos) 2026"
+function nombreCarpetaFusionada(prefijo, colegio, estudiantes = []) {
+  return `${nombreEstandar(estudiantes, [{ colegio }], `Informes ${testParaNombre(prefijo)}`)} (todos los cursos) ${anioParaArchivo()}`;
 }
 
 function cursoParaArchivo(estudiante) {
@@ -2764,11 +2765,9 @@ function cursosEnOrdenDeArchivo(porCurso) {
   return [...porCurso.values()].sort((a, b) => cursoParaArchivo(a[0]).localeCompare(cursoParaArchivo(b[0]), "es", { numeric: true, sensitivity: "base" }));
 }
 
-// el curso va adelante y no se repite después del nombre
+// el nombre de siempre: ya parte con el curso ("1ero A Colegio Informe Kuder - 01 - …")
 function nombreArchivoFusionado(c, estudiante) {
-  const curso = cursoParaArchivo(estudiante);
-  const resto = c.nombreArchivoIndividual({ ...estudiante, curso: "", letra: "" });
-  return curso ? `${curso} - ${resto}` : resto;
+  return c.nombreArchivoIndividual(estudiante);
 }
 
 function accionDescargarColegioFusionado(colegio, lista, btn) {
@@ -2792,7 +2791,7 @@ function accionDescargarColegioFusionado(colegio, lista, btn) {
     texto:
       `Se va a descargar <b>una sola carpeta</b> con los <b>${plural(lista.length, "informe", "informes")}</b> de los <b>${plural(cursos.length, "curso", "cursos")}</b> de <b>${escaparHtml(colegio)}</b>, todos juntos, <b>sin separar por curso</b>. Sirve para imprimirlos todos de una vez.<br/><br/>` +
       `Cada archivo empieza con su curso, así quedan ordenados curso por curso (y dentro de cada curso, con el mismo N° que lleva impreso el informe). Por ejemplo:<br/><i>${escaparHtml(ejemplo)}</i><br/><br/>` +
-      `📁 Carpeta: <b>${escaparHtml(nombreCarpetaFusionada(c.prefijoCarpetas, colegio))}</b><br/><br/>` +
+      `📁 Carpeta: <b>${escaparHtml(nombreCarpetaFusionada(c.prefijoCarpetas, colegio, lista))}</b><br/><br/>` +
       `⚠ Si necesitas los informes separados por curso (por ejemplo, para entregarle a cada curso los suyos), usa mejor «Descargar todos los informes del colegio (ZIP por curso)».<br/>` +
       `⏳ Puede demorar <b>${tiempo}</b>. Deja esta pestaña abierta y a la vista mientras tanto.` +
       (pendientes
@@ -2813,7 +2812,7 @@ async function descargarColegioFusionado(colegio, lista, btn) {
   const t0 = Date.now();
   try {
     const zip = new JSZip();
-    const nombreCarpeta = nombreCarpetaFusionada(c.prefijoCarpetas, colegio);
+    const nombreCarpeta = nombreCarpetaFusionada(c.prefijoCarpetas, colegio, lista);
     const carpeta = zip.folder(nombreCarpeta);
     const usados = new Map();
     const numerados = [];

@@ -64,9 +64,9 @@ function numerarParaCarpeta(estudiantes) {
 }
 
 // ==================== nombres de carpetas y archivos (los dos tests) ====================
-// Carpeta (o ZIP) de un curso: "KUDER_Colegio_Alfa_2do_Medio_C_2026" ("8VO_..." en 8°).
-// Archivo de cada informe: "01 - Nombre Alumno - Segundo C - Colegio Alfa.pdf", con el
-// número correlativo de la carpeta adelante (con cero a la izquierda, para que el
+// Carpeta (o ZIP) de un curso: "2do C Colegio Alfa Informes Kuder 2026".
+// Archivo de cada informe: "2do C Colegio Alfa Informe Kuder - 01 - Nombre Alumno.pdf",
+// con el número correlativo de la carpeta (con cero a la izquierda, para que el
 // explorador de archivos los ordene bien): si al imprimir falta una hoja, se sabe qué
 // número falta y de quién es.
 
@@ -95,34 +95,92 @@ function anioParaArchivo() {
   return String(new Date().getFullYear());
 }
 
-function nombreColegioParaCarpeta(estudiantes) {
-  const colegios = [...new Set(estudiantes.map((e) => e.colegio).filter(Boolean))];
-  return colegios.length === 1 ? limpiarParaCarpeta(colegios[0]) || "Colegio" : colegios.length ? "VariosColegios" : "SinColegio";
+// ---- nombres de los archivos que se descargan (toda la app) ----
+// Todos parten igual: "4to A Colegio Alfa Informe Kuder…": primero el curso, después
+// el colegio y al final qué es. Así, en la carpeta de descargas, basta escribir el nombre
+// del colegio (o "4to") para filtrar lo de ese colegio o de ese nivel.
+const ORDINALES_ARCHIVO = { 1: "1ero", 2: "2do", 3: "3ero", 4: "4to", 5: "5to", 6: "6to", 7: "7mo", 8: "8vo" };
+const NUMEROS_EN_PALABRAS_ARCHIVO = { primero: 1, primer: 1, segundo: 2, tercero: 3, tercer: 3, cuarto: 4, quinto: 5, sexto: 6, septimo: 7, octavo: 8 };
+
+// "2do Medio" + "C" → "2do C"; "4° Medio" → "4to"; "Segundo C" → "2do C"; "8vo" + "A" →
+// "8vo A"; "3° básico" → "3ero basico"; si no se reconoce el nivel, va el texto tal cual
+function cursoParaNombre(curso, letra) {
+  const original = limpiarParaNombreArchivo([curso, letra].filter(Boolean).join(" "));
+  const texto = original.toLowerCase();
+  if (!texto) return "";
+  let n = 0;
+  let resto = texto;
+  let m = texto.match(/(^|[^0-9])([1-8])\s*(ero|ro|do|er|to|vo|mo)?(?![0-9a-z])/);
+  if (m) {
+    n = Number(m[2]);
+    resto = texto.slice(0, m.index + m[1].length) + " " + texto.slice(m.index + m[0].length);
+  } else {
+    m = texto.match(/\b(primero|primer|segundo|tercero|tercer|cuarto|quinto|sexto|septimo|octavo)\b/);
+    if (m) {
+      n = NUMEROS_EN_PALABRAS_ARCHIVO[m[1]];
+      resto = texto.replace(m[0], " ");
+    } else {
+      m = texto.match(/\b(iv|iii|ii|i)\s+medio\b/);
+      if (m) {
+        n = { i: 1, ii: 2, iii: 3, iv: 4 }[m[1]];
+        resto = texto.replace(m[1], " ");
+      }
+    }
+  }
+  if (!n) return original;
+  const basico = /\bbasic[oa]\b/.test(resto) && n <= 6;
+  resto = resto.replace(/\b(medio|media|basico|basica|ano|de|ensenanza)\b/g, " ").replace(/[.,()]/g, " ").replace(/\s+/g, " ").trim();
+  return [ORDINALES_ARCHIVO[n], basico ? "basico" : "", resto.toUpperCase()].filter(Boolean).join(" ");
 }
 
+// varios cursos juntos: si es uno solo, "2do C"; si son varios, sus niveles ("1ero 2do")
+function cursosParaNombre(cursos) {
+  const completos = [...new Set(cursos.map((c) => cursoParaNombre(c.curso, c.letra)).filter(Boolean))];
+  if (completos.length <= 1) return completos[0] || "";
+  const niveles = [...new Set(cursos.map((c) => cursoParaNombre(c.curso, "")).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es", { numeric: true }));
+  return niveles.length <= 4 ? niveles.join(" ") : "Varios cursos";
+}
+
+function colegioParaNombre(lista) {
+  const colegios = [...new Set(lista.map((e) => (e.colegio || "").trim()).filter(Boolean))];
+  return colegios.length === 1 ? limpiarParaNombreArchivo(colegios[0]) || "Colegio" : colegios.length ? "Varios colegios" : "Sin colegio";
+}
+
+// "KUDER"/"Kuder" → "Kuder"; "8VO"/"8vo" → "Intereses" (el cuestionario de 8° básico)
+function testParaNombre(prefijo) {
+  return /kuder/i.test(prefijo || "") ? "Kuder" : "Intereses";
+}
+
+// "4to A Colegio Alfa Informe Kuder": el comienzo de todos los nombres. "cursos" es
+// una lista de { curso, letra } (uno o varios); "lista" es de donde sale el colegio
+function nombreEstandar(cursos, lista, tipo) {
+  return [cursosParaNombre(cursos), colegioParaNombre(lista), limpiarParaNombreArchivo(tipo)].filter(Boolean).join(" ");
+}
+
+// carpeta (o ZIP) de un curso: "2do C Colegio Alfa Informes Kuder 2026"
 function nombreCarpetaCurso(prefijo, estudiantes) {
-  // curso y letra separados: "2do Medio" + "C" → "2do_Medio_C"
-  const cursos = [...new Set(estudiantes.map((e) => [e.curso, e.letra].filter(Boolean).join(" ")).filter(Boolean))];
-  const curso = cursos.length === 1 ? limpiarParaCarpeta(cursos[0]) || "Curso" : cursos.length ? "VariosCursos" : "SinCurso";
-  return `${prefijo}_${nombreColegioParaCarpeta(estudiantes)}_${curso}_${anioParaArchivo()}`;
+  return `${nombreEstandar(estudiantes, estudiantes, `Informes ${testParaNombre(prefijo)}`)} ${anioParaArchivo()}`;
 }
 
-// ZIP con varios cursos (una carpeta por curso adentro)
+// ZIP con varios cursos (una carpeta por curso adentro):
+// "1ero 2do Colegio Alfa Informes Kuder (5 cursos) 2026.zip"
 function nombreZipVariosCursos(prefijo, estudiantes, nCursos) {
-  return `${prefijo}_${nombreColegioParaCarpeta(estudiantes)}_${nCursos}${nCursos === 1 ? "curso" : "cursos"}_${anioParaArchivo()}.zip`;
+  return `${nombreEstandar(estudiantes, estudiantes, `Informes ${testParaNombre(prefijo)}`)} (${nCursos} ${nCursos === 1 ? "curso" : "cursos"}) ${anioParaArchivo()}.zip`;
 }
 
 function numeroConCeros(numero, total) {
   return String(numero).padStart(Math.max(2, String(total || 0).length), "0");
 }
 
-// "01 - Nombre Alumno - Segundo C - Colegio Alfa.pdf"; "extra" va al final, antes de ".pdf"
-function nombreArchivoNumerado(estudiante, { numero, total }, extra = "") {
+// "2do C Colegio Alfa Informe Kuder - 01 - Nombre Alumno.pdf": curso, colegio y tipo
+// de informe adelante (igual en todos los archivos de la app) y después el N° de la
+// carpeta y el estudiante; "extra" va al final, antes de ".pdf". Como todos los informes
+// de un curso parten igual, el explorador de archivos los sigue ordenando por su N°.
+function nombreArchivoNumerado(estudiante, { numero, total }, extra = "", tipo = "Informe") {
   const partes = [
+    nombreEstandar([estudiante], [estudiante], tipo),
     numero ? numeroConCeros(numero, total) : "",
     limpiarParaNombreArchivo(capitalizarNombre(estudiante.nombre)) || "Estudiante",
-    limpiarParaNombreArchivo([estudiante.curso, estudiante.letra].filter(Boolean).join(" ")),
-    limpiarParaNombreArchivo(estudiante.colegio),
   ].filter(Boolean);
   return `${partes.join(" - ")}${extra}.pdf`;
 }
@@ -951,9 +1009,9 @@ async function paginasAPdfBlob(paginas) {
   return pdf.output("blob");
 }
 
-// "01 - Nombre Alumno - 8vo A - Colegio.pdf" (ver nombreArchivoNumerado)
+// "8vo A Colegio Informe Intereses - 01 - Nombre Alumno.pdf" (ver nombreArchivoNumerado)
 function nombreArchivoInforme(estudiante) {
-  return nombreArchivoNumerado(estudiante, numeracionEnGrupo(typeof store === "undefined" ? null : store, estudiante));
+  return nombreArchivoNumerado(estudiante, numeracionEnGrupo(typeof store === "undefined" ? null : store, estudiante), "", "Informe Intereses");
 }
 
 async function descargarInformeIndividual(estudiante) {
@@ -970,7 +1028,7 @@ async function descargarInformeIndividual(estudiante) {
   if (typeof store !== "undefined" && store.registrarInformeGenerado) store.registrarInformeGenerado();
 }
 
-// el ZIP de un curso se llama igual que su carpeta: "8VO_Colegio_8vo_A_2026.zip"
+// el ZIP de un curso se llama igual que su carpeta: "8vo A Colegio Informes Intereses 2026.zip"
 function nombreArchivoZip(estudiantes) {
   return `${nombreCarpetaCurso("8VO", estudiantes)}.zip`;
 }

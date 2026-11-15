@@ -119,14 +119,15 @@ Paso 2: las pestañas
      archivos, elegir "Permitir".
    - "⬇ Descargar todos los informes del colegio (ZIP por curso)" (dentro de cada
      colegio): un solo ZIP con todos los informes de ese colegio, con una carpeta por
-     curso (por ejemplo "KUDER_Colegio_Luterano_2do_Medio_A_2026"). Antes muestra la
+     curso (por ejemplo "2do A Colegio Luterano Informes Kuder 2026"). Antes muestra la
      misma vista previa de "Descargar todos los cursos" (cursos, nombre de cada carpeta
      y cuántos informes lleva), y se puede corregir ahí.
    - "🗂 Descargar todo en una sola carpeta (cursos fusionados)" (botón ámbar, dentro
      de cada colegio): todos los informes del colegio juntos en UNA sola carpeta, sin
      separar por curso, para imprimirlos todos de una vez y entregar la carpeta (por
-     ejemplo "KUDER_Colegio_Andino_todos_los_cursos_2026"). Cada archivo parte con su
-     curso ("1ro Medio A - 01 - Nombre - Colegio.pdf"), así quedan ordenados curso por
+     ejemplo "1ero 2do Colegio Andino Informes Kuder (todos los cursos) 2026").
+     Cada archivo parte con su curso ("1ero A Colegio Andino Informe Kuder - 01 -
+     Nombre.pdf"), así quedan ordenados curso por
      curso y, dentro de cada curso, con el mismo N° que lleva impreso el informe. Si
      hay tests mal traspasados, la carpeta trae una sola nota con la lista. Antes de
      descargar avisa qué se va a generar y cuánto puede demorar. Si se necesitan los
@@ -159,10 +160,16 @@ Paso 2: las pestañas
      es de otro colegio, lo avisa. Al terminar, si hay tests mal traspasados (no suman
      45), ofrece ir a la pestaña "Corrección". Se puede deshacer con "↩ Deshacer".
    - Nombres de carpetas y archivos:
-     * Carpeta (o ZIP) de un curso: "KUDER_Colegio_Alfa_2do_Medio_C_2026" (en
-       8° básico empieza con "8VO"). Lleva el año, no la fecha completa.
-     * Cada informe: "01 - Nombre Alumno - Segundo C - Colegio Alfa.pdf". El número
-       va del 1 al total de archivos de la carpeta, sin saltos, en orden alfabético,
+     * En toda la aplicación (Kuder, 8° básico y Ensayos PAES) los archivos parten
+       igual: CURSO, COLEGIO y QUÉ ES. Por ejemplo "4to A Colegio Alfa Informe
+       Ensayo PAES…", "2do C Colegio Alfa Informe Grupal Kuder.pdf" o "1ero 2do
+       Colegio Alfa Informe Global Kuder (5 cursos).pdf". Así, en la carpeta de
+       descargas, basta escribir el nombre del colegio (o "4to") para filtrar.
+       El curso va como 1ero, 2do, 3ero, 4to u 8vo, más la letra.
+     * Carpeta (o ZIP) de un curso: "2do C Colegio Alfa Informes Kuder 2026" (en
+       8° básico dice "Informes Intereses"). Lleva el año, no la fecha completa.
+     * Cada informe: "2do C Colegio Alfa Informe Kuder - 01 - Nombre Alumno.pdf".
+       El número va del 1 al total de archivos de la carpeta, sin saltos, en orden alfabético,
        y es el mismo N° que lleva impreso el informe: si al imprimir falta una hoja,
        sabes qué número falta y de quién es.
      * Cada informe muestra arriba, en letra chica y en una sola línea, el N°,
@@ -444,6 +451,19 @@ El trabajo va en cinco pasos:
      muestra cuáles clavijeros ya están aplicados a ese curso: si eliges uno de
      esos, los PDF se suman a ese ensayo; si eliges otro, se crea el ensayo. No
      borra lo ya corregido.
+   - Pestaña "⚙️ Configuración":
+     * "📦 Descargar informes": abre una ventana para marcar colegios y cursos
+       (con "Seleccionar todos" y "Desmarcar todos") y descarga un solo ZIP con el
+       informe PDF de cada prueba de cada curso marcado. Cada PDF se llama, por
+       ejemplo, "4to A Colegio Alfa Informe Ensayo PAES Competencia Lectora Forma
+       A 2026-04-10.pdf".
+     * "🗑 Eliminar todos los datos": borra todos los cursos, listas, ensayos y
+       hojas de los Ensayos PAES de este computador (pide escribir ELIMINAR; los
+       clavijeros se conservan salvo que marques la casilla). No se puede deshacer.
+   - En "Resultados guardados", cada curso tiene "👁 Ver curso" (muestra sus
+     ensayos y resultados, separados en CL y M1) y "✏️ Editar resultados" (lleva a
+     las hojas del ensayo que elijas, CL o M1, para corregirlas).
+   - Colores: Competencia Lectora siempre en rojo y Matemática M1 siempre en azul.
    - "Ensayos aplicados" (arriba en "Resultados guardados"): por cada ensayo,
      primero Competencia Lectora y después Matemática, qué clavijero se aplicó y a
      qué cursos.

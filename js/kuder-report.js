@@ -617,17 +617,10 @@ function construirPaginaResultadosGlobalKuder(datosCursoContinuacion, resumenPor
   return contenedor;
 }
 
+// "1ero 2do Colegio Alfa Informe Global Kuder (5 cursos).pdf"
 function nombreArchivoGlobalKuder(resumenPorCurso) {
-  const limpiar = (s) =>
-    (s || "")
-      .normalize("NFD")
-      .replace(/[̀-ͯ]/g, "")
-      .replace(/[^a-zA-Z0-9]+/g, "_")
-      .replace(/^_+|_+$/g, "");
-  const colegios = [...new Set(resumenPorCurso.map((r) => r.colegio).filter(Boolean))];
-  const colegio = colegios.length === 1 ? limpiar(colegios[0]) : "VariosColegios";
-  const fecha = new Date().toISOString().slice(0, 10);
-  return `Informe_Global_${G().prefijoArchivo}_${colegio}_${resumenPorCurso.length}cursos_${fecha}.pdf`;
+  const n = resumenPorCurso.length;
+  return `${nombreEstandar(resumenPorCurso, resumenPorCurso, `Informe Global ${testParaNombre(G().prefijoArchivo)}`)} (${n} ${n === 1 ? "curso" : "cursos"}).pdf`;
 }
 
 // el "datosCurso" que necesitan las páginas de área (js/kuder-report.js:
@@ -813,17 +806,9 @@ function construirPaginasAreasKuder(datosCurso, conteos, total, { htmlAntes = nu
 
 // ==================== armado + descarga del PDF ====================
 
+// "2do C Colegio Alfa Informe Grupal Kuder.pdf"
 function nombreArchivoInformeKuder(datosCurso) {
-  const limpiar = (s) =>
-    (s || "")
-      .normalize("NFD")
-      .replace(/[̀-ͯ]/g, "")
-      .replace(/[^a-zA-Z0-9]+/g, "_")
-      .replace(/^_+|_+$/g, "");
-  const colegio = limpiar(datosCurso.colegio) || "Colegio";
-  const curso = limpiar((datosCurso.curso || "") + (datosCurso.letra || "")) || "Curso";
-  const fecha = new Date().toISOString().slice(0, 10);
-  return `Informe_Grupal_${G().prefijoArchivo}_${colegio}_${curso}_${fecha}.pdf`;
+  return `${nombreEstandar([datosCurso], [datosCurso], `Informe Grupal ${testParaNombre(G().prefijoArchivo)}`)}.pdf`;
 }
 
 // calcula cuántos estudiantes del curso tienen cada área como interés.
@@ -884,17 +869,10 @@ async function generarInformeGrupalKuderPdf(datosCurso, estudiantes, config) {
 // entrega juntos en un único ZIP — así no se disparan N descargas sueltas del
 // navegador de una vez. Reutiliza JSZip, ya cargado por vendor/jszip.min.js para el
 // ZIP de informes del cuestionario de 8° (js/report.js: descargarInformesMasivo).
+// "1ero 2do Colegio Alfa Informes Grupales Kuder (5 cursos).zip"
 function nombreZipPorCursoKuder(porArchivo) {
-  const limpiar = (s) =>
-    (s || "")
-      .normalize("NFD")
-      .replace(/[̀-ͯ]/g, "")
-      .replace(/[^a-zA-Z0-9]+/g, "_")
-      .replace(/^_+|_+$/g, "");
-  const colegios = [...new Set(porArchivo.map((r) => r.colegio).filter(Boolean))];
-  const colegio = colegios.length === 1 ? limpiar(colegios[0]) : "VariosColegios";
-  const fecha = new Date().toISOString().slice(0, 10);
-  return `Informes_${G().prefijoArchivo}_por_curso_${colegio}_${porArchivo.length}cursos_${fecha}.zip`;
+  const n = porArchivo.length;
+  return `${nombreEstandar(porArchivo, porArchivo, `Informes Grupales ${testParaNombre(G().prefijoArchivo)}`)} (${n} ${n === 1 ? "curso" : "cursos"}).zip`;
 }
 
 async function generarInformesPorCursoKuderZip(porArchivo, fecha, config) {
