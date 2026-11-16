@@ -4144,7 +4144,8 @@
     est.clvForm = false;
     est.clvAbierto = k.id;
     pintar();
-    toast(`Clavijero «${k.nombre}» guardado: ${plural(leido.clave.length, "respuesta", "respuestas")}${leido.avisos.length ? " · " + leido.avisos[0] : ""} (${origen})`);
+    const pilotos = clave.filter((x) => !x.valida).length;
+    toast(`Clavijero «${k.nombre}» guardado: ${plural(leido.clave.length, "respuesta", "respuestas")}${pilotos ? ` · ${plural(pilotos, "pregunta quedó marcada como piloto", "preguntas quedaron marcadas como piloto")} (venían con 0 puntos o como no válidas)` : ""}${leido.avisos.length ? " · " + leido.avisos[0] : ""} (${origen})`);
   }
 
   // descarga un clavijero en Excel; el archivo se puede volver a subir en «Agregar clavijero»
