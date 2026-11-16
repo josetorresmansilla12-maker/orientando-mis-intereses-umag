@@ -544,6 +544,12 @@
     raiz.addEventListener("pointerdown", alBajarEnEditor);
     raiz.addEventListener("pointerover", alPasarEnEditor);
     global.addEventListener("pointerup", alSoltarEnEditor);
+    global.addEventListener("beforeunload", (ev) => {
+      if (est.editor && est.editor.hojas.some((x) => x.curso)) {
+        ev.preventDefault();
+        ev.returnValue = "";
+      }
+    });
     raiz.addEventListener("change", alCambiar);
     raiz.addEventListener("input", alEscribir);
     raiz.addEventListener("keydown", (ev) => {
@@ -1014,9 +1020,8 @@
     return { uid: PaesDB.nuevoId("l"), archivo: nombreArchivo, colegio: a.colegio, nivel: a.nivel, letra: a.letra, anio: new Date().getFullYear(), estudiantes, repetidos, avisos: avisos || [], origenCursoId: null, oficial: true };
   }
 
-  async function leerListasNuevas(archivos) {
-    const tarjetas = est.listas ? est.listas.slice() : [];
-    const fallas = [];
+  // lee archivos de lista y agrega a «tarjetas» una por cada curso que traigan
+  async function leerTarjetasDeListas(archivos, tarjetas, fallas) {
     for (const archivo of archivos) {
       try {
         const todas = (await hojasDeArchivo(archivo)).map((h) => ({ nombre: h.nombre, r: L.leerListaCurso(h.filas) }));
@@ -1044,6 +1049,12 @@
         fallas.push(`«${archivo.name}» no se pudo leer. ¿Es un Excel (.xls, .xlsx) o un CSV?`);
       }
     }
+  }
+
+  async function leerListasNuevas(archivos) {
+    const tarjetas = est.listas ? est.listas.slice() : [];
+    const fallas = [];
+    await leerTarjetasDeListas(archivos, tarjetas, fallas);
     est.listas = tarjetas.length ? tarjetas : null;
     est.avisosListas = fallas;
     if (!cursoActual()) est.enBlanco = est.cursos.length > 0;
@@ -1347,11 +1358,10 @@
     }
   }
 
-  async function confirmarLista() {
-    const c = cursoActual();
-    const p = est.previa;
-    if (!c || !p) return;
-    const filas = (p.cursoElegido ? p.estudiantes.filter((e) => e.curso === p.cursoElegido) : p.estudiantes).filter((e) => (e.nombres + e.apellidos + e.rut).trim());
+  // Guarda una lista en un curso, con las mismas reglas en toda la app: se calza por RUT,
+  // «sumar» agrega y actualiza, «reemplazar» saca a quien no viene (salvo que tenga hoja).
+  async function aplicarListaACurso(c, filasCrudas, p) {
+    const filas = filasCrudas.filter((e) => (String(e.nombres || "") + String(e.apellidos || "") + String(e.rut || "")).trim());
     const porRut = new Map(c.estudiantes.filter((e) => e.rut).map((e) => [e.rut, e]));
     let nuevos = 0, actualizados = 0, repetidos = 0;
     const vistos = new Set();
@@ -1365,13 +1375,13 @@
       if (rut) vistos.add(rut);
       const existente = rut ? porRut.get(rut) : null;
       if (existente) {
-        existente.nombres = f.nombres.trim();
-        existente.apellidos = f.apellidos.trim();
+        existente.nombres = String(f.nombres || "").trim();
+        existente.apellidos = String(f.apellidos || "").trim();
         delete existente.fueraDeLista;
         deLaLista.add(existente.id);
         actualizados++;
       } else {
-        const nuevo = { id: PaesDB.nuevoId("e"), rut, nombres: f.nombres.trim(), apellidos: f.apellidos.trim() };
+        const nuevo = { id: PaesDB.nuevoId("e"), rut, nombres: String(f.nombres || "").trim(), apellidos: String(f.apellidos || "").trim() };
         c.estudiantes.push(nuevo);
         deLaLista.add(nuevo.id);
         nuevos++;
@@ -1398,9 +1408,18 @@
     }
     c.listaArchivo = p.archivo;
     c.listaOficial = p.oficial !== false;
-    est.previa = null;
     await guardar("cursos", c);
     const vinculadas = await revincularCurso(c);
+    return { nuevos, actualizados, repetidos, quitados, fuera, vinculadas };
+  }
+
+  async function confirmarLista() {
+    const c = cursoActual();
+    const p = est.previa;
+    if (!c || !p) return;
+    const filas = (p.cursoElegido ? p.estudiantes.filter((e) => e.curso === p.cursoElegido) : p.estudiantes).filter((e) => (e.nombres + e.apellidos + e.rut).trim());
+    const { nuevos, actualizados, repetidos, quitados, fuera, vinculadas } = await aplicarListaACurso(c, filas, { archivo: p.archivo, oficial: p.oficial, modo: p.modo });
+    est.previa = null;
     pintar();
     toast(`Lista ${c.listaOficial ? "oficial" : "provisoria"} guardada: ${plural(nuevos, "estudiante nuevo", "estudiantes nuevos")}${actualizados ? `, ${plural(actualizados, "actualizado", "actualizados")}` : ""}${repetidos ? `, ${plural(repetidos, "repetido omitido", "repetidos omitidos")}` : ""}${quitados ? `, ${plural(quitados, "quitado (está en la papelera)", "quitados (están en la papelera)")}` : ""}${fuera ? `, ${plural(fuera, "con hoja quedó marcado «fuera de la lista»", "con hoja quedaron marcados «fuera de la lista»")}` : ""}${vinculadas ? ` · ${plural(vinculadas, "hoja vinculada", "hojas vinculadas")}` : ""}`);
   }
@@ -3017,7 +3036,7 @@
     const mx = 0.07, my = 0.035;
     return [Math.max(0, r[0] / def.ancho - mx), Math.max(0, r[1] / def.alto - my), Math.min(1, r[2] / def.ancho + mx), Math.min(1, r[3] / def.alto + my)];
   }
-  const editorVacio = (previo) => ({ archivos: [], hojas: [], cargando: null, colegio: previo ? previo.colegio : "", cursos: previo ? previo.cursos : [], activo: null, clavijeroId: previo ? previo.clavijeroId : null, fecha: hoyIso(), resultado: null, corrigiendo: null, ultimo: null });
+  const editorVacio = (previo) => ({ archivos: [], hojas: [], cargando: null, colegio: previo ? previo.colegio : "", cursos: previo ? previo.cursos : [], activo: null, clavijeroId: previo ? previo.clavijeroId : null, fecha: hoyIso(), resultado: null, corrigiendo: null, ultimo: null, listas: previo && previo.listas ? previo.listas : [], listaPara: null });
   function editor() {
     if (!est.editor) est.editor = editorVacio();
     return est.editor;
@@ -3039,6 +3058,9 @@
       if (h.curso && !claves.has(h.curso)) h.curso = null;
     });
     if (ed.activo !== "borrar" && !claves.has(ed.activo)) ed.activo = null;
+    ed.listas.forEach((t) => {
+      if (t.destino && !claves.has(t.destino)) t.destino = "";
+    });
   }
 
   async function cargarEditor(archivos) {
@@ -3077,35 +3099,144 @@
 
   function htmlVistaEditor() {
     const ed = editor();
-    const entrada = `<input type="file" data-archivo="editor-pdf" accept=".pdf,image/*" multiple style="display:none;" />`;
-    let h = `<div class="tarjeta"><h2>✂️ Editor de PDF</h2>
-      <p class="ayuda" style="margin-bottom:0;">Para un escaneo que trae <b>varios cursos en una sola pila</b>. Se muestran las hojas en el mismo orden en que salieron del escáner; eliges un curso y marcas sus hojas, y al finalizar cada grupo se corrige en su curso con el clavijero que elijas.</p></div>`;
-    if (ed.resultado) h += htmlResultadoEditor();
-    if (!ed.hojas.length) {
-      return h + `<div class="tarjeta">${entrada}<div id="paes-ed-carga">${htmlCargaEditor()}</div>
-        ${ed.cargando ? "" : `<div class="acciones-form"><button type="button" data-accion="ed-elegir">📄 Elegir el PDF escaneado…</button></div><p class="ayuda" style="margin:8px 0 0;">Puedes elegir más de un PDF: sus hojas quedan una tras otra.</p>`}</div>`;
-    }
+    const entrada = `<input type="file" data-archivo="editor-pdf" accept=".pdf,image/*" multiple style="display:none;" /><input type="file" data-archivo="editor-listas" accept=".xls,.xlsx,.csv" multiple style="display:none;" />`;
     const ocupado = !!(est.lectura || ed.cargando || ed.corrigiendo);
-    const chip = (key, texto, extra) => `<button type="button" class="secundario paes-ed-chip${ed.activo === key ? " activo" : ""}" data-accion="ed-activar" data-key="${esc(key)}" style="--c:${key === "borrar" ? "#6b6480" : colorEd(ed, key)}" ${ocupado ? "disabled" : ""}><i></i>${texto} <small data-ed-cuenta="${esc(key)}"></small>${extra || ""}</button>`;
-    h += `<div class="tarjeta"><h2 class="paes-ed-paso">1 · Colegio y cursos</h2>
-      <div class="grid-form"><div><label>Colegio *</label><input type="text" data-cambio="ed-colegio" list="paes-ed-colegios" value="${esc(ed.colegio)}" placeholder="Escribe o elige el colegio" autocomplete="off" ${ocupado ? "disabled" : ""} /><datalist id="paes-ed-colegios">${colegiosConocidos().map((n) => `<option value="${esc(n)}"></option>`).join("")}</datalist></div></div>
-      ${ed.colegio ? `<p class="ayuda" style="margin:10px 0 6px;">Pincha un curso para dejarlo <b>activo</b>: todo lo que marques después en las hojas queda en ese curso.</p>
-        <div class="paes-ed-chips">${ed.cursos.map((x) => chip(x.key, esc(etiquetaEd(x)) + (x.cursoId ? "" : " · nuevo"))).join("")}${ed.cursos.length ? chip("borrar", "🧽 Quitar del curso") : ""}</div>
-        <div class="paes-ed-nuevo"><span>Agregar un curso:</span><select id="paes-ed-nivel" ${ocupado ? "disabled" : ""}>${NIVELES.filter((n) => n !== NIVEL_DISPERSO).map((n) => `<option>${n}</option>`).join("")}</select><input type="text" id="paes-ed-letra" maxlength="3" placeholder="Letra" style="width:80px;" ${ocupado ? "disabled" : ""} /><button type="button" class="secundario chico" data-accion="ed-agregar-curso" ${ocupado ? "disabled" : ""}>➕ Agregar curso</button></div>` : `<p class="ayuda" style="margin:10px 0 0;">Escribe el colegio (o elige uno ya guardado) para ver y agregar sus cursos.</p>`}</div>`;
-    h += `<div class="tarjeta"><h2 class="paes-ed-paso">2 · Hojas, en el orden del escáner <small id="paes-ed-resumen" style="font-weight:400;"></small></h2>
-      <p class="ayuda">Cada miniatura muestra la franja de la hoja con el nombre, el curso («Class») y la fecha; con <b>🔍 Abrir visor</b> ves esa franja en grande, la hoja completa, y también puedes marcarla ahí. Con un curso activo: <b>pincha</b> una hoja, o <b>arrastra</b> desde la primera hasta la última hoja del curso (también sirve pinchar la primera y, con Mayúsculas, la última). Pinchar de nuevo una hoja del curso activo la saca.</p>
+    const des = ocupado ? "disabled" : "";
+    const guardado = (x) => (x.cursoId ? est.cursos.find((c) => c.id === x.cursoId) : null);
+    let h = `<div class="tarjeta"><h2>✂️ Editor de PDF</h2>
+      <p class="ayuda" style="margin-bottom:6px;">Para un escaneo que trae <b>varios cursos en una sola pila</b>. Son tres pasos:</p>
+      <ol class="paes-ed-guia"><li><b>Colegio, cursos y listas:</b> dices de qué colegio y qué cursos son, y subes sus listas si las tienes.</li><li><b>Hojas:</b> subes el PDF y marcas qué hojas son de cada curso.</li><li><b>Clavijero:</b> eliges la prueba y la app corrige cada grupo en su curso.</li></ol>${entrada}</div>`;
+    if (ed.resultado) h += htmlResultadoEditor();
+
+    // ---------- paso 1
+    h += `<div class="tarjeta"><h2 class="paes-ed-paso">1 · Colegio, cursos y listas</h2>
+      <div class="grid-form"><div><label>Colegio *</label><input type="text" data-cambio="ed-colegio" list="paes-ed-colegios" value="${esc(ed.colegio)}" placeholder="Escribe o elige el colegio" autocomplete="off" ${des} /><datalist id="paes-ed-colegios">${colegiosConocidos().map((n) => `<option value="${esc(n)}"></option>`).join("")}</datalist></div></div>`;
+    if (!ed.colegio) h += `<p class="ayuda" style="margin:10px 0 0;">Escribe el colegio (o elige uno ya guardado) para ver sus cursos y agregar otros.</p>`;
+    else {
+      h += `<div class="paes-ed-nuevo"><b>Agregar cursos:</b><select id="paes-ed-nivel" ${des}>${NIVELES.filter((n) => n !== NIVEL_DISPERSO).map((n) => `<option>${n}</option>`).join("")}</select>
+        <span class="paes-ed-letras">${"ABCDEFGH".split("").map((l) => `<label><input type="checkbox" class="paes-ed-letra-chk" value="${l}" ${des} />${l}</label>`).join("")}<label><input type="checkbox" class="paes-ed-letra-chk" value="" ${des} />sin letra</label></span>
+        <input type="text" id="paes-ed-letra" maxlength="12" placeholder="Otra letra" style="width:110px;" ${des} /><button type="button" class="chico" data-accion="ed-agregar-curso" ${des}>➕ Agregar</button></div>`;
+      if (ed.cursos.length) {
+        h += `<div class="paes-tabla-scroll"><table class="paes-tabla paes-ed-cursos"><thead><tr><th>Curso</th><th>Lista del curso</th><th></th></tr></thead><tbody>${ed.cursos
+          .map((x) => {
+            const c = guardado(x);
+            const n = c ? c.estudiantes.length : 0;
+            const lista = n ? `${plural(n, "estudiante", "estudiantes")} ${c.listaOficial === false ? `<span class="paes-ed-prov-chip">⚠ LISTA PROVISORIA</span>` : chipLista(c)}` : `<span class="paes-chip gris">Sin lista</span> <small>sus hojas quedarán por identificar</small>`;
+            return `<tr><td><i class="paes-ed-punto" style="background:${colorEd(ed, x.key)}"></i><b>${esc(etiquetaEd(x))}</b>${x.cursoId ? "" : ` <small>nuevo</small>`}</td><td>${lista}</td>
+              <td class="acciones"><button type="button" class="secundario chico" data-accion="ed-lista-curso" data-key="${esc(x.key)}" ${des}>${n ? "🔁 Reemplazar lista" : "📤 Subir su lista"}</button>${n ? ` <button type="button" class="secundario chico" data-accion="ed-lista-marca" data-key="${esc(x.key)}" ${des}>${c.listaOficial === true ? "Marcar como provisoria" : "Marcar como oficial"}</button>` : ""}${x.cursoId ? "" : ` <button type="button" class="secundario chico" data-accion="ed-quitar-curso" data-key="${esc(x.key)}" title="Quitar este curso nuevo" ${des}>✕</button>`}</td></tr>`;
+          })
+          .join("")}</tbody></table></div>`;
+        const provisorias = ed.cursos.filter((x) => guardado(x) && guardado(x).estudiantes.length && guardado(x).listaOficial === false);
+        if (provisorias.length) h += `<div class="paes-ed-prov">⚠ <b>${provisorias.length === 1 ? "Lista provisoria" : "Listas provisorias"} en ${provisorias.map((x) => esc(etiquetaEd(x))).join(", ")}.</b> Puede faltar o sobrar alguien y los resultados pueden cambiar. Cuando tengas la lista oficial, usa «🔁 Reemplazar lista» en ese curso.</div>`;
+      }
+      h += `<div class="acciones-form" style="margin-top:10px;"><button type="button" class="secundario" data-accion="ed-listas" ${des}>📤 Subir listas de curso…</button><small class="ayuda" style="margin:0;">Puedes subir varias a la vez (.xls, .xlsx o .csv); después enlazas cada una con su curso. Es opcional: sin lista, las hojas se corrigen igual y quedan por identificar.</small></div>`;
+      if (ed.listas.length) {
+        h += `<div class="paes-ed-listas"><b>Listas por guardar: enlaza cada una con su curso</b>${ed.listas
+          .map((t) => {
+            const cu = ed.cursos.find((x) => x.key === t.destino);
+            const c = cu ? guardado(cu) : null;
+            const yaTiene = c && c.estudiantes.length;
+            return `<div class="paes-ed-lista${t.oficial ? "" : " prov"}"><div class="paes-ed-lista-fila"><span>📄 <b>${esc(t.archivo)}</b> <small>${plural(t.estudiantes.length, "estudiante", "estudiantes")}${t.repetidos ? ` · ${plural(t.repetidos, "RUT repetido que no se carga", "RUT repetidos que no se cargan")}` : ""}</small></span>
+              <label>¿De qué curso es? <select data-cambio="ed-lista-destino" data-uid="${esc(t.uid)}" ${des}><option value="">— Elegir curso —</option>${ed.cursos.map((x) => `<option value="${esc(x.key)}" ${x.key === t.destino ? "selected" : ""}>${esc(etiquetaEd(x))}</option>`).join("")}</select></label>
+              <label class="paes-filtro"><input type="checkbox" data-cambio="ed-lista-oficial" data-uid="${esc(t.uid)}" ${t.oficial ? "checked" : ""} ${des} /> Es la lista oficial</label>
+              ${yaTiene ? `<label>Ese curso ya tiene lista: <select data-cambio="ed-lista-modo" data-uid="${esc(t.uid)}" ${des}><option value="sumar" ${t.modo === "sumar" ? "selected" : ""}>Sumar a la que tiene</option><option value="reemplazar" ${t.modo === "reemplazar" ? "selected" : ""}>Reemplazarla por esta</option></select></label>` : ""}
+              <button type="button" class="secundario chico" data-accion="ed-lista-quitar" data-uid="${esc(t.uid)}" title="No cargar esta lista" ${des}>✕</button></div>
+              ${t.oficial ? "" : `<div class="paes-ed-prov">⚠ <b>Se guardará como LISTA PROVISORIA.</b> Puede faltar o sobrar alguien; reemplázala por la oficial cuando la tengas.</div>`}
+              ${t.avisos && t.avisos.length ? htmlAvisos(t.avisos.slice(0, 3), "amarillo") : ""}</div>`;
+          })
+          .join("")}
+          <div class="acciones-form"><button type="button" data-accion="ed-listas-guardar" ${des}>Guardar ${plural(ed.listas.length, "lista", "listas")} en ${ed.listas.length === 1 ? "su curso" : "sus cursos"}</button></div></div>`;
+      }
+    }
+    h += `</div>`;
+
+    // ---------- paso 2
+    const chip = (key, texto) => `<button type="button" class="secundario paes-ed-chip${ed.activo === key ? " activo" : ""}" data-accion="ed-activar" data-key="${esc(key)}" style="--c:${key === "borrar" ? "#6b6480" : colorEd(ed, key)}" ${des}><i></i>${texto} <small data-ed-cuenta="${esc(key)}"></small></button>`;
+    h += `<div class="tarjeta"><h2 class="paes-ed-paso">2 · Hojas: marca las de cada curso <small id="paes-ed-resumen" style="font-weight:400;"></small></h2>`;
+    if (!ed.hojas.length) {
+      h += `<div id="paes-ed-carga">${htmlCargaEditor()}</div>${ed.cargando ? "" : `<p class="ayuda">Sube el PDF tal como salió del escáner. Puedes elegir más de uno: sus hojas quedan una tras otra.</p><div class="acciones-form"><button type="button" data-accion="ed-elegir">📄 Elegir el PDF escaneado…</button></div>`}</div>`;
+      return h;
+    }
+    h += `<p class="ayuda">Las hojas están en el orden del escáner y cada una muestra su nombre y su curso («Class»). <b>Primero pincha un curso</b> y después sus hojas: una por una, o arrastrando desde la primera hasta la última (también: pinchar la primera y, con Mayúsculas, la última). Pinchar de nuevo una hoja la saca. Con <b>🔍 Abrir visor</b> la ves en grande y la marcas ahí.</p>
+      ${ed.cursos.length ? `<div class="paes-ed-barra"><span>Curso activo:</span><div class="paes-ed-chips">${ed.cursos.map((x) => chip(x.key, esc(etiquetaEd(x)))).join("")}${chip("borrar", "🧽 Quitar del curso")}</div></div>` : `<div class="paes-ed-prov">Antes de marcar, agrega en el paso 1 el colegio y sus cursos.</div>`}
       <div class="paes-ed-hojas${ocupado ? " ocupado" : ""}">${ed.hojas.map((x, i) => `<div class="paes-ed-hoja" data-i="${i}"><img src="${x.url}" alt="Hoja ${i + 1}" draggable="false" /><b>${i + 1}</b><button type="button" class="secundario paes-ed-ver" data-accion="ed-ver" data-i="${i}" title="Ver la hoja en grande">🔍 Abrir visor</button><span></span></div>`).join("")}</div>
-      ${entrada}<div id="paes-ed-carga">${htmlCargaEditor()}</div>
-      <div class="acciones-form" style="margin-top:10px;"><button type="button" class="secundario chico" data-accion="ed-elegir" ${ocupado ? "disabled" : ""}>➕ Agregar otro PDF</button><button type="button" class="secundario chico" data-accion="ed-limpiar" ${ocupado ? "disabled" : ""}>Quitar todas las hojas y empezar de nuevo</button></div></div>`;
+      <div id="paes-ed-carga">${htmlCargaEditor()}</div>
+      <div class="acciones-form" style="margin-top:10px;"><button type="button" class="secundario chico" data-accion="ed-elegir" ${des}>➕ Agregar otro PDF</button><button type="button" class="secundario chico" data-accion="ed-limpiar" ${des}>Quitar todas las hojas y empezar de nuevo</button></div></div>`;
+
+    // ---------- paso 3
     const clvs = est.clavijeros.slice().sort((a, b) => a.prueba.localeCompare(b.prueba) || a.nombre.localeCompare(b.nombre, "es"));
     h += `<div class="tarjeta"><h2 class="paes-ed-paso">3 · Clavijero y finalizar</h2>
       ${clvs.length ? `<p class="ayuda">Elige con qué clavijero se corrigen estas hojas (por ejemplo, Competencia Lectora o M1). Si el curso ya tiene ese ensayo, las hojas se suman a él; si no, se crea. Lo ya corregido no cambia.</p>
-        <div class="paes-checks paes-clv-opciones">${clvs.map((k) => `<label><input type="radio" name="paes-ed-clv" data-cambio="ed-clv" value="${esc(k.id)}" ${ed.clavijeroId === k.id ? "checked" : ""} ${ocupado ? "disabled" : ""} /> <span class="paes-pill ${clasePrueba(k)}"><b>${esc(siglaPrueba(k))}</b>${esc(k.nombre)}</span></label>`).join("")}</div>
-        <div class="grid-form" style="margin-top:8px;"><div><label>Fecha de aplicación</label><input type="date" data-cambio="ed-fecha" value="${esc(ed.fecha || "")}" ${ocupado ? "disabled" : ""} /></div></div>` : `<p class="ayuda">Aún no hay clavijeros guardados. Agrégalo en «Clavijeros subidos» y vuelve: las hojas marcadas se conservan mientras no cierres la app.</p><div class="acciones-form"><button type="button" class="secundario chico" data-vista="clavijeros">Ir a Clavijeros subidos</button></div>`}
+        <div class="paes-checks paes-clv-opciones">${clvs.map((k) => `<label><input type="radio" name="paes-ed-clv" data-cambio="ed-clv" value="${esc(k.id)}" ${ed.clavijeroId === k.id ? "checked" : ""} ${des} /> <span class="paes-pill ${clasePrueba(k)}"><b>${esc(siglaPrueba(k))}</b>${esc(k.nombre)}</span></label>`).join("")}</div>
+        <div class="grid-form" style="margin-top:8px;"><div><label>Fecha de aplicación</label><input type="date" data-cambio="ed-fecha" value="${esc(ed.fecha || "")}" ${des} /></div></div>` : `<p class="ayuda">Aún no hay clavijeros guardados. Agrégalo en «Clavijeros subidos» y vuelve: las hojas marcadas se conservan mientras no cierres la app.</p><div class="acciones-form"><button type="button" class="secundario chico" data-vista="clavijeros">Ir a Clavijeros subidos</button></div>`}
       ${ed.corrigiendo ? `<p class="paes-ed-avance"><b>Curso ${ed.corrigiendo.n} de ${ed.corrigiendo.de}</b> · ${esc(ed.corrigiendo.curso)}</p>` : ""}
       <div id="paes-progreso">${htmlProgreso()}</div>
       <div class="acciones-form" style="margin-top:10px;"><button type="button" id="paes-ed-finalizar" data-accion="ed-finalizar">Finalizar</button><small id="paes-ed-faltan" class="ayuda" style="margin:0;"></small></div></div>`;
     return h;
+  }
+
+  // el curso del editor pasa a existir como curso guardado (si era nuevo)
+  async function asegurarCursoEditor(cu) {
+    const ed = editor();
+    let c = cu.cursoId ? est.cursos.find((x) => x.id === cu.cursoId) : null;
+    if (c) return c;
+    c = { id: PaesDB.nuevoId("c"), colegio: ed.colegio, nivel: cu.nivel, letra: cu.letra, anio: cu.anio || new Date().getFullYear(), estudiantes: [], creado: new Date().toISOString() };
+    est.cursos.push(c);
+    await guardar("cursos", c);
+    const antes = cu.key;
+    ed.hojas.forEach((x) => {
+      if (x.curso === antes) x.curso = c.id;
+    });
+    ed.listas.forEach((t) => {
+      if (t.destino === antes) t.destino = c.id;
+    });
+    if (ed.activo === antes) ed.activo = c.id;
+    if (ed.listaPara === antes) ed.listaPara = c.id;
+    Object.assign(cu, { key: c.id, cursoId: c.id });
+    return c;
+  }
+
+  // listas subidas en el editor: se proponen para el curso que calza por nivel y letra
+  async function leerListasEditor(archivos) {
+    const ed = editor();
+    const tarjetas = [], fallas = [];
+    await leerTarjetasDeListas(archivos, tarjetas, fallas);
+    const para = ed.listaPara ? ed.cursos.find((x) => x.key === ed.listaPara) : null;
+    ed.listaPara = null;
+    tarjetas.forEach((t) => {
+      let cu = para;
+      if (!cu && t.letra) {
+        cu = ed.cursos.find((x) => x.nivel === t.nivel && (x.letra || "").toUpperCase() === t.letra.toUpperCase());
+        if (!cu) {
+          // la lista dice de qué curso es y ese curso no está: se agrega
+          cu = { key: PaesDB.nuevoId("n"), cursoId: null, nivel: t.nivel, letra: t.letra.toUpperCase(), anio: new Date().getFullYear() };
+          ed.cursos.push(cu);
+        }
+      }
+      const c = cu && cu.cursoId ? est.cursos.find((x) => x.id === cu.cursoId) : null;
+      ed.listas.push(Object.assign(t, { destino: cu ? cu.key : "", oficial: true, modo: para && c && c.estudiantes.length ? "reemplazar" : "sumar" }));
+    });
+    pintar();
+    if (fallas.length) toast(fallas[0]);
+    else if (tarjetas.length) toast(`${plural(tarjetas.length, "lista leída", "listas leídas")}: revisa a qué curso va cada una y guarda`);
+  }
+
+  async function guardarListasEditor() {
+    const ed = editor();
+    const listas = ed.listas.filter((t) => t.destino && ed.cursos.some((x) => x.key === t.destino));
+    if (!listas.length) return toast("Elige a qué curso corresponde cada lista.");
+    let estudiantes = 0, vinculadas = 0, provisorias = 0;
+    for (const t of listas) {
+      const cu = ed.cursos.find((x) => x.key === t.destino);
+      const c = await asegurarCursoEditor(cu);
+      const r = await aplicarListaACurso(c, t.estudiantes, { archivo: t.archivo, oficial: t.oficial, modo: t.modo });
+      estudiantes += r.nuevos + r.actualizados;
+      vinculadas += r.vinculadas || 0;
+      if (!t.oficial) provisorias++;
+      ed.listas = ed.listas.filter((x) => x !== t);
+    }
+    pintar();
+    toast(`${plural(listas.length, "lista guardada", "listas guardadas")} (${plural(estudiantes, "estudiante", "estudiantes")})${provisorias ? ` · ${provisorias} como provisoria` : ""}${vinculadas ? ` · ${plural(vinculadas, "hoja identificada", "hojas identificadas")}` : ""}${ed.listas.length ? ` · ${ed.listas.length} sin curso elegido` : ""}`);
   }
 
   function htmlResultadoEditor() {
@@ -3141,15 +3272,16 @@
     });
     const asignadas = ed.hojas.filter((x) => x.curso).length;
     const sin = ed.hojas.length - asignadas;
+    const sinLista = ed.cursos.filter((x) => cuenta.has(x.key) && !((est.cursos.find((c) => c.id === x.cursoId) || { estudiantes: [] }).estudiantes.length)).length;
     const res = raiz.querySelector("#paes-ed-resumen");
-    if (res) res.textContent = `· ${plural(ed.hojas.length, "hoja", "hojas")}, ${asignadas} con curso`;
+    if (res) res.textContent = ed.hojas.length ? `· ${plural(ed.hojas.length, "hoja", "hojas")}, ${asignadas} con curso` : "";
     const btn = raiz.querySelector("#paes-ed-finalizar");
     const faltan = raiz.querySelector("#paes-ed-faltan");
     if (btn) {
       const ocupado = !!(est.lectura || ed.cargando || ed.corrigiendo);
       btn.disabled = ocupado || !asignadas || !ed.clavijeroId;
       btn.textContent = asignadas ? `Finalizar: corregir ${plural(asignadas, "hoja", "hojas")} en ${plural(cuenta.size, "curso", "cursos")}` : "Finalizar";
-      if (faltan) faltan.textContent = !asignadas ? "Marca al menos una hoja en un curso." : !ed.clavijeroId ? "Falta elegir el clavijero." : sin ? `${plural(sin, "hoja queda", "hojas quedan")} sin curso y no se ${sin === 1 ? "corrige" : "corrigen"}.` : "Todas las hojas tienen curso.";
+      if (faltan) faltan.textContent = !asignadas ? "Marca al menos una hoja en un curso." : !ed.clavijeroId ? "Falta elegir el clavijero." : (sin ? `${plural(sin, "hoja queda", "hojas quedan")} sin curso y no se ${sin === 1 ? "corrige" : "corrigen"}.` : "Todas las hojas tienen curso.") + (sinLista ? ` ${plural(sinLista, "curso no tiene lista: sus hojas quedarán", "cursos no tienen lista: sus hojas quedarán")} por identificar hasta que la subas.` : "");
     }
   }
 
@@ -3252,7 +3384,7 @@
         <div class="paes-ed-chips">${ed.cursos.length ? ed.cursos.map((k) => `<button type="button" class="secundario paes-ed-chip${x.curso === k.key ? " activo" : ""}" data-v="curso" data-key="${esc(k.key)}" style="--c:${colorEd(ed, k.key)}" ${ocupado ? "disabled" : ""}><i></i>${esc(etiquetaEd(k))}</button>`).join("") + (x.curso ? `<button type="button" class="secundario chico" data-v="quitar" ${ocupado ? "disabled" : ""}>🧽 Quitar del curso</button>` : "") : `<small>Cierra el visor y agrega primero el colegio y sus cursos.</small>`}</div>
         <button type="button" class="secundario" data-v="sig" ${visorEd.i < ed.hojas.length - 1 ? "" : "disabled"}>Siguiente →</button>
       </div>
-      <div class="paes-ed-visor-ayuda">${activo && !ocupado ? `<button type="button" data-v="marcar">✔ Marcar en ${esc(etiquetaEd(activo))} y pasar a la siguiente</button> ` : ""}<small>Pincha un curso para dejar esta hoja en él. Teclas: ← y → para cambiar de hoja${activo ? ", Enter para marcarla en el curso activo y seguir" : ""}, Esc para cerrar.</small></div>
+      <div class="paes-ed-visor-ayuda">${activo && !ocupado ? `<button type="button" data-v="marcar">✔ Marcar en ${esc(etiquetaEd(activo))} y pasar a la siguiente</button> ` : ""}<small>Pincha un curso para dejar esta hoja en él. Teclas: ← y → para cambiar de hoja, 1 a 9 para elegir el curso según su orden${activo ? ", Enter para marcarla en el curso activo y seguir" : ""}, Esc para cerrar.</small></div>
     </div>`;
     const caja = visorEd.el.querySelector(".paes-ed-visor-img");
     caja.scrollTop = y;
@@ -3304,6 +3436,7 @@
     else if (ev.key === "ArrowLeft") moverVisorEd(-1);
     else if (ev.key === "ArrowRight") moverVisorEd(1);
     else if (ev.key === "Enter" && ed.activo && ed.activo !== "borrar") marcarEnVisorEd(ed.activo, true);
+    else if (/^[1-9]$/.test(ev.key) && ed.cursos[Number(ev.key) - 1]) marcarEnVisorEd(ed.cursos[Number(ev.key) - 1].key, false);
     else return;
     ev.preventDefault();
   }
@@ -3321,17 +3454,7 @@
     let detenido = false;
     for (let n = 0; n < grupos.length && !detenido; n++) {
       const g = grupos[n];
-      let c = g.cu.cursoId ? est.cursos.find((x) => x.id === g.cu.cursoId) : null;
-      if (!c) {
-        c = { id: PaesDB.nuevoId("c"), colegio: ed.colegio, nivel: g.cu.nivel, letra: g.cu.letra, anio: g.cu.anio || new Date().getFullYear(), estudiantes: [], creado: new Date().toISOString() };
-        est.cursos.push(c);
-        await guardar("cursos", c);
-        ed.hojas.forEach((x) => {
-          if (x.curso === g.cu.key) x.curso = c.id;
-        });
-        if (ed.activo === g.cu.key) ed.activo = c.id;
-        Object.assign(g.cu, { key: c.id, cursoId: c.id });
-      }
+      const c = await asegurarCursoEditor(g.cu);
       let e = ensayosDelCurso(c.id).find((x) => x.clavijeroId === k.id);
       if (!e) e = await crearEnsayoCon(c, { prueba: k.prueba, pruebaNombre: k.pruebaNombre, fecha: ed.fecha || "", clavijero: k });
       const paginas = new Map();
@@ -3357,7 +3480,7 @@
       ed.hojas = ed.hojas.filter((x) => !hechas.has(x) || !x.curso);
     } else {
       soltarVistasEd();
-      const previo = { colegio: ed.colegio, cursos: [], clavijeroId: null };
+      const previo = { colegio: ed.colegio, cursos: [], clavijeroId: null, listas: ed.listas };
       est.editor = Object.assign(editorVacio(previo), { resultado });
       fijarColegioEditor(previo.colegio);
     }
@@ -4421,6 +4544,16 @@
       pintar();
       return true;
     }
+    if (d.cambio === "ed-lista-destino" || d.cambio === "ed-lista-oficial" || d.cambio === "ed-lista-modo") {
+      const lista = editor().listas.find((x) => x.uid === d.uid);
+      if (lista) {
+        if (d.cambio === "ed-lista-destino") lista.destino = t.value;
+        if (d.cambio === "ed-lista-oficial") lista.oficial = t.checked;
+        if (d.cambio === "ed-lista-modo") lista.modo = t.value;
+      }
+      pintar();
+      return true;
+    }
     if (d.cambio === "ed-clv") {
       editor().clavijeroId = t.value;
       refrescarEditor();
@@ -4930,24 +5063,72 @@
         break;
       case "ed-agregar-curso": {
         const ed = editor();
-        const nivel = raiz.querySelector("#paes-ed-nivel").value;
-        const letra = raiz.querySelector("#paes-ed-letra").value.replace(/\s+/g, "").toUpperCase();
         if (!ed.colegio) {
           toast("Primero escribe el colegio.");
           break;
         }
-        let cu = ed.cursos.find((x) => x.nivel === nivel && (x.letra || "").toUpperCase() === letra && (!x.cursoId || x.anio === new Date().getFullYear()));
-        if (!cu) {
-          cu = { key: PaesDB.nuevoId("n"), cursoId: null, nivel, letra, anio: new Date().getFullYear() };
-          ed.cursos.push(cu);
+        const nivel = raiz.querySelector("#paes-ed-nivel").value;
+        const letras = Array.from(raiz.querySelectorAll(".paes-ed-letra-chk:checked")).map((x) => x.value);
+        raiz.querySelector("#paes-ed-letra").value.split(/[\s,;]+/).forEach((t) => t && letras.push(t.toUpperCase()));
+        if (!letras.length) {
+          toast("Marca al menos una letra (o «sin letra») para agregar el curso.");
+          break;
         }
-        ed.activo = cu.key;
+        let ultimo = null, creados = 0;
+        Array.from(new Set(letras)).forEach((letra) => {
+          let cu = ed.cursos.find((x) => x.nivel === nivel && (x.letra || "").toUpperCase() === letra && (!x.cursoId || x.anio === new Date().getFullYear()));
+          if (!cu) {
+            cu = { key: PaesDB.nuevoId("n"), cursoId: null, nivel, letra, anio: new Date().getFullYear() };
+            ed.cursos.push(cu);
+            creados++;
+          }
+          ultimo = ultimo || cu;
+        });
+        if (ed.activo == null && ultimo) ed.activo = ultimo.key;
+        pintar();
+        toast(creados ? `${plural(creados, "curso agregado", "cursos agregados")}` : "Esos cursos ya estaban");
+        break;
+      }
+      case "ed-quitar-curso": {
+        const ed = editor();
+        ed.cursos = ed.cursos.filter((x) => x.key !== b.dataset.key || x.cursoId);
+        ed.hojas.forEach((x) => {
+          if (x.curso === b.dataset.key) x.curso = null;
+        });
+        ed.listas.forEach((t) => {
+          if (t.destino === b.dataset.key) t.destino = "";
+        });
+        if (ed.activo === b.dataset.key) ed.activo = null;
         pintar();
         break;
       }
+      case "ed-listas":
+      case "ed-lista-curso": {
+        editor().listaPara = b.dataset.key || null;
+        const entrada = raiz.querySelector('[data-archivo="editor-listas"]');
+        if (entrada) entrada.click();
+        break;
+      }
+      case "ed-lista-marca": {
+        const cu = editor().cursos.find((x) => x.key === b.dataset.key);
+        const c = cu && est.cursos.find((x) => x.id === cu.cursoId);
+        if (!c) break;
+        c.listaOficial = c.listaOficial !== true;
+        guardar("cursos", c);
+        pintar();
+        toast(c.listaOficial ? "La lista quedó marcada como oficial" : "La lista quedó marcada como provisoria");
+        break;
+      }
+      case "ed-lista-quitar":
+        editor().listas = editor().listas.filter((t) => t.uid !== b.dataset.uid);
+        pintar();
+        break;
+      case "ed-listas-guardar":
+        guardarListasEditor();
+        break;
       case "ed-limpiar":
         soltarVistasEd();
-        est.editor = Object.assign(editorVacio({ colegio: editor().colegio, cursos: editor().cursos, clavijeroId: editor().clavijeroId }), {});
+        est.editor = editorVacio({ colegio: editor().colegio, cursos: editor().cursos, clavijeroId: editor().clavijeroId, listas: editor().listas });
         pintar();
         break;
       case "ed-finalizar":
@@ -5084,6 +5265,10 @@
       if (t.dataset.archivo === "lista") leerArchivoLista(archivos[0]);
       if (t.dataset.archivo === "listas") leerListasNuevas(archivos);
       if (t.dataset.archivo === "disperso") crearDisperso(archivos);
+      if (t.dataset.archivo === "editor-listas") {
+        leerListasEditor(archivos);
+        t.value = "";
+      }
       if (t.dataset.archivo === "editor-pdf") {
         cargarEditor(archivos);
         t.value = "";

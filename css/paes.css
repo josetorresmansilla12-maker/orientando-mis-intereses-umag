@@ -616,3 +616,29 @@ body.modulo-paes .topbar-acciones { display: none !important; }
 /* Editor de PDF: cada apartado numerado con franja morada y letra blanca */
 #modulo-paes h2.paes-ed-paso { background: var(--morado, #5b2a86); color: white; font-size: 18px; border-radius: 8px; padding: 8px 14px; margin: 0 0 12px; }
 #modulo-paes h2.paes-ed-paso small { color: white; font-size: 13px; opacity: 0.92; }
+
+/* Editor de PDF: guía, cursos con sus listas y barra del curso activo */
+.paes-ed-guia { margin: 0; padding-left: 22px; font-size: 13.5px; color: var(--texto); line-height: 1.6; }
+.paes-ed-nuevo { margin: 12px 0; }
+.paes-ed-nuevo > b { color: var(--paes-oscuro); }
+.paes-ed-letras { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.paes-ed-letras label { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--paes-borde); border-radius: 7px; padding: 4px 9px; margin: 0; font-weight: 700; color: var(--texto); cursor: pointer; background: white; }
+.paes-ed-letras label:has(input:checked) { background: var(--paes-fondo); border-color: var(--paes); color: var(--paes-oscuro); }
+.paes-ed-letras input { margin: 0; }
+.paes-ed-cursos td { vertical-align: middle; }
+.paes-ed-cursos small { color: var(--texto-suave); }
+.paes-ed-punto { display: inline-block; width: 14px; height: 14px; border-radius: 50%; margin-right: 8px; vertical-align: -2px; }
+.paes-ed-prov { background: #fff3cd; border: 2px solid #e0a800; color: #5c4300; border-radius: 9px; padding: 9px 12px; margin: 10px 0 0; font-size: 13.5px; }
+.paes-ed-prov-chip { display: inline-block; background: #e0a800; color: #3d2c00; font-weight: 800; font-size: 12px; border-radius: 999px; padding: 2px 10px; letter-spacing: 0.3px; }
+.paes-ed-listas { border: 2px dashed var(--paes); border-radius: 10px; padding: 10px 12px; margin-top: 12px; background: var(--paes-fondo); }
+.paes-ed-listas > b { color: var(--paes-oscuro); display: block; margin-bottom: 6px; }
+.paes-ed-lista { background: white; border: 1px solid var(--paes-borde); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+.paes-ed-lista.prov { border-color: #e0a800; }
+.paes-ed-lista-fila { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.paes-ed-lista-fila > span { flex: 1 1 220px; }
+.paes-ed-lista-fila label { margin: 0; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+.paes-ed-lista-fila select { width: auto; }
+.paes-ed-lista small { color: var(--texto-suave); }
+.paes-ed-barra { position: sticky; top: 0; z-index: 6; background: white; border: 1px solid var(--paes-borde); border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; box-shadow: 0 2px 8px rgba(40, 36, 56, 0.1); }
+.paes-ed-barra > span { font-weight: 700; color: var(--paes-oscuro); font-size: 13.5px; }
+.paes-ed-barra .paes-ed-chips { margin: 0; }

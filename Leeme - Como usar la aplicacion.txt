@@ -460,6 +460,11 @@ El trabajo va en cinco pasos:
      "Finalizar": cada grupo de hojas se corrige en su curso. Para la otra prueba
      de los mismos cursos, cargas el otro PDF: el colegio y los cursos quedan listos.
      Cada hoja queda en el curso que marcaste, aunque su RUT sea de otro curso.
+     En el paso 1 del editor puedes agregar varios cursos de una vez (marcando las
+     letras A, B, C…) y subir sus listas: cada lista se enlaza con su curso y se
+     marca como oficial o no. Una lista no oficial queda con el aviso "LISTA
+     PROVISORIA", y después se cambia con "🔁 Reemplazar lista". Con lista, las
+     hojas se identifican solas por RUT; las que no calcen quedan por revisar.
      Cada miniatura muestra la franja de la hoja con el nombre, el curso ("Class")
      y la fecha. "🔍 Abrir visor" muestra esa franja en grande y la hoja completa: ahí puedes pasar a la anterior o la
      siguiente (también con las flechas del teclado) y marcar la hoja pinchando
