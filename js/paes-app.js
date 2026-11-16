@@ -3027,14 +3027,15 @@
 
   // sin rojo ni azul: esos colores son de CL y M1
   const COLORES_EDITOR = ["#2e7d32", "#b26a00", "#6a3fb5", "#00838f", "#ad1457", "#5d4037", "#455a64", "#827717", "#4e342e", "#00695c"];
-  // franja de la hoja con el nombre, el curso («Class») y la fecha: sale de la plantilla, con
-  // margen porque el escaneo no viene alineado. Es lo que muestra cada miniatura.
+  // recuadro de la hoja con el nombre, el curso («Class») y el RUT escrito a mano: sale de la
+  // plantilla, con un margen chico porque el escaneo no viene alineado. Es lo que muestra cada miniatura.
   function zonaDatosEditor() {
     const def = (typeof PLANTILLAS_PAES !== "undefined" && PLANTILLAS_PAES[PLANTILLA_PAES_POR_DEFECTO]) || null;
     const r = def && def.recortes && def.recortes.nombre;
     if (!r) return [0, 0, 1, 0.38];
-    const mx = 0.07, my = 0.035;
-    return [Math.max(0, r[0] / def.ancho - mx), Math.max(0, r[1] / def.alto - my), Math.min(1, r[2] / def.ancho + mx), Math.min(1, r[3] / def.alto + my)];
+    // justo el recuadro del nombre, el curso y el RUT escrito a mano, con un margen chico
+    const mx = 0.025, arriba = 0.014, abajo = 0.024;
+    return [Math.max(0, r[0] / def.ancho - mx), Math.max(0, r[1] / def.alto - arriba), Math.min(1, r[2] / def.ancho + mx), Math.min(1, r[3] / def.alto + abajo)];
   }
   const editorVacio = (previo) => ({ archivos: [], hojas: [], cargando: null, colegio: previo ? previo.colegio : "", cursos: previo ? previo.cursos : [], activo: null, clavijeroId: previo ? previo.clavijeroId : null, fecha: hoyIso(), resultado: null, corrigiendo: null, ultimo: null, listas: previo && previo.listas ? previo.listas : [], listaPara: null });
   function editor() {
@@ -3377,7 +3378,7 @@
       <div class="paes-ed-visor-cab"><b>Hoja ${visorEd.i + 1} de ${ed.hojas.length}</b><span>${esc(ed.archivos[x.archivo].name)} · página ${x.pagina}</span>
         ${cu ? `<span class="paes-ed-visor-curso" style="background:${colorEd(ed, cu.key)}">${esc(etiquetaEd(cu))}</span>` : `<span class="paes-ed-visor-curso sin">sin curso</span>`}
         <button type="button" class="secundario chico" data-v="cerrar">✕ Cerrar</button></div>
-      <div class="paes-ed-visor-datos"><small>Nombre, curso («Class») y fecha</small><img src="${x.url}" alt="Datos de la hoja ${visorEd.i + 1}" draggable="false" /></div>
+      <div class="paes-ed-visor-datos"><small>Nombre, curso («Class») y RUT escrito a mano</small><img src="${x.url}" alt="Datos de la hoja ${visorEd.i + 1}" draggable="false" /></div>
       <div class="paes-ed-visor-img"><img src="${src}" alt="Hoja ${visorEd.i + 1}" draggable="false" /></div>
       <div class="paes-ed-visor-pie">
         <button type="button" class="secundario" data-v="ant" ${visorEd.i ? "" : "disabled"}>← Anterior</button>

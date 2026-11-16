@@ -642,3 +642,6 @@ body.modulo-paes .topbar-acciones { display: none !important; }
 .paes-ed-barra { position: sticky; top: 0; z-index: 6; background: white; border: 1px solid var(--paes-borde); border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; box-shadow: 0 2px 8px rgba(40, 36, 56, 0.1); }
 .paes-ed-barra > span { font-weight: 700; color: var(--paes-oscuro); font-size: 13.5px; }
 .paes-ed-barra .paes-ed-chips { margin: 0; }
+
+/* miniaturas más anchas: el recuadro del nombre y el RUT se lee sin abrir el visor */
+.paes-ed-hojas { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
