@@ -645,3 +645,22 @@ body.modulo-paes .topbar-acciones { display: none !important; }
 
 /* miniaturas más anchas: el recuadro del nombre y el RUT se lee sin abrir el visor */
 .paes-ed-hojas { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+
+/* Inicio «¿Qué quieres hacer?» y herramientas de Configuración: opciones grandes con una frase */
+.paes-ini { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 10px; }
+#modulo-paes button.paes-ini-op { display: grid; grid-template-columns: auto 1fr; column-gap: 12px; row-gap: 2px; align-items: center; text-align: left; padding: 12px 14px; border-width: 2px; border-radius: 11px; background: white; height: 100%; }
+#modulo-paes button.paes-ini-op:hover { background: var(--paes-fondo); border-color: var(--paes-oscuro); }
+#modulo-paes button.paes-ini-op i { grid-row: span 2; font-style: normal; font-size: 26px; }
+#modulo-paes button.paes-ini-op b { font-size: 15px; color: var(--paes-oscuro); }
+#modulo-paes button.paes-ini-op small { grid-column: 2; font-weight: 400; color: var(--texto-suave); font-size: 12.5px; line-height: 1.4; }
+.paes-volver-config { margin: 0 0 10px; }
+
+/* girar hojas en el visor del Editor de PDF */
+.paes-ed-visor-giro { display: inline-flex; gap: 6px; margin-left: auto; }
+.paes-ed-visor-cab > .paes-ed-visor-giro + button { margin-left: 0; }
+
+/* qué tabla de puntajes usa cada ensayo (CL y M1 convierten distinto) */
+.paes-tabla-de { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+.paes-tabla-de > b { color: var(--paes-oscuro); font-size: 13.5px; }
+.paes-tabla-mal { display: inline-block; background: #fde8e6; color: #9b1c12; border: 1px solid #e3a59f; border-radius: 7px; padding: 1px 8px; font-weight: 700; font-size: 12.5px; }
+.paes-tabla-mal.grande { display: block; border-width: 2px; padding: 9px 12px; font-size: 14px; font-weight: 600; margin: 8px 0; }

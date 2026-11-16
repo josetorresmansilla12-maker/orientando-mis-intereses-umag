@@ -47,7 +47,7 @@
     deshacer: [], // cambios de la revisión que se pueden deshacer (por sesión)
     sinNombres: false, // informe sin nombres (uso interno)
     generando: false, // se está creando un informe
-    vista: "curso", // "curso" (los cinco pasos), "resultados", "clavijeros" o "carpetas"
+    vista: "inicio", // "inicio", "curso" (los cinco pasos), "resultados", "clavijeros", "editor", "config"…
     clavijeros: [], // claves de respuestas guardadas, que se aplican a los ensayos
     clvAbierto: null, // clavijero desplegado en «Clavijeros subidos»
     clvForm: false, // formulario «Agregar clavijero»
@@ -776,7 +776,7 @@
       htmlVistas() +
       (est.vista === "curso"
         ? (est.importar ? htmlImportarKuder() : "") + htmlContexto() + htmlPasos() + `<div id="paes-panel">${htmlPanel()}</div>`
-        : `<div id="paes-panel">${est.vista === "resultados" ? htmlVistaResultados() : est.vista === "clavijeros" ? htmlVistaClavijeros() : est.vista === "papelera" ? htmlVistaPapelera() : est.vista === "acciones" ? htmlVistaAcciones() : est.vista === "config" ? htmlVistaConfig() : est.vista === "editor" ? htmlVistaEditor() : htmlVistaCarpetas()}</div>`) +
+        : `<div id="paes-panel">${VISTAS_DE_CONFIG.includes(est.vista) && est.vista !== "config" ? `<div class="acciones-form paes-volver-config"><button type="button" class="secundario chico" data-vista="config">← Volver a Configuración</button></div>` : ""}${est.vista === "inicio" ? htmlVistaInicio() : est.vista === "resultados" ? htmlVistaResultados() : est.vista === "clavijeros" ? htmlVistaClavijeros() : est.vista === "papelera" ? htmlVistaPapelera() : est.vista === "acciones" ? htmlVistaAcciones() : est.vista === "config" ? htmlVistaConfig() : est.vista === "editor" ? htmlVistaEditor() : htmlVistaCarpetas()}</div>`) +
       `<div id="paes-visor" class="modal-overlay" style="display:none;"></div>`;
     global.scrollTo(0, y);
     if (est.vista === "editor") refrescarEditor();
@@ -1624,6 +1624,10 @@
     const defecto = L.TABLAS_PAES[e.prueba];
     h += `<div class="tarjeta">
       <h2 style="font-size:16px;">Tabla de conversión (correctas → puntaje)</h2>
+      <div class="paes-tabla-de"><b>Puntajes que usa este ensayo:</b>
+        ${Object.values(L.PRUEBAS_PAES).map((p) => `<button type="button" class="paes-prueba-btn ${p.id === "CL" ? "cl" : "m1"}${tablaQueUsa(e) === p.id ? " activa" : ""}" data-accion="tabla-de" data-prueba="${p.id}"><b>${p.id}</b><span>${esc(p.nombre)}</span><small>${tablaQueUsa(e) === p.id ? "✔ en uso" : "Usar estos puntajes"} · ${L.TABLAS_PAES[p.id][1]}, ${L.TABLAS_PAES[p.id][2]}, ${L.TABLAS_PAES[p.id][3]}…</small></button>`).join("")}
+        ${tablaQueUsa(e) === "propia" ? `<span class="paes-chip gris">En uso: una tabla propia (cambiada a mano o importada)</span>` : ""}</div>
+      ${tablaCruzada(e) ? `<p class="paes-tabla-mal grande">⚠ Este ensayo es de <b>${esc(nombrePrueba(e))}</b> pero está usando los puntajes de <b>${esc(tablaQueUsa(e))}</b>. Los puntajes de CL y M1 son distintos: elige arriba la tabla que corresponde.</p>` : `<p class="ayuda" style="margin:6px 0;">Competencia Lectora y M1 convierten las correctas a puntaje con tablas distintas. La app pone sola la de la prueba del ensayo (o de su clavijero); aquí puedes comprobarlo o cambiarlo.</p>`}
       <p class="paes-resumen" id="paes-resumen-tabla">${resumenTabla(e)}</p>
       ${validas > maxTabla && e.tabla.length ? `<p class="paes-nota amarillo">El ensayo tiene ${plural(validas, "pregunta válida", "preguntas válidas")} y la tabla llega a ${maxTabla} correctas. Mientras no marques las preguntas de pilotaje como no válidas se cuentan todas, y una hoja con más de ${maxTabla} correctas queda «sin tabla» (no se recorta ni se inventa un puntaje).</p>` : ""}
       <div class="acciones-form" style="margin-top:0;">
@@ -1814,6 +1818,21 @@
       console.error(err);
       toast("No se pudo leer la tabla. ¿Es un CSV o un Excel?");
     }
+  }
+
+  // qué tabla de puntajes usa un ensayo: "CL", "M1" (las de la unidad), "propia" o "" (sin tabla)
+  function tablaQueUsa(e) {
+    if (!e.tabla || !e.tabla.length) return "";
+    const texto = e.tabla.join(",");
+    return Object.keys(L.TABLAS_PAES).find((p) => L.TABLAS_PAES[p].join(",") === texto) || "propia";
+  }
+  // la tabla no calza con la prueba (por ejemplo, un ensayo M1 con los puntajes de CL)
+  const tablaCruzada = (e) => !!L.TABLAS_PAES[e.prueba] && !!L.TABLAS_PAES[tablaQueUsa(e)] && tablaQueUsa(e) !== e.prueba;
+  function chipTabla(e) {
+    const t = tablaQueUsa(e);
+    if (tablaCruzada(e)) return `<span class="paes-tabla-mal">⚠ Usa los puntajes de ${esc(t)} y la prueba es ${esc(siglaPrueba(e))}</span>`;
+    if (t === "propia") return `<span class="paes-chip gris" title="La tabla de este ensayo se cambió a mano o se importó">Puntajes: tabla propia</span>`;
+    return t ? `<span class="paes-chip gris">Puntajes de ${esc(t)}</span>` : `<span class="paes-chip amarillo">Sin tabla de puntajes</span>`;
   }
 
   async function cambiarTabla(e, tabla, origen) {
@@ -2655,17 +2674,19 @@
           <button type="button" class="secundario chico" data-accion="visor-ir" data-id="${pos > 0 ? esc(lista[pos - 1].id) : ""}" ${pos > 0 ? "" : "disabled"}>← Anterior</button>
           <button type="button" class="secundario chico" data-accion="visor-ir" data-id="${pos < lista.length - 1 ? esc(lista[pos + 1].id) : ""}" ${pos < lista.length - 1 ? "" : "disabled"}>Siguiente →</button>
           <button type="button" class="secundario chico" data-accion="deshacer" ${diario.hechas.length && diario.hechas[diario.hechas.length - 1].reversible ? "" : "disabled"}>↩ Deshacer</button>
+          ${legible || !url ? "" : `<button type="button" class="secundario chico" data-accion="visor-girar" title="Gira la imagen para leerla; no cambia nada de la hoja">⟳ Girar imagen</button>`}
           <button type="button" class="chico" data-accion="cerrar-visor">Cerrar ✕</button>
         </div>
       </div>
       ${legible ? `<div class="paes-leyenda"><span><i style="background:${COLOR_MARCA.correcta}"></i>Correcta</span><span><i style="background:${COLOR_MARCA.incorrecta}"></i>Incorrecta</span><span><i style="background:${COLOR_MARCA.falto}"></i>La correcta que faltó</span><span><i style="background:${COLOR_MARCA.doble}"></i>Doble marca</span><span class="paes-leyenda-nota">Pulsa una burbuja o una letra para corregir. Lo que leyó la app se conserva${editadas ? ` · <b>${plural(editadas, "respuesta editada", "respuestas editadas")}</b>` : ""}.</span></div>` : `<p class="paes-nota" style="margin:0 0 10px;">La app no pudo leer esta hoja. Puedes volver a escanearla o <button type="button" class="chico" data-accion="ingresar-a-mano" data-id="${esc(h.id)}">✍ ingresar sus respuestas a mano</button></p>`}
       ${avisos.length ? `<ul class="paes-advertencias">${avisos.map((a) => `<li>${esc(a.detalle)}</li>`).join("")}</ul>` : ""}
       <div class="paes-visor-cuerpo">
-        <div class="paes-visor-imagen">${url ? `<img src="${url}" alt="Hoja de respuestas escaneada" />${legible && !h.manual ? svgDeHoja(h, e) : ""}` : `<p class="ayuda">La imagen de esta hoja ya no está guardada.</p>`}</div>
+        <div class="paes-visor-imagen">${url ? `<img src="${url}" alt="Hoja de respuestas escaneada" data-giro="${legible ? 0 : (est.visorGiro && est.visorGiro.id === h.id ? est.visorGiro.g : 0)}" />${legible && !h.manual ? svgDeHoja(h, e) : ""}` : `<p class="ayuda">La imagen de esta hoja ya no está guardada.</p>`}</div>
         <div class="paes-pregs">${legible ? htmlPreguntas(h, e) : ""}</div>
       </div>
     </div>`;
     visor.style.display = "flex";
+    aplicarGiroVisor();
     visor.scrollTop = scroll.visor;
     const nueva = visor.querySelector(".paes-pregs");
     if (nueva) nueva.scrollTop = scroll.lista;
@@ -2763,6 +2784,30 @@
     visor.scrollTop = 0;
   }
 
+  // gira (solo a la vista) la imagen de una hoja ilegible en el visor de la revisión
+  function aplicarGiroVisor() {
+    const img = raiz.querySelector(".paes-visor-imagen img[data-giro]");
+    if (!img) return;
+    const g = est.visorGiro && est.visorGiro.id === est.visor ? est.visorGiro.g : Number(img.dataset.giro) || 0;
+    const poner = () => {
+      const caja = img.parentElement;
+      const r = img.naturalHeight / (img.naturalWidth || 1);
+      Object.assign(img.style, { transformOrigin: "", transform: "", width: "", position: "", top: "", left: "" });
+      Object.assign(caja.style, { position: "", height: "", overflow: "" });
+      if (!g) return;
+      if (g === 180) {
+        img.style.transform = "rotate(180deg)";
+        return;
+      }
+      // de lado: la caja toma el alto de la hoja acostada y la imagen se gira dentro
+      const ancho = caja.clientWidth;
+      Object.assign(caja.style, { position: "relative", height: Math.round(ancho / r) + "px", overflow: "hidden" });
+      Object.assign(img.style, { position: "absolute", top: "0", left: "0", width: Math.round(ancho / r) + "px", transformOrigin: "top left", transform: g === 90 ? `translateX(${ancho}px) rotate(90deg)` : `translateY(${Math.round(ancho / r)}px) rotate(-90deg)` });
+    };
+    if (img.complete && img.naturalWidth) poner();
+    else img.addEventListener("load", poner, { once: true });
+  }
+
   // ============================================================ PASO 5 · resultados
 
   function htmlPasoResultados() {
@@ -2803,9 +2848,9 @@
         ${dato("Máximo", numero(st.maximo), "puntos")}
         ${dato("Mínimo", numero(st.minimo), "puntos")}
         ${dato("Desviación estándar", numero(st.desviacion, 1), "poblacional")}
-        ${dato("Logro promedio", st.logroPromedio == null ? "—" : numero(st.logroPromedio, 1) + " %", `${numero(st.correctasPromedio, 1)} correctas de ${st.preguntasValidas}`)}
       </div>
-      <p class="paes-nota">Ensayo de preparación tipo PAES. Puntaje <b>referencial, no oficial</b>, según la tabla de conversión de la unidad: <b>tabla de 0 a ${st.maximoTabla == null ? "—" : st.maximoTabla} correctas</b> (versión ${e.tablaVersion || 1}) · <b>${plural(st.preguntasValidas, "pregunta válida", "preguntas válidas")}</b> de ${st.preguntas} (clave versión ${e.claveVersion || 0}).</p>
+      ${tablaCruzada(e) ? `<p class="paes-tabla-mal grande">⚠ Este ensayo es de <b>${esc(nombrePrueba(e))}</b> pero está usando los puntajes de <b>${esc(tablaQueUsa(e))}</b>. Corrígelo en el paso 2, «Tabla de conversión».</p>` : ""}
+      <p class="paes-nota">${chipTabla(e)} Ensayo de preparación tipo PAES. Puntaje <b>referencial, no oficial</b>, según la tabla de conversión de la unidad: <b>tabla de 0 a ${st.maximoTabla == null ? "—" : st.maximoTabla} correctas</b> (versión ${e.tablaVersion || 1}) · <b>${plural(st.preguntasValidas, "pregunta válida", "preguntas válidas")}</b> de ${st.preguntas} (clave versión ${e.claveVersion || 0}).</p>
     </div>`;
     h += `<div class="tarjeta"><h2 style="font-size:16px;">Tabla del curso, de mayor a menor puntaje</h2>
       <div class="paes-tabla-scroll"><table class="paes-tabla paes-resultados"><thead><tr><th>Lugar</th><th>Estudiante</th><th>RUT</th><th>Correctas</th><th>Incorrectas</th><th>Omitidas</th><th>Logro</th><th>Puntaje</th></tr></thead><tbody>`;
@@ -3162,7 +3207,7 @@
       ${ed.cursos.length ? `<div class="paes-ed-barra"><span>Curso activo:</span><div class="paes-ed-chips">${ed.cursos.map((x) => chip(x.key, esc(etiquetaEd(x)))).join("")}${chip("borrar", "🧽 Quitar del curso")}</div></div>` : `<div class="paes-ed-prov">Antes de marcar, agrega en el paso 1 el colegio y sus cursos.</div>`}
       <div class="paes-ed-hojas${ocupado ? " ocupado" : ""}">${ed.hojas.map((x, i) => `<div class="paes-ed-hoja" data-i="${i}"><img src="${x.url}" alt="Hoja ${i + 1}" draggable="false" /><b>${i + 1}</b><button type="button" class="secundario paes-ed-ver" data-accion="ed-ver" data-i="${i}" title="Ver la hoja en grande">🔍 Abrir visor</button><span></span></div>`).join("")}</div>
       <div id="paes-ed-carga">${htmlCargaEditor()}</div>
-      <div class="acciones-form" style="margin-top:10px;"><button type="button" class="secundario chico" data-accion="ed-elegir" ${des}>➕ Agregar otro PDF</button><button type="button" class="secundario chico" data-accion="ed-limpiar" ${des}>Quitar todas las hojas y empezar de nuevo</button></div></div>`;
+      <div class="acciones-form" style="margin-top:10px;"><button type="button" class="secundario chico" data-accion="ed-elegir" ${des}>➕ Agregar otro PDF</button><button type="button" class="secundario chico" data-accion="ed-girar-todas" ${des} title="Para una pila que entró al escáner al revés">🔄 Girar todas las hojas 180°</button><button type="button" class="secundario chico" data-accion="ed-limpiar" ${des}>Quitar todas las hojas y empezar de nuevo</button></div></div>`;
 
     // ---------- paso 3
     const clvs = est.clavijeros.slice().sort((a, b) => a.prueba.localeCompare(b.prueba) || a.nombre.localeCompare(b.nombre, "es"));
@@ -3328,13 +3373,43 @@
   let visorEd = null; // { i, el }
   const vistasEd = new Map(); // archivo → vista abierta (PaesPdf.abrirVista)
   const grandesEd = new Map(); // "archivo|página" → imagen grande ya dibujada
+  function vistaEd(archivo) {
+    if (!vistasEd.has(archivo)) vistasEd.set(archivo, PaesPdf.abrirVista(archivo));
+    return vistasEd.get(archivo);
+  }
+  // gira hojas (solo cómo se ven aquí: al corregir, la app endereza cada hoja por su cuenta)
+  // y vuelve a dibujar sus miniaturas
+  async function girarHojasEd(indices, grados) {
+    const ed = est.editor;
+    if (!ed || ed.girando || est.lectura || ed.corrigiendo || ed.cargando) return;
+    ed.girando = true;
+    const zona = zonaDatosEditor();
+    try {
+      let hechas = 0;
+      for (const i of indices) {
+        const x = ed.hojas[i];
+        if (!x) continue;
+        x.giro = ((((x.giro || 0) + grados) % 360) + 360) % 360;
+        const v = await vistaEd(ed.archivos[x.archivo]);
+        x.url = await v.imagen(x.pagina, 900, x.giro, zona);
+        const img = raiz.querySelector(`.paes-ed-hoja[data-i="${i}"] img`);
+        if (img) img.src = x.url;
+        if (indices.length > 1 && ++hechas % 5 === 0) toast(`Girando hojas… ${hechas} de ${indices.length}`);
+      }
+    } catch (err) {
+      console.error(err);
+      toast("No se pudo girar la hoja.");
+    }
+    ed.girando = false;
+    if (indices.length > 1) toast(`${plural(indices.length, "hoja girada", "hojas giradas")}`);
+    if (visorEd) pintarVisorEd(true);
+  }
   function imagenGrandeEd(x) {
     const ed = est.editor;
     const archivo = ed.archivos[x.archivo];
-    const clave = x.archivo + "|" + x.pagina;
+    const clave = x.archivo + "|" + x.pagina + "|" + (x.giro || 0);
     if (!grandesEd.has(clave)) {
-      if (!vistasEd.has(archivo)) vistasEd.set(archivo, PaesPdf.abrirVista(archivo));
-      grandesEd.set(clave, vistasEd.get(archivo).then((v) => v.imagen(x.pagina, 1400)));
+      grandesEd.set(clave, vistaEd(archivo).then((v) => v.imagen(x.pagina, 1400, x.giro || 0)));
       if (grandesEd.size > 14) grandesEd.delete(grandesEd.keys().next().value);
     }
     return grandesEd.get(clave);
@@ -3377,6 +3452,7 @@
     visorEd.el.innerHTML = `<div class="modal-caja paes-ed-visor-caja">
       <div class="paes-ed-visor-cab"><b>Hoja ${visorEd.i + 1} de ${ed.hojas.length}</b><span>${esc(ed.archivos[x.archivo].name)} · página ${x.pagina}</span>
         ${cu ? `<span class="paes-ed-visor-curso" style="background:${colorEd(ed, cu.key)}">${esc(etiquetaEd(cu))}</span>` : `<span class="paes-ed-visor-curso sin">sin curso</span>`}
+        <span class="paes-ed-visor-giro"><button type="button" class="secundario chico" data-v="giro-izq" title="Girar la hoja hacia la izquierda" ${ocupado ? "disabled" : ""}>⟲ Girar</button><button type="button" class="secundario chico" data-v="giro-der" title="Girar la hoja hacia la derecha" ${ocupado ? "disabled" : ""}>⟳ Girar</button></span>
         <button type="button" class="secundario chico" data-v="cerrar">✕ Cerrar</button></div>
       <div class="paes-ed-visor-datos"><small>Nombre, curso («Class») y RUT escrito a mano</small><img src="${x.url}" alt="Datos de la hoja ${visorEd.i + 1}" draggable="false" /></div>
       <div class="paes-ed-visor-img"><img src="${src}" alt="Hoja ${visorEd.i + 1}" draggable="false" /></div>
@@ -3428,6 +3504,8 @@
     else if (b.dataset.v === "sig") moverVisorEd(1);
     else if (b.dataset.v === "curso") marcarEnVisorEd(x.curso === b.dataset.key ? null : b.dataset.key, false);
     else if (b.dataset.v === "quitar") marcarEnVisorEd(null, false);
+    else if (b.dataset.v === "giro-izq") girarHojasEd([visorEd.i], -90);
+    else if (b.dataset.v === "giro-der") girarHojasEd([visorEd.i], 90);
     else if (b.dataset.v === "marcar") marcarEnVisorEd(ed.activo, true);
   }
   function alTeclaVisorEd(ev) {
@@ -3491,12 +3569,193 @@
     toast(detenido ? "La corrección se detuvo: lo ya leído quedó guardado" : "Hojas corregidas y guardadas en sus cursos");
   }
 
+  // ============================================================ RESPALDO
+  // Un ZIP con todo lo de Ensayos PAES: los datos para restaurar (carpeta «datos») y, para
+  // mirar sin la app, las listas, los clavijeros, los informes PDF y los Excel.
+
+  const TIPO_RESPALDO = "umag-ensayos-paes-respaldo";
+  const ALMACENES_RESPALDO = ["cursos", "ensayos", "hojas", "auditoria", "ajustes"];
+  const carpetaSegura = (t) => textoArchivo(t).replace(/[.]+$/, "") || "Sin nombre";
+
+  async function exportarRespaldo() {
+    if (est.generando) return;
+    if (typeof JSZip === "undefined") return toast("No se pudo preparar el respaldo en este navegador.");
+    const conInformes = !raiz.querySelector("#paes-resp-informes") || raiz.querySelector("#paes-resp-informes").checked;
+    const conImagenes = !raiz.querySelector("#paes-resp-imagenes") || raiz.querySelector("#paes-resp-imagenes").checked;
+    est.generando = true;
+    pintar();
+    try {
+      const zip = new JSZip();
+      toast("Preparando el respaldo…");
+      const datos = { tipo: TIPO_RESPALDO, version: 1, creado: new Date().toISOString(), conImagenes };
+      for (const almacen of ALMACENES_RESPALDO) datos[almacen] = await PaesDB.todos(almacen);
+      zip.file("datos/respaldo.json", JSON.stringify(datos));
+      if (conImagenes) {
+        const imagenes = await PaesDB.todos("imagenes");
+        imagenes.forEach((im) => {
+          if (im.pagina) zip.file(`datos/imagenes/${im.hojaId}.jpg`, im.pagina);
+          if (im.nombre) zip.file(`datos/imagenes/${im.hojaId}_nombre.jpg`, im.nombre);
+        });
+      }
+      const usados = new Set();
+      const unico = (ruta) => {
+        let r = ruta, n = 1;
+        const punto = ruta.lastIndexOf(".");
+        while (usados.has(r.toLowerCase())) r = `${ruta.slice(0, punto)} (${++n})${ruta.slice(punto)}`;
+        usados.add(r.toLowerCase());
+        return r;
+      };
+      // listas de curso, tal como están hoy
+      ordenarCursos(est.cursos).filter((c) => c.estudiantes.length && !c.disperso).forEach((c) => {
+        const libro = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(libro, XLSX.utils.aoa_to_sheet([["N°", "RUT", "Nombres", "Apellidos"]].concat(c.estudiantes.map((e, i) => [i + 1, L.formatearRutPaes(e.rut) || "", e.nombres || "", e.apellidos || ""]))), "Lista");
+        const tipo = c.listaOficial === false ? "Lista provisoria" : c.listaOficial === true ? "Lista oficial" : "Lista sin marcar";
+        zip.file(unico(`Listas de curso/${inicioArchivo([c], tipo)} ${c.anio}.xlsx`), XLSX.write(libro, { type: "array", bookType: "xlsx" }));
+      });
+      est.clavijeros.forEach((k) => zip.file(unico(`Clavijeros/Clavijero ${carpetaSegura(k.nombre)}.xlsx`), blobDeClavijero(k)));
+      if (conInformes) {
+        const pares = ensayosConHojas(est.cursos);
+        let hechos = 0;
+        for (const { c, e } of pares) {
+          toast(`Respaldo: informe ${++hechos} de ${pares.length}…`);
+          const k = e.clavijeroId ? est.clavijeros.find((x) => x.id === e.clavijeroId) : null;
+          const carpeta = `${carpetaSegura(nombrePrueba(e))}/${k ? "Clavijero " + carpetaSegura(k.nombre) : "Sin clavijero guardado"}`;
+          zip.file(unico(`Informes PDF/${carpeta}/${nombreArchivoEnsayo(c, e, "Informe Ensayo PAES")}.pdf`), await PaesInforme.pdf(datosDeInforme(c, e, true)));
+          zip.file(unico(`Resultados Excel/${carpeta}/${nombreArchivoEnsayo(c, e, "Resultados Ensayo PAES")}.xlsx`), await PaesExcel.excelDeEnsayo({ ensayo: e, curso: cursoParaResultados(c, [e]), hojas: hojasDelEnsayo(e.id), nombrePrueba: nombrePrueba(e), etiquetaCurso: etiquetaCurso(c), advertencias: advertenciasDelEnsayo(e) }));
+          await ceder();
+        }
+      }
+      zip.file("LEEME.txt", "﻿" + [
+        "RESPALDO DE ENSAYOS PAES",
+        `Creado el ${PaesExcel.fechaCorta(hoyIso())}.`,
+        "",
+        "Este archivo contiene datos personales de estudiantes (nombres y RUT) y los clavijeros con las respuestas correctas. Guárdalo solo dentro de la unidad.",
+        "",
+        "Para restaurar: en la app, Ensayos PAES > Configuración > Importar respaldo, y elige este archivo ZIP completo (sin descomprimir).",
+        "",
+        "Carpetas:",
+        "- datos: lo que la app necesita para restaurar todo (cursos, listas, ensayos, hojas leídas, correcciones, clavijeros" + (conImagenes ? " e imágenes de las hojas)." : "). Sin las imágenes de las hojas."),
+        "- Listas de curso: la lista de cada curso en Excel; el nombre dice si es oficial o provisoria.",
+        "- Clavijeros: cada clavijero guardado, en Excel.",
+        conInformes ? "- Informes PDF y Resultados Excel: separados por prueba y, dentro, por clavijero." : "- Este respaldo se hizo sin informes PDF ni Excel.",
+      ].join("\r\n"));
+      toast("Respaldo: comprimiendo…");
+      descargar(await zip.generateAsync({ type: "blob" }), `Respaldo Ensayos PAES ${hoyIso()}.zip`);
+      toast("Respaldo descargado. Guárdalo en un lugar seguro de la unidad");
+    } catch (err) {
+      console.error(err);
+      toast("No se pudo crear el respaldo.");
+    }
+    est.generando = false;
+    pintar();
+  }
+
+  async function leerRespaldo(archivo) {
+    if (!archivo) return;
+    try {
+      const zip = await JSZip.loadAsync(archivo);
+      const json = zip.file("datos/respaldo.json");
+      if (!json) throw new Error("no es un respaldo");
+      const datos = JSON.parse(await json.async("string"));
+      if (datos.tipo !== TIPO_RESPALDO || !Array.isArray(datos.cursos) || !Array.isArray(datos.ensayos) || !Array.isArray(datos.hojas)) throw new Error("formato");
+      const clv = (datos.ajustes || []).find((a) => a.clave === "clavijeros");
+      est.cfgRespaldo = { zip, datos, nombre: archivo.name, imagenes: zip.file(/^datos\/imagenes\/.+\.jpg$/).length, clavijeros: clv && Array.isArray(clv.valor) ? clv.valor.length : 0 };
+      pintar();
+    } catch (err) {
+      console.error(err);
+      toast("Ese archivo no es un respaldo de Ensayos PAES (debe ser el ZIP completo, sin descomprimir).");
+    }
+  }
+
+  // modo "reemplazar": borra lo actual y deja solo el respaldo; "sumar": agrega el respaldo a lo actual
+  async function restaurarRespaldo(modo) {
+    const r = est.cfgRespaldo;
+    if (!r || est.generando) return;
+    const o = diario.original || PaesDB; // sin pasar por el historial de acciones
+    est.generando = true;
+    pintar();
+    try {
+      const d = r.datos;
+      if (modo === "reemplazar") await PaesDB.vaciar(["cursos", "ensayos", "hojas", "imagenes", "auditoria", "ajustes"]);
+      const porTandas = async (almacen, lista) => {
+        for (let i = 0; i < lista.length; i += 200) await o.ponerVarios.call(PaesDB, lista.slice(i, i + 200).map((v) => [almacen, v]));
+      };
+      await porTandas("cursos", d.cursos);
+      await porTandas("ensayos", d.ensayos);
+      await porTandas("hojas", d.hojas);
+      if (modo === "reemplazar") {
+        await porTandas("ajustes", d.ajustes || []);
+        await porTandas("auditoria", d.auditoria || []);
+      } else {
+        // clavijeros: se agregan los que no estaban
+        const suyos = ((d.ajustes || []).find((a) => a.clave === "clavijeros") || { valor: [] }).valor || [];
+        const ids = new Set(est.clavijeros.map((k) => k.id));
+        const juntos = est.clavijeros.concat(suyos.filter((k) => !ids.has(k.id)));
+        await o.poner.call(PaesDB, "ajustes", { clave: "clavijeros", valor: juntos });
+      }
+      const ensayoDe = new Map(d.hojas.map((h) => [h.id, h.ensayoId]));
+      const archivos = r.zip.file(/^datos\/imagenes\/[^/]+\.jpg$/).filter((f) => !/_nombre\.jpg$/.test(f.name));
+      let hechas = 0;
+      for (const f of archivos) {
+        const hojaId = f.name.slice("datos/imagenes/".length, -4);
+        if (!ensayoDe.has(hojaId)) continue;
+        const nombre = r.zip.file(`datos/imagenes/${hojaId}_nombre.jpg`);
+        const blob = async (x) => new Blob([await x.async("arraybuffer")], { type: "image/jpeg" });
+        await o.poner.call(PaesDB, "imagenes", { hojaId, ensayoId: ensayoDe.get(hojaId), pagina: await blob(f), nombre: nombre ? await blob(nombre) : null });
+        if (++hechas % 25 === 0) {
+          toast(`Restaurando imágenes… ${hechas} de ${archivos.length}`);
+          await ceder();
+        }
+      }
+      Object.assign(diario, { hechas: [], deshechas: [], pendiente: null });
+      Object.assign(est, { cfgRespaldo: null, cursoId: null, ensayoId: null, enBlanco: false, tanda: [], paso: "curso", editor: null });
+      await cargarDatos();
+      est.vista = "resultados";
+      toast(`Respaldo restaurado: ${plural(d.cursos.length, "curso", "cursos")}, ${plural(d.ensayos.length, "ensayo", "ensayos")} y ${plural(d.hojas.length, "hoja", "hojas")}`);
+    } catch (err) {
+      console.error(err);
+      toast("No se pudo restaurar el respaldo completo. Revisa el mensaje en la consola.");
+    }
+    est.generando = false;
+    pintar();
+    pintarBarraAcciones();
+  }
+
+  function htmlRespaldo() {
+    const r = est.cfgRespaldo;
+    const des = est.generando ? "disabled" : "";
+    let h = `<div class="tarjeta"><h2 style="font-size:16px;">💾 Respaldo</h2>
+      <p class="ayuda">Los datos de Ensayos PAES viven solo en este computador. Un respaldo es un archivo ZIP con <b>todo</b>: cursos y listas, ensayos, hojas leídas con sus correcciones, clavijeros, y además las listas, los informes PDF y los Excel listos para abrir. Sirve para no perder el trabajo o para llevarlo a otro computador.</p>
+      <div class="paes-checks"><label><input type="checkbox" id="paes-resp-informes" checked ${des} /> Incluir informes PDF y Excel <small>(separados por prueba y por clavijero; tarda más)</small></label>
+        <label><input type="checkbox" id="paes-resp-imagenes" checked ${des} /> Incluir las imágenes de las hojas <small>(necesarias para revisar hojas después de restaurar; el archivo pesa más)</small></label></div>
+      <input type="file" data-archivo="respaldo" accept=".zip" style="display:none;" />
+      <div class="acciones-form" style="margin-top:10px;"><button type="button" data-accion="resp-exportar" ${des}>💾 Exportar respaldo</button><button type="button" class="secundario" data-accion="resp-elegir" ${des}>📂 Importar respaldo…</button></div>
+      <p class="ayuda" style="margin:8px 0 0;">El respaldo trae nombres, RUT y clavijeros: guárdalo solo dentro de la unidad.</p>`;
+    if (r) {
+      const d = r.datos;
+      const hay = est.cursos.length + est.papelera.length;
+      h += `<div class="paes-cfg-confirmar" style="margin-top:12px;">
+        <p><b>📂 ${esc(r.nombre)}</b> · creado el ${esc(PaesExcel.fechaCorta(String(d.creado || "").slice(0, 10)))}</p>
+        <p>Trae ${plural(d.cursos.length, "curso", "cursos")}, ${plural(d.ensayos.length, "ensayo", "ensayos")}, ${plural(d.hojas.length, "hoja leída", "hojas leídas")}, ${plural(r.clavijeros, "clavijero", "clavijeros")} y ${r.imagenes ? plural(r.imagenes, "imagen de hoja", "imágenes de hojas") : "ninguna imagen de hojas"}.</p>
+        ${hay ? `<p>Este computador ya tiene ${plural(hay, "curso guardado", "cursos guardados")}. <b>Reemplazar</b> borra lo actual y deja solo el respaldo (no se puede deshacer). <b>Sumar</b> agrega el respaldo a lo que hay; si un curso está en ambos, queda la versión del respaldo.</p>` : ""}
+        <div class="acciones-form">${hay ? `<button type="button" class="peligro" data-accion="resp-restaurar" data-modo="reemplazar" ${des}>Reemplazar todo por el respaldo</button><button type="button" data-accion="resp-restaurar" data-modo="sumar" ${des}>Sumar el respaldo a lo actual</button>` : `<button type="button" data-accion="resp-restaurar" data-modo="reemplazar" ${des}>Restaurar el respaldo</button>`}<button type="button" class="secundario" data-accion="resp-cancelar" ${des}>Cancelar</button></div></div>`;
+    }
+    return h + `</div>`;
+  }
+
   // ============================================================ CONFIGURACIÓN
 
   function htmlVistaConfig() {
     const nCursos = est.cursos.length + est.papelera.length;
     let h = `<div class="tarjeta"><h2>⚙️ Configuración</h2>
-      <p class="ayuda" style="margin-bottom:0;">Descarga de informes y borrado de los datos de los Ensayos PAES guardados en este computador.</p></div>
+      <p class="ayuda" style="margin-bottom:0;">Respaldo, descarga de informes, herramientas y borrado de los datos de los Ensayos PAES guardados en este computador.</p></div>
+      ${htmlRespaldo()}
+      <div class="tarjeta"><h2 style="font-size:16px;">🧰 Más herramientas</h2>
+        <div class="paes-ini">
+          <button type="button" class="secundario paes-ini-op" data-vista="carpetas"><i>🗂</i><b>Editar carpetas</b><small>Corregir nombres de colegios y cursos, o juntar los que quedaron duplicados.</small></button>
+          <button type="button" class="secundario paes-ini-op" data-vista="papelera"><i>🗑</i><b>Papelera${cuentaPapelera() ? " (" + cuentaPapelera() + ")" : ""}</b><small>Recuperar cursos o estudiantes eliminados, o borrarlos para siempre.</small></button>
+          <button type="button" class="secundario paes-ini-op" data-vista="acciones"><i>🕓</i><b>Acciones${diario.hechas.length ? " (" + diario.hechas.length + ")" : ""}</b><small>Ver lo último que hiciste y deshacerlo o rehacerlo.</small></button>
+        </div></div>
       <div class="tarjeta"><h2 style="font-size:16px;">📦 Descargar informes</h2>
         <p class="ayuda">Eliges los colegios y cursos, y se descarga <b>un solo archivo ZIP</b> con el informe PDF de resultados de cada prueba de cada curso marcado.</p>
         <div class="acciones-form"><button type="button" data-accion="cfg-informes" ${est.generando ? "disabled" : ""}>📦 Descargar informes</button></div></div>
@@ -3625,10 +3884,29 @@
 
   // ============================================================ VISTAS DEL MÓDULO
 
+  const VISTAS_DE_CONFIG = ["config", "carpetas", "papelera", "acciones"];
   function htmlVistas() {
-    const b = (id, texto) => `<button type="button" class="${est.vista === id ? "" : "secundario"}" data-vista="${id}">${texto}</button>`;
-    return `<div class="paes-vistas">${b("curso", "📝 Trabajar un curso")}${b("resultados", "📁 Resultados guardados")}${b("clavijeros", `🔑 Clavijeros subidos${est.clavijeros.length ? " (" + est.clavijeros.length + ")" : ""}`)}${b("carpetas", "🗂 Editar carpetas")}${b("papelera", `🗑 Papelera${cuentaPapelera() ? " (" + cuentaPapelera() + ")" : ""}`)}${b("acciones", `🕓 Acciones${diario.hechas.length ? " (" + diario.hechas.length + ")" : ""}`)}${b("editor", "✂️ Editor de PDF")}${b("config", "⚙️ Configuración")}</div>`;
+    const b = (id, texto, activa) => `<button type="button" class="${(activa === undefined ? est.vista === id : activa) ? "" : "secundario"}" data-vista="${id}">${texto}</button>`;
+    return `<div class="paes-vistas">${b("inicio", "🏠 Inicio")}${b("curso", "📝 Trabajar un curso")}${b("resultados", "📁 Resultados guardados")}${b("clavijeros", `🔑 Clavijeros subidos${est.clavijeros.length ? " (" + est.clavijeros.length + ")" : ""}`)}${b("editor", "✂️ Editor de PDF")}${b("config", `⚙️ Configuración${cuentaPapelera() ? " · papelera (" + cuentaPapelera() + ")" : ""}`, VISTAS_DE_CONFIG.includes(est.vista))}</div>`;
   }
+
+  // ============================================================ INICIO: ¿qué quieres hacer?
+
+  function htmlVistaInicio() {
+    const c = cursoActual();
+    const op = (ir, icono, titulo, frase) => `<button type="button" class="secundario paes-ini-op" data-accion="ini" data-ir="${ir}"><i>${icono}</i><b>${titulo}</b><small>${frase}</small></button>`;
+    return `<div class="tarjeta"><h2>¿Qué quieres hacer?</h2>
+      <p class="ayuda">Elige una opción y la app te lleva al lugar correcto.</p>
+      <div class="paes-ini">
+        ${op("nuevo", "📝", "Corregir cursos nuevos", "Tengo un PDF por cada curso. Subo sus listas, las hojas y obtengo los resultados.")}
+        ${op("editor", "✂️", "Corregir un PDF que trae varios cursos", "Escaneé varios cursos juntos. Marco qué hojas son de cada curso y la app las reparte.")}
+        ${op("agregar", "➕", "Agregar otra prueba o más hojas a un curso que ya existe", "Por ejemplo, el curso ya tiene Competencia Lectora y ahora traigo M1.")}
+        ${op("disperso", "👥", "Corregir a algunos estudiantes sueltos de un colegio", "Rindieron pocos y no un curso completo. No necesita lista.")}
+        ${c && !est.enBlanco ? op("seguir", "▶️", `Seguir con ${esc(nombreCurso(c))}`, "Vuelvo al curso que estaba trabajando, en el paso donde quedé.") : ""}
+        ${op("resultados", "📁", "Ver resultados o descargar informes", "Reviso lo ya corregido, edito resultados o bajo los informes en PDF, Word o Excel.")}
+      </div></div>`;
+  }
+
 
   // cursos agrupados por colegio
   function porColegio() {
@@ -3863,14 +4141,16 @@
   }
 
   // descarga un clavijero en Excel; el archivo se puede volver a subir en «Agregar clavijero»
-  function exportarClavijero(id) {
-    const k = est.clavijeros.find((x) => x.id === id);
-    if (!k) return;
+  function blobDeClavijero(k) {
     const libro = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(libro, XLSX.utils.aoa_to_sheet([["Pregunta", "Respuesta", "Válida"]].concat(k.clave.map((q) => [q.n, q.r || "", q.valida ? "sí" : "no"]))), "Clave");
     XLSX.utils.book_append_sheet(libro, XLSX.utils.aoa_to_sheet([["Dato", "Valor"], ["Nombre", k.nombre], ["Prueba", k.prueba], ["Nombre de la prueba", k.prueba === "OTRA" ? k.pruebaNombre || "" : nombrePruebaDe(k)], ["Forma", k.forma || ""], ["Alternativas", k.alternativas || 4], ["Exportado", new Date().toLocaleString("es-CL")]]), "Datos");
-    const blob = new Blob([XLSX.write(libro, { type: "array", bookType: "xlsx" })], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    descargar(blob, `Clavijero_${nombreSeguro(k.nombre)}.xlsx`);
+    return new Blob([XLSX.write(libro, { type: "array", bookType: "xlsx" })], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  }
+  function exportarClavijero(id) {
+    const k = est.clavijeros.find((x) => x.id === id);
+    if (!k) return;
+    descargar(blobDeClavijero(k), `Clavijero_${nombreSeguro(k.nombre)}.xlsx`);
     toast("Clavijero exportado. Contiene las respuestas correctas: compártelo solo dentro de la unidad");
   }
 
@@ -3936,6 +4216,8 @@
       <button type="button" class="${est.resMezcla ? "secundario " : ""}chico" data-accion="res-modo" data-modo="separado">Ver por separado</button>
       <button type="button" class="${est.resMezcla ? "" : "secundario "}chico" data-accion="res-modo" data-modo="mezcla">🔀 Mezclar datos (pruebas juntas)</button>
       <small>${est.resMezcla ? "Cada curso muestra una sola tabla con sus pruebas lado a lado, por estudiante. No se calcula un puntaje combinado." : "Cada prueba del curso se muestra en su propia fila."}</small></div>`;
+    const cruzados = est.ensayos.filter((e) => tablaCruzada(e) && est.cursos.some((c) => c.id === e.cursoId));
+    if (cruzados.length) h += `<div class="tarjeta"><p class="paes-tabla-mal grande" style="margin:0;">⚠ ${plural(cruzados.length, "ensayo usa", "ensayos usan")} los puntajes de otra prueba: ${cruzados.map((e) => `${esc(nombreCurso(est.cursos.find((c) => c.id === e.cursoId)))} · ${esc(siglaPrueba(e))}`).join("; ")}. Abre cada uno con «Ver resultados», ve al paso 2 y elige la tabla que corresponde.</p></div>`;
     h += htmlCursosParecidos() + htmlEnsayosAplicados();
     porColegio().forEach((g) => {
       h += `<div class="tarjeta paes-colegio"><h2 style="font-size:17px;">🏫 ${esc(g.colegio)} <small>${plural(g.cursos.length, "curso", "cursos")}</small></h2>`;
@@ -3958,7 +4240,7 @@
           const pend = contarEstados(e).revisar;
           const attrs = `data-curso="${esc(c.id)}" data-ensayo="${esc(e.id)}"`;
           h += `<div class="paes-res-fila ${clasePrueba(e)}"><div><b>${esc(nombrePrueba(e))}</b>
-            <small>${e.forma ? "Forma " + esc(e.forma) + " · " : ""}${e.fecha ? esc(PaesExcel.fechaCorta(e.fecha)) + " · " : ""}rindieron ${st.rindieron} de ${st.enLista} · promedio ${numero(st.promedio, 1)}${pend ? ` · <span class="paes-falta">${pend} por revisar</span>` : ""}</small></div>
+            <small>${e.forma ? "Forma " + esc(e.forma) + " · " : ""}${e.fecha ? esc(PaesExcel.fechaCorta(e.fecha)) + " · " : ""}rindieron ${st.rindieron} de ${st.enLista} · promedio ${numero(st.promedio, 1)}${pend ? ` · <span class="paes-falta">${pend} por revisar</span>` : ""} ${chipTabla(e)}</small></div>
             <div class="paes-cabecera-acciones">
               <button type="button" class="chico" data-accion="res-ver" ${attrs}>Ver resultados</button>
               <button type="button" class="secundario chico" data-accion="res-informe" data-formato="pdf" ${attrs} ${est.generando ? "disabled" : ""}>📄 PDF</button>
@@ -4688,7 +4970,7 @@
     const vista = ev.target.closest("[data-vista]");
     if (vista) {
       est.vista = vista.dataset.vista;
-      Object.assign(est, { importar: null, clvForm: false, formCurso: null, formEnsayo: false, otroClv: null, formDisperso: false, cfgInformes: null, cfgBorrar: false, verCurso: null, editarEn: null });
+      Object.assign(est, { importar: null, clvForm: false, formCurso: null, formEnsayo: false, otroClv: null, formDisperso: false, cfgInformes: null, cfgBorrar: false, cfgRespaldo: VISTAS_DE_CONFIG.includes(vista.dataset.vista) ? est.cfgRespaldo : null, verCurso: null, editarEn: null });
       pintar();
       global.scrollTo({ top: 0 });
       return;
@@ -4872,6 +5154,19 @@
       case "elegir-tabla":
         elegirArchivo("tabla");
         break;
+      case "tabla-de": {
+        const e = ensayoActual();
+        const p = b.dataset.prueba;
+        if (!e || !L.TABLAS_PAES[p] || tablaQueUsa(e) === p) break;
+        const cambiar = () =>
+          cambiarTabla(e, L.TABLAS_PAES[p].slice(), "puntajes de " + p).then(() => {
+            pintar();
+            toast(`Este ensayo ahora usa los puntajes de ${p}: los resultados ya se recalcularon`);
+          });
+        if (L.TABLAS_PAES[e.prueba] && p !== e.prueba) confirmar({ titulo: "Puntajes de otra prueba", texto: `Este ensayo es de ${nombrePrueba(e)} y vas a dejarlo con los puntajes de ${p}. ¿Seguro?`, textoBoton: `Usar los puntajes de ${p}`, onConfirmar: cambiar });
+        else cambiar();
+        break;
+      }
       case "restaurar-tabla": {
         const e = ensayoActual();
         cambiarTabla(e, L.TABLAS_PAES[e.prueba].slice(), "tabla de la unidad").then(() => {
@@ -5049,12 +5344,51 @@
         pintar();
         break;
       }
+      // ---- inicio
+      case "ini": {
+        const ir = b.dataset.ir;
+        const enBlanco = { vista: "curso", enBlanco: true, cursoId: null, ensayoId: null, tanda: [], paso: "curso", formCurso: null, formEnsayo: false, previa: null, listas: null, avisosListas: [], formDisperso: false };
+        if (ir === "nuevo") Object.assign(est, enBlanco);
+        else if (ir === "disperso") Object.assign(est, enBlanco, { formDisperso: true });
+        else if (ir === "editor") est.vista = "editor";
+        else if (ir === "seguir") est.vista = "curso";
+        else est.vista = "resultados";
+        pintar();
+        global.scrollTo({ top: 0 });
+        if (ir === "agregar") toast(est.cursos.length ? "Abre el curso y presiona «📄 Agregar ensayos PDF»" : "Aún no hay cursos guardados: primero corrige un curso nuevo");
+        break;
+      }
+      // ---- respaldo
+      case "resp-exportar":
+        exportarRespaldo();
+        break;
+      case "resp-elegir": {
+        const entrada = raiz.querySelector('[data-archivo="respaldo"]');
+        if (entrada) entrada.click();
+        break;
+      }
+      case "resp-cancelar":
+        est.cfgRespaldo = null;
+        pintar();
+        break;
+      case "resp-restaurar":
+        restaurarRespaldo(b.dataset.modo);
+        break;
       // ---- editor de PDF
       case "ed-elegir": {
         const entrada = raiz.querySelector('[data-archivo="editor-pdf"]');
         if (entrada) entrada.click();
         break;
       }
+      case "visor-girar": {
+        const g = est.visorGiro && est.visorGiro.id === est.visor ? est.visorGiro.g : 0;
+        est.visorGiro = { id: est.visor, g: (g + 90) % 360 };
+        aplicarGiroVisor();
+        break;
+      }
+      case "ed-girar-todas":
+        girarHojasEd(editor().hojas.map((_, i) => i), 180);
+        break;
       case "ed-ver":
         abrirVisorEditor(Number(b.dataset.i));
         break;
@@ -5266,6 +5600,10 @@
       if (t.dataset.archivo === "lista") leerArchivoLista(archivos[0]);
       if (t.dataset.archivo === "listas") leerListasNuevas(archivos);
       if (t.dataset.archivo === "disperso") crearDisperso(archivos);
+      if (t.dataset.archivo === "respaldo") {
+        leerRespaldo(archivos[0]);
+        t.value = "";
+      }
       if (t.dataset.archivo === "editor-listas") {
         leerListasEditor(archivos);
         t.value = "";

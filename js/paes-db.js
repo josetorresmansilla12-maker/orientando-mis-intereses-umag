@@ -14,7 +14,10 @@
 (function (global) {
   "use strict";
 
-  const NOMBRE_BD = "umag_ensayos_paes";
+  // las pruebas automáticas de pantallas (pruebas/paes-pantallas.html) abren la app con
+  // «?paes-pruebas=1» y usan una base aparte: nunca tocan los datos reales
+  const EN_PRUEBAS = /[?&]paes-pruebas=1(&|$)/.test((global.location && global.location.search) || "");
+  const NOMBRE_BD = EN_PRUEBAS ? "umag_ensayos_paes_pruebas" : "umag_ensayos_paes";
   const VERSION_BD = 1;
   let conexion = null;
 
@@ -138,5 +141,5 @@
     return prefijo + "-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
   }
 
-  global.PaesDB = { abrir, todos, obtener, porIndice, poner, ponerVarios, borrar, borrarEnsayo, borrarHojas, vaciar, registrarAuditoria, nuevoId };
+  global.PaesDB = { enPruebas: EN_PRUEBAS, abrir, todos, obtener, porIndice, poner, ponerVarios, borrar, borrarEnsayo, borrarHojas, vaciar, registrarAuditoria, nuevoId };
 })(window);

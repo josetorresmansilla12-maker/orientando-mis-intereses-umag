@@ -469,6 +469,27 @@ El trabajo va en cinco pasos:
      y la fecha. "🔍 Abrir visor" muestra esa franja en grande y la hoja completa: ahí puedes pasar a la anterior o la
      siguiente (también con las flechas del teclado) y marcar la hoja pinchando
      el curso, o con Enter para dejarla en el curso activo y seguir.
+   - Pestaña "🏠 Inicio": pregunta "¿Qué quieres hacer?" y lleva al lugar correcto
+     (cursos nuevos, un PDF con varios cursos, agregar otra prueba, estudiantes
+     sueltos, ver resultados).
+   - Puntajes de CL y de M1: cada prueba convierte las correctas a puntaje con su
+     propia tabla. La app pone sola la de la prueba del ensayo (o de su clavijero).
+     En el paso 2, "Tabla de conversión", se ve cuál está en uso y se puede cambiar
+     con los botones CL y M1. Si un ensayo usa los puntajes de la otra prueba,
+     aparece un aviso rojo ahí, en los resultados y en "Resultados guardados".
+   - Respaldo (en "Configuración"): "💾 Exportar respaldo" baja un ZIP con todo lo
+     de Ensayos PAES: los datos para restaurar, las listas de curso, los
+     clavijeros y los informes PDF y Excel separados por prueba y por clavijero.
+     "📂 Importar respaldo" lo restaura (reemplazando lo actual o sumándolo). El
+     ZIP trae nombres, RUT y clavijeros: guárdalo solo dentro de la unidad.
+   - "Editar carpetas", "Papelera" y "Acciones" ahora están dentro de
+     "Configuración", en "Más herramientas".
+   - Girar hojas: en el visor del Editor de PDF ("⟲ Girar" y "⟳ Girar") y, para una
+     pila que entró al revés, "🔄 Girar todas las hojas 180°". En la revisión, una
+     hoja ilegible tiene "⟳ Girar imagen". Girar solo cambia cómo se ve: al
+     corregir, la app endereza cada hoja por su cuenta.
+   - Pruebas automáticas de pantallas: pruebas/paes-pantallas.html (usan un
+     guardado de prueba aparte y datos inventados).
    - Pestaña "⚙️ Configuración":
      * "📦 Descargar informes": abre una ventana para marcar colegios y cursos
        (con "Seleccionar todos" y "Desmarcar todos") y descarga un solo ZIP con el

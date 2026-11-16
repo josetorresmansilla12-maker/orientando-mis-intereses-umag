@@ -64,7 +64,6 @@
         ["Mediana", num(st.mediana, st.mediana % 1 ? 1 : 0)],
         ["Máximo", num(st.maximo)],
         ["Mínimo", num(st.minimo)],
-        ["Logro promedio", num(st.logroPromedio, 1) + " %"],
       ].concat(d.interno ? [["Desv. estándar", num(st.desviacion, 1)]] : []),
       interno: !!d.interno,
       tramos: st.tramos,

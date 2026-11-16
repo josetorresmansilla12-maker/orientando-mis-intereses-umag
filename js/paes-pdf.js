@@ -169,32 +169,40 @@
     }
   }
 
-  // Abre un archivo para mirar sus páginas en grande (visor del Editor de PDF):
-  //   { imagen(pagina, ancho) -> url de la imagen, cerrar() }
+  // Abre un archivo para mirar sus páginas (Editor de PDF):
+  //   { imagen(pagina, ancho, giro, zona) -> url de la imagen, cerrar() }
+  // «giro» son grados (0, 90, 180 o 270) y «zona» [x0, y0, x1, y1] recorta, ya girada la hoja.
   async function abrirVista(archivo) {
     const bytes = new Uint8Array(await archivo.arrayBuffer());
     const canvas = document.createElement("canvas");
+    let cola = Promise.resolve();
+    const enCola = (tarea) => (cola = cola.catch(() => {}).then(tarea)); // de a una: el lienzo es compartido
+    const preparar = (w, h) => {
+      canvas.width = Math.max(1, Math.round(w));
+      canvas.height = Math.max(1, Math.round(h));
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      return ctx;
+    };
     if (esPdf(archivo)) {
       const pdfjs = await cargarPdfJs();
       const doc = await pdfjs.getDocument({ data: bytes, isEvalSupported: false }).promise;
-      let cola = Promise.resolve();
       return {
-        imagen(pagina, ancho) {
-          // de a una: el lienzo es compartido
-          cola = cola.catch(() => {}).then(async () => {
+        imagen(pagina, ancho, giro, zona) {
+          return enCola(async () => {
+            const z = zona || [0, 0, 1, 1];
             const pag = await doc.getPage(pagina);
-            const base = pag.getViewport({ scale: 1 });
-            const vista = pag.getViewport({ scale: ancho / base.width });
-            canvas.width = Math.round(vista.width);
-            canvas.height = Math.round(vista.height);
-            const ctx = canvas.getContext("2d");
-            ctx.fillStyle = "#fff";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            const rotation = (((pag.rotate || 0) + (giro || 0)) % 360 + 360) % 360;
+            const base = pag.getViewport({ scale: 1, rotation });
+            const escala = ancho / (base.width * (z[2] - z[0]));
+            const entera = pag.getViewport({ scale: escala, rotation });
+            const vista = pag.getViewport({ scale: escala, rotation, offsetX: -z[0] * entera.width, offsetY: -z[1] * entera.height });
+            const ctx = preparar(entera.width * (z[2] - z[0]), entera.height * (z[3] - z[1]));
             await pag.render({ canvasContext: ctx, viewport: vista, intent: "print" }).promise;
             pag.cleanup();
             return canvas.toDataURL("image/jpeg", 0.8);
           });
-          return cola;
         },
         cerrar() {
           canvas.width = canvas.height = 1;
@@ -203,7 +211,33 @@
       };
     }
     const url = URL.createObjectURL(new Blob([bytes], { type: archivo.type || "image/jpeg" }));
-    return { imagen: async () => url, cerrar: () => URL.revokeObjectURL(url) };
+    const img = await new Promise((ok, mal) => {
+      const i = new Image();
+      i.onload = () => ok(i);
+      i.onerror = () => mal(new Error(`No se pudo abrir «${archivo.name}».`));
+      i.src = url;
+    });
+    return {
+      imagen(pagina, ancho, giro, zona) {
+        return enCola(async () => {
+          const z = zona || [0, 0, 1, 1];
+          const g = (((giro || 0) % 360) + 360) % 360;
+          const deLado = g === 90 || g === 270;
+          const w = deLado ? img.naturalHeight : img.naturalWidth, h = deLado ? img.naturalWidth : img.naturalHeight;
+          const escala = ancho / (w * (z[2] - z[0]));
+          const ctx = preparar(w * escala * (z[2] - z[0]), h * escala * (z[3] - z[1]));
+          ctx.translate(-z[0] * w * escala, -z[1] * h * escala);
+          ctx.translate((w * escala) / 2, (h * escala) / 2);
+          ctx.rotate((g * Math.PI) / 180);
+          ctx.drawImage(img, (-img.naturalWidth * escala) / 2, (-img.naturalHeight * escala) / 2, img.naturalWidth * escala, img.naturalHeight * escala);
+          return canvas.toDataURL("image/jpeg", 0.8);
+        });
+      },
+      cerrar() {
+        URL.revokeObjectURL(url);
+        canvas.width = canvas.height = 1;
+      },
+    };
   }
 
   function blobDeGris(img, calidad) {

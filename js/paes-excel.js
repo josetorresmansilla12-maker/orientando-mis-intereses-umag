@@ -177,8 +177,6 @@
       ["Máximo", st.maximo],
       ["Mínimo", st.minimo],
       ["Desviación estándar (poblacional)", st.desviacion],
-      ["% de logro promedio", st.logroPromedio],
-      ["Correctas promedio", st.correctasPromedio],
     ].forEach(([k, v]) => filasRes.push([k, null, null, null, E(v == null ? "—" : v, "centro")]));
     filasRes.push([]);
     filasRes.push([E("Distribución de puntajes", "negrita")]);
