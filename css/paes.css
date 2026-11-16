@@ -605,3 +605,10 @@ body.modulo-paes .topbar-acciones { display: none !important; }
 #modulo-paes button.paes-ed-ver { top: 3px; right: 3px; }
 .paes-ed-hoja > span { position: static; display: block; }
 .paes-ed-hoja.previa { background: #e9e6f2; }
+
+/* visor: la franja del nombre y el curso arriba, en grande, y la hoja completa debajo */
+.paes-ed-visor-datos { border: 2px solid var(--paes); border-radius: 8px; background: white; overflow: hidden; flex: 0 0 auto; }
+.paes-ed-visor-datos small { display: block; background: var(--paes-fondo); color: var(--paes-oscuro); font-size: 12px; font-weight: 700; padding: 2px 10px; }
+.paes-ed-visor-datos img { width: 100%; display: block; }
+.paes-ed-visor-img { min-height: 160px; }
+.paes-ed-hojas { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }

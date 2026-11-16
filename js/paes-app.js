@@ -3001,7 +3001,15 @@
 
   // sin rojo ni azul: esos colores son de CL y M1
   const COLORES_EDITOR = ["#2e7d32", "#b26a00", "#6a3fb5", "#00838f", "#ad1457", "#5d4037", "#455a64", "#827717", "#4e342e", "#00695c"];
-  const PORCION_DATOS_EDITOR = 0.38; // parte de arriba de la hoja: nombre, RUT y curso («class»)
+  // franja de la hoja con el nombre, el curso («Class») y la fecha: sale de la plantilla, con
+  // margen porque el escaneo no viene alineado. Es lo que muestra cada miniatura.
+  function zonaDatosEditor() {
+    const def = (typeof PLANTILLAS_PAES !== "undefined" && PLANTILLAS_PAES[PLANTILLA_PAES_POR_DEFECTO]) || null;
+    const r = def && def.recortes && def.recortes.nombre;
+    if (!r) return [0, 0, 1, 0.38];
+    const mx = 0.07, my = 0.035;
+    return [Math.max(0, r[0] / def.ancho - mx), Math.max(0, r[1] / def.alto - my), Math.min(1, r[2] / def.ancho + mx), Math.min(1, r[3] / def.alto + my)];
+  }
   const editorVacio = (previo) => ({ archivos: [], hojas: [], cargando: null, colegio: previo ? previo.colegio : "", cursos: previo ? previo.cursos : [], activo: null, clavijeroId: previo ? previo.clavijeroId : null, fecha: hoyIso(), resultado: null, corrigiendo: null, ultimo: null });
   function editor() {
     if (!est.editor) est.editor = editorVacio();
@@ -3038,13 +3046,13 @@
       const indice = ed.archivos.length;
       ed.archivos.push(archivo);
       try {
-        await PaesPdf.miniaturas(archivo, 640, async (url, pagina, total) => {
+        await PaesPdf.miniaturas(archivo, 900, async (url, pagina, total) => {
           ed.hojas.push({ archivo: indice, pagina, url, curso: null });
           Object.assign(ed.cargando, { hecho: pagina, total, archivo: archivo.name });
           const el = raiz.querySelector("#paes-ed-carga");
           if (el) el.innerHTML = htmlCargaEditor();
           await ceder();
-        }, PORCION_DATOS_EDITOR);
+        }, zonaDatosEditor());
       } catch (err) {
         console.error(err);
         toast(`«${archivo.name}» no se pudo abrir.`);
@@ -3078,7 +3086,7 @@
         <div class="paes-ed-chips">${ed.cursos.map((x) => chip(x.key, esc(etiquetaEd(x)) + (x.cursoId ? "" : " · nuevo"))).join("")}${ed.cursos.length ? chip("borrar", "🧽 Quitar del curso") : ""}</div>
         <div class="paes-ed-nuevo"><span>Agregar un curso:</span><select id="paes-ed-nivel" ${ocupado ? "disabled" : ""}>${NIVELES.filter((n) => n !== NIVEL_DISPERSO).map((n) => `<option>${n}</option>`).join("")}</select><input type="text" id="paes-ed-letra" maxlength="3" placeholder="Letra" style="width:80px;" ${ocupado ? "disabled" : ""} /><button type="button" class="secundario chico" data-accion="ed-agregar-curso" ${ocupado ? "disabled" : ""}>➕ Agregar curso</button></div>` : `<p class="ayuda" style="margin:10px 0 0;">Escribe el colegio (o elige uno ya guardado) para ver y agregar sus cursos.</p>`}</div>`;
     h += `<div class="tarjeta"><h2 style="font-size:16px;">2 · Hojas, en el orden del escáner <small id="paes-ed-resumen" style="font-weight:400;"></small></h2>
-      <p class="ayuda">Cada miniatura muestra la parte de arriba de la hoja (nombre, RUT y curso); con <b>🔍 Abrir visor</b> la ves en grande y también puedes marcarla ahí. Con un curso activo: <b>pincha</b> una hoja, o <b>arrastra</b> desde la primera hasta la última hoja del curso (también sirve pinchar la primera y, con Mayúsculas, la última). Pinchar de nuevo una hoja del curso activo la saca.</p>
+      <p class="ayuda">Cada miniatura muestra la franja de la hoja con el nombre, el curso («Class») y la fecha; con <b>🔍 Abrir visor</b> ves esa franja en grande, la hoja completa, y también puedes marcarla ahí. Con un curso activo: <b>pincha</b> una hoja, o <b>arrastra</b> desde la primera hasta la última hoja del curso (también sirve pinchar la primera y, con Mayúsculas, la última). Pinchar de nuevo una hoja del curso activo la saca.</p>
       <div class="paes-ed-hojas${ocupado ? " ocupado" : ""}">${ed.hojas.map((x, i) => `<div class="paes-ed-hoja" data-i="${i}"><img src="${x.url}" alt="Hoja ${i + 1}" draggable="false" /><b>${i + 1}</b><button type="button" class="secundario paes-ed-ver" data-accion="ed-ver" data-i="${i}" title="Ver la hoja en grande">🔍 Abrir visor</button><span></span></div>`).join("")}</div>
       ${entrada}<div id="paes-ed-carga">${htmlCargaEditor()}</div>
       <div class="acciones-form" style="margin-top:10px;"><button type="button" class="secundario chico" data-accion="ed-elegir" ${ocupado ? "disabled" : ""}>➕ Agregar otro PDF</button><button type="button" class="secundario chico" data-accion="ed-limpiar" ${ocupado ? "disabled" : ""}>Quitar todas las hojas y empezar de nuevo</button></div></div>`;
@@ -3225,11 +3233,12 @@
     const activo = ed.activo && ed.activo !== "borrar" ? ed.cursos.find((k) => k.key === ed.activo) : null;
     const anterior = visorEd.el.querySelector(".paes-ed-visor-img");
     const y = anterior && !conImagen ? anterior.scrollTop : 0;
-    const src = anterior && !conImagen ? anterior.querySelector("img").src : x.url;
+    const src = anterior && !conImagen ? anterior.querySelector("img").src : "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
     visorEd.el.innerHTML = `<div class="modal-caja paes-ed-visor-caja">
       <div class="paes-ed-visor-cab"><b>Hoja ${visorEd.i + 1} de ${ed.hojas.length}</b><span>${esc(ed.archivos[x.archivo].name)} · página ${x.pagina}</span>
         ${cu ? `<span class="paes-ed-visor-curso" style="background:${colorEd(ed, cu.key)}">${esc(etiquetaEd(cu))}</span>` : `<span class="paes-ed-visor-curso sin">sin curso</span>`}
         <button type="button" class="secundario chico" data-v="cerrar">✕ Cerrar</button></div>
+      <div class="paes-ed-visor-datos"><small>Nombre, curso («Class») y fecha</small><img src="${x.url}" alt="Datos de la hoja ${visorEd.i + 1}" draggable="false" /></div>
       <div class="paes-ed-visor-img"><img src="${src}" alt="Hoja ${visorEd.i + 1}" draggable="false" /></div>
       <div class="paes-ed-visor-pie">
         <button type="button" class="secundario" data-v="ant" ${visorEd.i ? "" : "disabled"}>← Anterior</button>

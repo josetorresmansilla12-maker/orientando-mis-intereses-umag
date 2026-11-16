@@ -115,9 +115,11 @@
 
   // Miniaturas de todas las páginas de un archivo, en su orden (Editor de PDF). Avisa de a
   // una con alAvanzar(urlDeLaImagen, numeroDePagina, totalDePaginas).
-  // «porcion» (0 a 1) recorta la parte de arriba de la página: 0.38 deja solo la zona de datos.
-  async function miniaturas(archivo, ancho, alAvanzar, porcion) {
-    const parte = porcion > 0 && porcion < 1 ? porcion : 1;
+  // «zona» [x0, y0, x1, y1] (fracciones de la página) recorta la miniatura a esa parte de la hoja,
+  // por ejemplo la franja del nombre; «ancho» es el ancho en píxeles de ese recorte.
+  async function miniaturas(archivo, ancho, alAvanzar, zona) {
+    const z = zona || [0, 0, 1, 1];
+    const zw = z[2] - z[0], zh = z[3] - z[1];
     const bytes = new Uint8Array(await archivo.arrayBuffer());
     const canvas = document.createElement("canvas");
     const ctxDe = (w, h) => {
@@ -135,8 +137,10 @@
         for (let i = 1; i <= doc.numPages; i++) {
           const pag = await doc.getPage(i);
           const base = pag.getViewport({ scale: 1 });
-          const vista = pag.getViewport({ scale: ancho / base.width });
-          const ctx = ctxDe(vista.width, vista.height * parte);
+          const escala = ancho / (base.width * zw);
+          const entera = pag.getViewport({ scale: escala });
+          const vista = pag.getViewport({ scale: escala, offsetX: -z[0] * entera.width, offsetY: -z[1] * entera.height });
+          const ctx = ctxDe(entera.width * zw, entera.height * zh);
           await pag.render({ canvasContext: ctx, viewport: vista, intent: "print" }).promise;
           pag.cleanup();
           await alAvanzar(canvas.toDataURL("image/jpeg", 0.6), i, doc.numPages);
@@ -155,9 +159,9 @@
         i.onerror = () => mal(new Error(`No se pudo abrir «${archivo.name}».`));
         i.src = url;
       });
-      const alto = (img.naturalHeight * ancho) / img.naturalWidth;
-      const ctx = ctxDe(ancho, alto * parte);
-      ctx.drawImage(img, 0, 0, canvas.width, Math.round(alto));
+      const sw = img.naturalWidth * zw, sh = img.naturalHeight * zh;
+      const ctx = ctxDe(ancho, (sh * ancho) / sw);
+      ctx.drawImage(img, img.naturalWidth * z[0], img.naturalHeight * z[1], sw, sh, 0, 0, canvas.width, canvas.height);
       await alAvanzar(canvas.toDataURL("image/jpeg", 0.6), 1, 1);
     } finally {
       URL.revokeObjectURL(url);
