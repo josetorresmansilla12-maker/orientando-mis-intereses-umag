@@ -1609,7 +1609,7 @@
         <div class="acciones-form"><button type="button" class="chico" data-accion="aplicar-clave">Usar esta clave</button><button type="button" class="secundario chico" data-accion="cancelar-pegar">Cancelar</button></div>
       </div>`;
     }
-    h += `<p class="paes-nota">Desmarca la casilla de una pregunta para dejarla como <b>no válida</b> (anulada o de pilotaje): no cuenta para nadie y todo se recalcula.</p>
+    h += `<p class="paes-nota">Desmarca la casilla de una pregunta para dejarla como <b>piloto o anulada</b> (queda en naranjo): no cuenta para nadie y todo se recalcula. Si el ensayo usa un clavijero guardado, es mejor marcarlas en «Clavijeros subidos», con «✏️ Editar clavijero», para que valga en todos los cursos.</p>
       <div class="paes-clave-grilla">`;
     e.clave.forEach((k) => {
       h += `<div class="paes-clave-celda${k.valida ? "" : " no-valida"}${k.r ? "" : " sin-clave"}" data-celda-clave="${k.n}">
@@ -4077,16 +4077,20 @@
         const usos = ensayosConClavijero(k.id);
         const con = k.clave.filter((x) => x.r).length, validas = k.clave.filter((x) => x.r && x.valida).length;
         const abierto = est.clvAbierto === k.id;
+        const piloto = k.clave.filter((x) => !x.valida).length;
+        const tope = L.TABLAS_PAES[k.prueba] ? L.TABLAS_PAES[k.prueba].length - 1 : null; // la tabla llega a 60 correctas
+        const sobran = tope != null ? validas - tope : 0;
         h += `<div class="tarjeta paes-clavijero">
           <div class="paes-cabecera">
             <div><h2 style="margin:0;font-size:17px;">🔑 ${esc(k.nombre)}</h2>
-            <p class="paes-cuenta" style="margin:6px 0 0;"><span class="paes-chip azul">${esc(nombrePruebaDe(k))}</span>${k.forma ? `<span class="paes-chip">Forma ${esc(k.forma)}</span>` : ""}<span class="paes-chip">${con} de ${k.clave.length} respuestas</span><span class="paes-chip">${plural(validas, "pregunta válida", "preguntas válidas")}</span><span class="paes-chip gris">versión ${k.version || 1}</span><span class="paes-chip ${usos.length ? "verde" : "gris"}">${usos.length ? "aplicado a " + plural(usos.length, "curso", "cursos") : "sin aplicar"}</span></p></div>
+            <p class="paes-cuenta" style="margin:6px 0 0;"><span class="paes-chip azul">${esc(nombrePruebaDe(k))}</span>${k.forma ? `<span class="paes-chip">Forma ${esc(k.forma)}</span>` : ""}<span class="paes-chip">${con} de ${k.clave.length} respuestas</span><span class="paes-chip">${plural(validas, "pregunta válida", "preguntas válidas")}</span>${piloto ? `<span class="paes-chip-piloto">${plural(piloto, "pregunta piloto", "preguntas piloto")}</span>` : ""}<span class="paes-chip gris">versión ${k.version || 1}</span><span class="paes-chip ${usos.length ? "verde" : "gris"}">${usos.length ? "aplicado a " + plural(usos.length, "curso", "cursos") : "sin aplicar"}</span></p></div>
             <div class="paes-cabecera-acciones">
-              <button type="button" class="${abierto ? "" : "secundario "}chico" data-accion="clv-abrir" data-id="${esc(k.id)}">${abierto ? "▲ Cerrar" : "▼ Ver y modificar el mapa"}</button>
+              <button type="button" class="${abierto ? "" : "secundario "}chico" data-accion="clv-abrir" data-id="${esc(k.id)}">${abierto ? "▲ Cerrar el editor" : "✏️ Editar clavijero"}</button>
               <button type="button" class="secundario chico" data-accion="clv-exportar" data-id="${esc(k.id)}" title="Descarga el clavijero en Excel para pasárselo a otra persona de la unidad">⬇ Exportar</button>
               <button type="button" class="chico peligro" data-accion="clv-eliminar" data-id="${esc(k.id)}">🗑 Eliminar</button>
             </div>
-          </div>`;
+          </div>
+          ${sobran > 0 ? `<p class="paes-piloto-aviso">⚠ Cuentan ${validas} preguntas y la tabla de puntajes llega a ${tope} correctas: ${sobran === 1 ? "falta marcar 1 pregunta piloto" : "faltan por marcar " + sobran + " preguntas piloto"}. Mientras no se marquen, suman correctas de más. Usa «✏️ Editar clavijero».</p>` : ""}`;
         if (abierto) {
           const letras = L.LETRAS_PAES.slice(0, k.alternativas || 4).split("");
           h += `<div class="grid-form" style="margin-top:14px;">
@@ -4094,11 +4098,14 @@
               <div><label>Forma</label><input type="text" data-clv-campo="forma" data-id="${esc(k.id)}" maxlength="12" value="${esc(k.forma || "")}" /></div>
               <div><label>Alternativas</label><select data-clv-campo="alternativas" data-id="${esc(k.id)}"><option value="4" ${(k.alternativas || 4) === 4 ? "selected" : ""}>A a D</option><option value="5" ${k.alternativas === 5 ? "selected" : ""}>A a E</option></select></div>
             </div>
-            <p class="paes-nota${usos.length ? " amarillo" : ""}">${usos.length ? `Lo que cambies aquí se aplica de inmediato a ${plural(usos.length, "curso", "cursos")} y sus puntajes se recalculan.` : "Este clavijero aún no se aplica a ningún curso."} Desmarca la casilla de una pregunta para dejarla como <b>no válida</b> (anulada o de pilotaje).</p>
-            <div class="paes-clave-grilla">${k.clave.map((x) => `<div class="paes-clave-celda${x.valida ? "" : " no-valida"}${x.r ? "" : " sin-clave"}" data-clv-celda="${x.n}">
+            <div class="paes-piloto-guia"><b>Editor del clavijero</b>
+              <span>En cada pregunta eliges la <b>respuesta correcta</b>. Las <b>preguntas piloto</b> se marcan con el botón «Piloto»: quedan en <i class="paes-piloto-muestra">naranjo</i>, conservan su respuesta correcta, pero no suman correctas ni puntaje.</span>
+              <span class="paes-piloto-cuenta${sobran > 0 ? " falta" : ""}">${plural(piloto, "pregunta piloto marcada", "preguntas piloto marcadas")} · ${plural(validas, "pregunta cuenta", "preguntas cuentan")} para el puntaje${tope != null ? (sobran > 0 ? ` · la tabla llega a ${tope}: faltan ${sobran} piloto` : validas === tope ? ` · ✔ calza con la tabla (${tope})` : "") : ""}</span></div>
+            ${usos.length ? `<p class="paes-nota amarillo">Lo que cambies aquí se aplica de inmediato a ${plural(usos.length, "curso", "cursos")} y sus puntajes se recalculan.</p>` : ""}
+            <div class="paes-clave-grilla con-piloto">${k.clave.map((x) => `<div class="paes-clave-celda${x.valida ? "" : " no-valida"}${x.r ? "" : " sin-clave"}" data-clv-celda="${x.n}">
               <span class="n">${x.n}</span>
-              <select data-clv-clave="${x.n}" data-id="${esc(k.id)}" aria-label="Respuesta de la pregunta ${x.n}"><option value="">–</option>${letras.concat(x.r && !letras.includes(x.r) ? [x.r] : []).map((l) => `<option ${l === x.r ? "selected" : ""}>${l}</option>`).join("")}</select>
-              <input type="checkbox" data-clv-valida="${x.n}" data-id="${esc(k.id)}" ${x.valida ? "checked" : ""} title="Pregunta válida (cuenta para el puntaje)" aria-label="Pregunta ${x.n} válida" />
+              <select data-clv-clave="${x.n}" data-id="${esc(k.id)}" aria-label="Respuesta correcta de la pregunta ${x.n}"><option value="">–</option>${letras.concat(x.r && !letras.includes(x.r) ? [x.r] : []).map((l) => `<option ${l === x.r ? "selected" : ""}>${l}</option>`).join("")}</select>
+              <button type="button" class="secundario paes-piloto-btn${x.valida ? "" : " activo"}" data-accion="clv-piloto" data-id="${esc(k.id)}" data-n="${x.n}" aria-pressed="${x.valida ? "false" : "true"}" title="${x.valida ? "Marcar la pregunta " + x.n + " como piloto (no cuenta para el puntaje)" : "La pregunta " + x.n + " es piloto: pincha para que vuelva a contar"}">Piloto</button>
             </div>`).join("")}</div>
             <h3 class="paes-subtitulo">A quiénes se les aplicó</h3>`;
           if (!usos.length) h += `<p class="ayuda" style="margin:0;">A nadie todavía. Se elige al crear el ensayo de un curso, o en el paso 2 del curso.</p>`;
@@ -5528,6 +5535,17 @@
       case "clv-guardar":
         guardarClavijeroEscrito();
         break;
+      case "clv-piloto": {
+        const k = est.clavijeros.find((y) => y.id === id);
+        const x = k && k.clave.find((y) => y.n === Number(b.dataset.n));
+        if (!x) break;
+        x.valida = !x.valida;
+        difundirClavijero(k).then((afectados) => {
+          pintar();
+          toast(`Pregunta ${x.n}: ${x.valida ? "vuelve a contar para el puntaje" : "marcada como piloto"}${afectados ? ` · se recalcularon ${plural(afectados, "curso", "cursos")}` : ""}`);
+        });
+        break;
+      }
       case "clv-abrir":
         est.clvAbierto = est.clvAbierto === id ? null : id;
         pintar();

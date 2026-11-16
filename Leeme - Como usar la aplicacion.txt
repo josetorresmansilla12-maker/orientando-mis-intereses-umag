@@ -472,6 +472,12 @@ El trabajo va en cinco pasos:
    - Pestaña "🏠 Inicio": pregunta "¿Qué quieres hacer?" y lleva al lugar correcto
      (cursos nuevos, un PDF con varios cursos, agregar otra prueba, estudiantes
      sueltos, ver resultados).
+   - Preguntas piloto: de las 65 preguntas solo 60 cuentan para el puntaje. En
+     "Clavijeros subidos", "✏️ Editar clavijero" abre el editor: en cada pregunta
+     se elige la respuesta correcta y con el botón "Piloto" se marcan las de
+     pilotaje, que quedan en naranjo y no suman. Los cursos que usan ese
+     clavijero se recalculan solos. Si cuentan más preguntas que las de la tabla
+     de puntajes, aparece un aviso naranjo.
    - Puntajes de CL y de M1: cada prueba convierte las correctas a puntaje con su
      propia tabla. La app pone sola la de la prueba del ensayo (o de su clavijero).
      En el paso 2, "Tabla de conversión", se ve cuál está en uso y se puede cambiar

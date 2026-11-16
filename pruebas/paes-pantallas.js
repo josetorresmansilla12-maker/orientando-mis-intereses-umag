@@ -196,6 +196,16 @@
       await clic('[data-vista="clavijeros"]');
       return /CL de prueba/.test(texto()) && /M1 de prueba/.test(texto());
     });
+    await prueba("En el editor del clavijero, «Piloto» deja la pregunta en naranjo y descuenta una pregunta válida", async () => {
+      await clic('[data-accion="clv-abrir"][data-id="k-cl"]');
+      const k = E.clavijeros.find((x) => x.id === "k-cl");
+      await clic('[data-accion="clv-piloto"][data-n="65"]');
+      await espera(300);
+      const naranja = !!q('[data-clv-celda="65"].no-valida') && k.clave.find((x) => x.n === 65).valida === false && k.clave.find((x) => x.n === 65).r !== "";
+      await clic('[data-accion="clv-piloto"][data-n="65"]');
+      await espera(300);
+      return naranja && k.clave.every((x) => x.valida);
+    });
     const cursoA = () => E.cursos.find((c) => c.letra === "A");
     const cursoB = () => E.cursos.find((c) => c.letra === "B");
     await prueba("«Agregar ensayos PDF» corrige dos hojas del 4° A con el clavijero CL y las identifica por RUT", async () => {

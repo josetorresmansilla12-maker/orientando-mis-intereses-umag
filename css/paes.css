@@ -664,3 +664,19 @@ body.modulo-paes .topbar-acciones { display: none !important; }
 .paes-tabla-de > b { color: var(--paes-oscuro); font-size: 13.5px; }
 .paes-tabla-mal { display: inline-block; background: #fde8e6; color: #9b1c12; border: 1px solid #e3a59f; border-radius: 7px; padding: 1px 8px; font-weight: 700; font-size: 12.5px; }
 .paes-tabla-mal.grande { display: block; border-width: 2px; padding: 9px 12px; font-size: 14px; font-weight: 600; margin: 8px 0; }
+
+/* preguntas piloto: naranjo fijo en el editor del clavijero y en la clave del ensayo */
+.paes-clave-celda.no-valida { background: #f28c28; border-color: #c96a10; }
+.paes-clave-celda.no-valida .n { color: white; }
+.paes-clave-celda.no-valida select { color: #5a2e00; text-decoration: none; background: #ffe6cc; border-color: #c96a10; }
+.paes-clave-grilla.con-piloto { grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); }
+#modulo-paes button.secundario.paes-piloto-btn { background: white; color: #8a4a00; border: 1px dashed #d08a3c; border-radius: 6px; padding: 3px 7px; font-size: 11.5px; font-weight: 700; }
+#modulo-paes button.secundario.paes-piloto-btn:hover { background: #fff1e0; }
+#modulo-paes button.secundario.paes-piloto-btn.activo { background: #7a3d00; color: white; border: 1px solid #7a3d00; }
+.paes-chip-piloto { display: inline-block; background: #f28c28; color: white; font-weight: 700; font-size: 12px; border-radius: 999px; padding: 2px 10px; margin-right: 6px; }
+.paes-piloto-aviso { background: #fff1e0; border: 2px solid #f28c28; color: #6b3600; border-radius: 9px; padding: 9px 12px; margin: 10px 0 0; font-size: 13.5px; font-weight: 600; }
+.paes-piloto-guia { display: grid; gap: 4px; border: 1px solid var(--paes-borde); background: var(--paes-fondo); border-radius: 9px; padding: 10px 12px; margin: 12px 0 10px; font-size: 13.5px; }
+.paes-piloto-guia > b { color: var(--paes-oscuro); }
+.paes-piloto-muestra { font-style: normal; background: #f28c28; color: white; font-weight: 700; border-radius: 5px; padding: 0 6px; }
+.paes-piloto-cuenta { font-weight: 700; color: #1d6b3f; }
+.paes-piloto-cuenta.falta { color: #a04a00; }
