@@ -774,6 +774,10 @@
       `<div id="paes-visor" class="modal-overlay" style="display:none;"></div>`;
     global.scrollTo(0, y);
     if (est.vista === "editor") refrescarEditor();
+    if (visorEd) {
+      if (est.vista === "editor" && est.editor && est.editor.hojas[visorEd.i]) raiz.appendChild(visorEd.el);
+      else cerrarVisorEditor();
+    }
     cargarImagenes();
     actualizarConteo();
     pintarBarraAcciones();
@@ -2997,6 +3001,7 @@
 
   // sin rojo ni azul: esos colores son de CL y M1
   const COLORES_EDITOR = ["#2e7d32", "#b26a00", "#6a3fb5", "#00838f", "#ad1457", "#5d4037", "#455a64", "#827717", "#4e342e", "#00695c"];
+  const PORCION_DATOS_EDITOR = 0.38; // parte de arriba de la hoja: nombre, RUT y curso («class»)
   const editorVacio = (previo) => ({ archivos: [], hojas: [], cargando: null, colegio: previo ? previo.colegio : "", cursos: previo ? previo.cursos : [], activo: null, clavijeroId: previo ? previo.clavijeroId : null, fecha: hoyIso(), resultado: null, corrigiendo: null, ultimo: null });
   function editor() {
     if (!est.editor) est.editor = editorVacio();
@@ -3033,13 +3038,13 @@
       const indice = ed.archivos.length;
       ed.archivos.push(archivo);
       try {
-        await PaesPdf.miniaturas(archivo, 260, async (url, pagina, total) => {
+        await PaesPdf.miniaturas(archivo, 640, async (url, pagina, total) => {
           ed.hojas.push({ archivo: indice, pagina, url, curso: null });
           Object.assign(ed.cargando, { hecho: pagina, total, archivo: archivo.name });
           const el = raiz.querySelector("#paes-ed-carga");
           if (el) el.innerHTML = htmlCargaEditor();
           await ceder();
-        });
+        }, PORCION_DATOS_EDITOR);
       } catch (err) {
         console.error(err);
         toast(`«${archivo.name}» no se pudo abrir.`);
@@ -3073,8 +3078,8 @@
         <div class="paes-ed-chips">${ed.cursos.map((x) => chip(x.key, esc(etiquetaEd(x)) + (x.cursoId ? "" : " · nuevo"))).join("")}${ed.cursos.length ? chip("borrar", "🧽 Quitar del curso") : ""}</div>
         <div class="paes-ed-nuevo"><span>Agregar un curso:</span><select id="paes-ed-nivel" ${ocupado ? "disabled" : ""}>${NIVELES.filter((n) => n !== NIVEL_DISPERSO).map((n) => `<option>${n}</option>`).join("")}</select><input type="text" id="paes-ed-letra" maxlength="3" placeholder="Letra" style="width:80px;" ${ocupado ? "disabled" : ""} /><button type="button" class="secundario chico" data-accion="ed-agregar-curso" ${ocupado ? "disabled" : ""}>➕ Agregar curso</button></div>` : `<p class="ayuda" style="margin:10px 0 0;">Escribe el colegio (o elige uno ya guardado) para ver y agregar sus cursos.</p>`}</div>`;
     h += `<div class="tarjeta"><h2 style="font-size:16px;">2 · Hojas, en el orden del escáner <small id="paes-ed-resumen" style="font-weight:400;"></small></h2>
-      <p class="ayuda">Con un curso activo: <b>pincha</b> una hoja, o <b>arrastra</b> desde la primera hasta la última hoja del curso (también sirve pinchar la primera y, con Mayúsculas, la última). Pinchar de nuevo una hoja del curso activo la saca.</p>
-      <div class="paes-ed-hojas${ocupado ? " ocupado" : ""}">${ed.hojas.map((x, i) => `<div class="paes-ed-hoja" data-i="${i}"><img src="${x.url}" alt="Hoja ${i + 1}" draggable="false" /><b>${i + 1}</b><span></span></div>`).join("")}</div>
+      <p class="ayuda">Cada miniatura muestra la parte de arriba de la hoja (nombre, RUT y curso); con <b>🔍 Abrir visor</b> la ves en grande y también puedes marcarla ahí. Con un curso activo: <b>pincha</b> una hoja, o <b>arrastra</b> desde la primera hasta la última hoja del curso (también sirve pinchar la primera y, con Mayúsculas, la última). Pinchar de nuevo una hoja del curso activo la saca.</p>
+      <div class="paes-ed-hojas${ocupado ? " ocupado" : ""}">${ed.hojas.map((x, i) => `<div class="paes-ed-hoja" data-i="${i}"><img src="${x.url}" alt="Hoja ${i + 1}" draggable="false" /><b>${i + 1}</b><button type="button" class="secundario paes-ed-ver" data-accion="ed-ver" data-i="${i}" title="Ver la hoja en grande">🔍 Abrir visor</button><span></span></div>`).join("")}</div>
       ${entrada}<div id="paes-ed-carga">${htmlCargaEditor()}</div>
       <div class="acciones-form" style="margin-top:10px;"><button type="button" class="secundario chico" data-accion="ed-elegir" ${ocupado ? "disabled" : ""}>➕ Agregar otro PDF</button><button type="button" class="secundario chico" data-accion="ed-limpiar" ${ocupado ? "disabled" : ""}>Quitar todas las hojas y empezar de nuevo</button></div></div>`;
     const clvs = est.clavijeros.slice().sort((a, b) => a.prueba.localeCompare(b.prueba) || a.nombre.localeCompare(b.nombre, "es"));
@@ -3140,6 +3145,7 @@
     const el = ev.target.closest && ev.target.closest(".paes-ed-hoja");
     const ed = est.editor;
     if (!el || !ed || est.vista !== "editor" || ev.button > 0) return;
+    if (ev.target.closest(".paes-ed-ver")) return; // el botón del visor no marca la hoja
     if (est.lectura || ed.cargando || ed.corrigiendo) return;
     ev.preventDefault();
     if (ed.activo == null) return toast(ed.colegio ? "Primero pincha un curso (o agrégalo) y después marca sus hojas." : "Primero escribe el colegio y elige un curso.");
@@ -3170,7 +3176,124 @@
     refrescarEditor();
   }
 
+  // ---- visor: la hoja en grande, con anterior / siguiente y los cursos para marcarla ahí mismo
+  let visorEd = null; // { i, el }
+  const vistasEd = new Map(); // archivo → vista abierta (PaesPdf.abrirVista)
+  const grandesEd = new Map(); // "archivo|página" → imagen grande ya dibujada
+  function imagenGrandeEd(x) {
+    const ed = est.editor;
+    const archivo = ed.archivos[x.archivo];
+    const clave = x.archivo + "|" + x.pagina;
+    if (!grandesEd.has(clave)) {
+      if (!vistasEd.has(archivo)) vistasEd.set(archivo, PaesPdf.abrirVista(archivo));
+      grandesEd.set(clave, vistasEd.get(archivo).then((v) => v.imagen(x.pagina, 1400)));
+      if (grandesEd.size > 14) grandesEd.delete(grandesEd.keys().next().value);
+    }
+    return grandesEd.get(clave);
+  }
+  function soltarVistasEd() {
+    vistasEd.forEach((v) => v.then((x) => x.cerrar()).catch(() => {}));
+    vistasEd.clear();
+    grandesEd.clear();
+  }
+  function abrirVisorEditor(i) {
+    const ed = est.editor;
+    if (!ed || !ed.hojas[i]) return;
+    if (!visorEd) {
+      const el = document.createElement("div");
+      el.className = "modal-overlay paes-ed-visor";
+      el.style.display = "flex";
+      el.addEventListener("click", alClicVisorEd);
+      document.addEventListener("keydown", alTeclaVisorEd);
+      raiz.appendChild(el);
+      visorEd = { i, el };
+    }
+    visorEd.i = i;
+    pintarVisorEd(true);
+  }
+  function cerrarVisorEditor() {
+    if (!visorEd) return;
+    document.removeEventListener("keydown", alTeclaVisorEd);
+    visorEd.el.remove();
+    visorEd = null;
+  }
+  function pintarVisorEd(conImagen) {
+    const ed = est.editor;
+    const x = ed.hojas[visorEd.i];
+    const ocupado = !!(est.lectura || ed.cargando || ed.corrigiendo);
+    const cu = x.curso ? ed.cursos.find((k) => k.key === x.curso) : null;
+    const activo = ed.activo && ed.activo !== "borrar" ? ed.cursos.find((k) => k.key === ed.activo) : null;
+    const anterior = visorEd.el.querySelector(".paes-ed-visor-img");
+    const y = anterior && !conImagen ? anterior.scrollTop : 0;
+    const src = anterior && !conImagen ? anterior.querySelector("img").src : x.url;
+    visorEd.el.innerHTML = `<div class="modal-caja paes-ed-visor-caja">
+      <div class="paes-ed-visor-cab"><b>Hoja ${visorEd.i + 1} de ${ed.hojas.length}</b><span>${esc(ed.archivos[x.archivo].name)} · página ${x.pagina}</span>
+        ${cu ? `<span class="paes-ed-visor-curso" style="background:${colorEd(ed, cu.key)}">${esc(etiquetaEd(cu))}</span>` : `<span class="paes-ed-visor-curso sin">sin curso</span>`}
+        <button type="button" class="secundario chico" data-v="cerrar">✕ Cerrar</button></div>
+      <div class="paes-ed-visor-img"><img src="${src}" alt="Hoja ${visorEd.i + 1}" draggable="false" /></div>
+      <div class="paes-ed-visor-pie">
+        <button type="button" class="secundario" data-v="ant" ${visorEd.i ? "" : "disabled"}>← Anterior</button>
+        <div class="paes-ed-chips">${ed.cursos.length ? ed.cursos.map((k) => `<button type="button" class="secundario paes-ed-chip${x.curso === k.key ? " activo" : ""}" data-v="curso" data-key="${esc(k.key)}" style="--c:${colorEd(ed, k.key)}" ${ocupado ? "disabled" : ""}><i></i>${esc(etiquetaEd(k))}</button>`).join("") + (x.curso ? `<button type="button" class="secundario chico" data-v="quitar" ${ocupado ? "disabled" : ""}>🧽 Quitar del curso</button>` : "") : `<small>Cierra el visor y agrega primero el colegio y sus cursos.</small>`}</div>
+        <button type="button" class="secundario" data-v="sig" ${visorEd.i < ed.hojas.length - 1 ? "" : "disabled"}>Siguiente →</button>
+      </div>
+      <div class="paes-ed-visor-ayuda">${activo && !ocupado ? `<button type="button" data-v="marcar">✔ Marcar en ${esc(etiquetaEd(activo))} y pasar a la siguiente</button> ` : ""}<small>Pincha un curso para dejar esta hoja en él. Teclas: ← y → para cambiar de hoja${activo ? ", Enter para marcarla en el curso activo y seguir" : ""}, Esc para cerrar.</small></div>
+    </div>`;
+    const caja = visorEd.el.querySelector(".paes-ed-visor-img");
+    caja.scrollTop = y;
+    if (conImagen) {
+      const i = visorEd.i;
+      imagenGrandeEd(x)
+        .then((url) => {
+          if (visorEd && visorEd.i === i) visorEd.el.querySelector(".paes-ed-visor-img img").src = url;
+        })
+        .catch((err) => console.error(err));
+    }
+  }
+  function moverVisorEd(paso) {
+    const n = visorEd.i + paso;
+    if (n < 0 || n >= est.editor.hojas.length) return;
+    visorEd.i = n;
+    pintarVisorEd(true);
+  }
+  function marcarEnVisorEd(key, avanzar) {
+    const ed = est.editor;
+    if (est.lectura || ed.cargando || ed.corrigiendo) return;
+    const x = ed.hojas[visorEd.i];
+    x.curso = key;
+    if (key) ed.activo = key;
+    ed.ultimo = visorEd.i;
+    raiz.querySelectorAll(".paes-ed-chips > .paes-ed-chip[data-accion]").forEach((b) => b.classList.toggle("activo", b.dataset.key === ed.activo));
+    refrescarEditor();
+    if (avanzar && visorEd.i < ed.hojas.length - 1) moverVisorEd(1);
+    else pintarVisorEd(false);
+  }
+  function alClicVisorEd(ev) {
+    ev.stopPropagation();
+    if (ev.target === visorEd.el) return cerrarVisorEditor();
+    const b = ev.target.closest("[data-v]");
+    if (!b || b.disabled) return;
+    const ed = est.editor;
+    const x = ed.hojas[visorEd.i];
+    if (b.dataset.v === "cerrar") cerrarVisorEditor();
+    else if (b.dataset.v === "ant") moverVisorEd(-1);
+    else if (b.dataset.v === "sig") moverVisorEd(1);
+    else if (b.dataset.v === "curso") marcarEnVisorEd(x.curso === b.dataset.key ? null : b.dataset.key, false);
+    else if (b.dataset.v === "quitar") marcarEnVisorEd(null, false);
+    else if (b.dataset.v === "marcar") marcarEnVisorEd(ed.activo, true);
+  }
+  function alTeclaVisorEd(ev) {
+    if (!visorEd) return;
+    const ed = est.editor;
+    if (ev.key === "Escape") cerrarVisorEditor();
+    else if (ev.key === "ArrowLeft") moverVisorEd(-1);
+    else if (ev.key === "ArrowRight") moverVisorEd(1);
+    else if (ev.key === "Enter" && ed.activo && ed.activo !== "borrar") marcarEnVisorEd(ed.activo, true);
+    else return;
+    ev.preventDefault();
+  }
+
   async function finalizarEditor() {
+    cerrarVisorEditor();
     const ed = editor();
     const k = est.clavijeros.find((x) => x.id === ed.clavijeroId);
     if (est.lectura || ed.corrigiendo || ed.cargando) return;
@@ -3217,6 +3340,7 @@
       // lo que no alcanzó a corregirse sigue marcado, para finalizar de nuevo
       ed.hojas = ed.hojas.filter((x) => !hechas.has(x) || !x.curso);
     } else {
+      soltarVistasEd();
       const previo = { colegio: ed.colegio, cursos: [], clavijeroId: null };
       est.editor = Object.assign(editorVacio(previo), { resultado });
       fijarColegioEditor(previo.colegio);
@@ -4781,6 +4905,9 @@
         if (entrada) entrada.click();
         break;
       }
+      case "ed-ver":
+        abrirVisorEditor(Number(b.dataset.i));
+        break;
       case "ed-activar":
         editor().activo = editor().activo === b.dataset.key ? null : b.dataset.key;
         raiz.querySelectorAll(".paes-ed-chip").forEach((x) => x.classList.toggle("activo", x.dataset.key === editor().activo));
@@ -4803,6 +4930,7 @@
         break;
       }
       case "ed-limpiar":
+        soltarVistasEd();
         est.editor = Object.assign(editorVacio({ colegio: editor().colegio, cursos: editor().cursos, clavijeroId: editor().clavijeroId }), {});
         pintar();
         break;

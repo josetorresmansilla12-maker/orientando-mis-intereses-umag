@@ -459,6 +459,10 @@ El trabajo va en cinco pasos:
      "Finalizar": cada grupo de hojas se corrige en su curso. Para la otra prueba
      de los mismos cursos, cargas el otro PDF: el colegio y los cursos quedan listos.
      Cada hoja queda en el curso que marcaste, aunque su RUT sea de otro curso.
+     Cada miniatura muestra la parte de arriba de la hoja (nombre, RUT y curso).
+     "🔍 Abrir visor" abre la hoja en grande: ahí puedes pasar a la anterior o la
+     siguiente (también con las flechas del teclado) y marcar la hoja pinchando
+     el curso, o con Enter para dejarla en el curso activo y seguir.
    - Pestaña "⚙️ Configuración":
      * "📦 Descargar informes": abre una ventana para marcar colegios y cursos
        (con "Seleccionar todos" y "Desmarcar todos") y descarga un solo ZIP con el

@@ -569,7 +569,7 @@ body.modulo-paes .topbar-acciones { display: none !important; }
 #modulo-paes button.paes-ed-chip.activo { border-color: var(--c); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 28%, transparent); background: color-mix(in srgb, var(--c) 10%, white); }
 .paes-ed-nuevo { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--texto-suave); }
 .paes-ed-nuevo select { width: auto; }
-.paes-ed-hojas { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; user-select: none; -webkit-user-select: none; }
+.paes-ed-hojas { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; user-select: none; -webkit-user-select: none; }
 .paes-ed-hojas.ocupado { opacity: 0.6; pointer-events: none; }
 .paes-ed-hoja { position: relative; border: 3px solid #dcd8e6; border-radius: 7px; background: white; cursor: pointer; overflow: hidden; line-height: 0; }
 .paes-ed-hoja img { width: 100%; display: block; pointer-events: none; }
@@ -582,3 +582,26 @@ body.modulo-paes .topbar-acciones { display: none !important; }
 .paes-ed-hoja.asignada:hover { border-color: var(--c); }
 .paes-ed-avance { margin: 10px 0 0; font-size: 13.5px; }
 .paes-ed-listo { border-left: 5px solid #2e7d32; }
+
+/* Editor de PDF: miniatura con la zona de datos y visor en grande */
+#modulo-paes button.paes-ed-ver { position: absolute; top: 3px; right: 3px; background: rgba(255, 255, 255, 0.94); color: var(--paes-oscuro); border: 1px solid var(--paes); border-radius: 6px; font-size: 11.5px; font-weight: 700; line-height: 1.4; padding: 2px 7px; }
+#modulo-paes button.paes-ed-ver:hover { background: var(--paes-fondo); }
+.modal-caja.paes-ed-visor-caja { max-width: 1040px; width: 100%; max-height: 94vh; display: flex; flex-direction: column; gap: 8px; border-top-color: var(--paes); padding: 12px 14px; }
+.paes-ed-visor-cab { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.paes-ed-visor-cab > b { font-size: 16px; color: var(--paes-oscuro); }
+.paes-ed-visor-cab > span { color: var(--texto-suave); font-size: 13px; }
+.paes-ed-visor-cab > button { margin-left: auto; }
+.paes-ed-visor-cab .paes-ed-visor-curso { color: white; font-weight: 700; border-radius: 999px; padding: 2px 12px; font-size: 13px; }
+.paes-ed-visor-cab .paes-ed-visor-curso.sin { background: #efedf4; color: #6b6480; }
+.paes-ed-visor-img { flex: 1 1 auto; min-height: 240px; overflow: auto; border: 1px solid var(--borde); border-radius: 8px; background: #f3f2f7; }
+.paes-ed-visor-img img { width: 100%; display: block; }
+.paes-ed-visor-pie { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.paes-ed-visor-pie .paes-ed-chips { margin: 0; justify-content: center; flex: 1 1 300px; align-items: center; }
+.paes-ed-visor-ayuda { text-align: center; }
+.paes-ed-visor-ayuda small { color: var(--texto-suave); font-size: 12px; display: block; margin-top: 4px; }
+/* número y botón del visor en una franja propia, y el curso debajo: nada tapa los datos de la hoja */
+.paes-ed-hoja { padding-top: 26px; }
+.paes-ed-hoja > b { top: 4px; left: 4px; }
+#modulo-paes button.paes-ed-ver { top: 3px; right: 3px; }
+.paes-ed-hoja > span { position: static; display: block; }
+.paes-ed-hoja.previa { background: #e9e6f2; }

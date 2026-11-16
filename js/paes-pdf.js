@@ -115,7 +115,9 @@
 
   // Miniaturas de todas las páginas de un archivo, en su orden (Editor de PDF). Avisa de a
   // una con alAvanzar(urlDeLaImagen, numeroDePagina, totalDePaginas).
-  async function miniaturas(archivo, ancho, alAvanzar) {
+  // «porcion» (0 a 1) recorta la parte de arriba de la página: 0.38 deja solo la zona de datos.
+  async function miniaturas(archivo, ancho, alAvanzar, porcion) {
+    const parte = porcion > 0 && porcion < 1 ? porcion : 1;
     const bytes = new Uint8Array(await archivo.arrayBuffer());
     const canvas = document.createElement("canvas");
     const ctxDe = (w, h) => {
@@ -134,7 +136,7 @@
           const pag = await doc.getPage(i);
           const base = pag.getViewport({ scale: 1 });
           const vista = pag.getViewport({ scale: ancho / base.width });
-          const ctx = ctxDe(vista.width, vista.height);
+          const ctx = ctxDe(vista.width, vista.height * parte);
           await pag.render({ canvasContext: ctx, viewport: vista, intent: "print" }).promise;
           pag.cleanup();
           await alAvanzar(canvas.toDataURL("image/jpeg", 0.6), i, doc.numPages);
@@ -153,13 +155,51 @@
         i.onerror = () => mal(new Error(`No se pudo abrir «${archivo.name}».`));
         i.src = url;
       });
-      const ctx = ctxDe(ancho, (img.naturalHeight * ancho) / img.naturalWidth);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const alto = (img.naturalHeight * ancho) / img.naturalWidth;
+      const ctx = ctxDe(ancho, alto * parte);
+      ctx.drawImage(img, 0, 0, canvas.width, Math.round(alto));
       await alAvanzar(canvas.toDataURL("image/jpeg", 0.6), 1, 1);
     } finally {
       URL.revokeObjectURL(url);
       canvas.width = canvas.height = 1;
     }
+  }
+
+  // Abre un archivo para mirar sus páginas en grande (visor del Editor de PDF):
+  //   { imagen(pagina, ancho) -> url de la imagen, cerrar() }
+  async function abrirVista(archivo) {
+    const bytes = new Uint8Array(await archivo.arrayBuffer());
+    const canvas = document.createElement("canvas");
+    if (esPdf(archivo)) {
+      const pdfjs = await cargarPdfJs();
+      const doc = await pdfjs.getDocument({ data: bytes, isEvalSupported: false }).promise;
+      let cola = Promise.resolve();
+      return {
+        imagen(pagina, ancho) {
+          // de a una: el lienzo es compartido
+          cola = cola.catch(() => {}).then(async () => {
+            const pag = await doc.getPage(pagina);
+            const base = pag.getViewport({ scale: 1 });
+            const vista = pag.getViewport({ scale: ancho / base.width });
+            canvas.width = Math.round(vista.width);
+            canvas.height = Math.round(vista.height);
+            const ctx = canvas.getContext("2d");
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            await pag.render({ canvasContext: ctx, viewport: vista, intent: "print" }).promise;
+            pag.cleanup();
+            return canvas.toDataURL("image/jpeg", 0.8);
+          });
+          return cola;
+        },
+        cerrar() {
+          canvas.width = canvas.height = 1;
+          return doc.destroy();
+        },
+      };
+    }
+    const url = URL.createObjectURL(new Blob([bytes], { type: archivo.type || "image/jpeg" }));
+    return { imagen: async () => url, cerrar: () => URL.revokeObjectURL(url) };
   }
 
   function blobDeGris(img, calidad) {
@@ -207,5 +247,5 @@
     return { legible: r.legible, lectura, imagenes };
   }
 
-  global.PaesPdf = { cargarPdfJs, abrirArchivo, miniaturas, huellaDePagina, leerPagina, blobDeGris };
+  global.PaesPdf = { cargarPdfJs, abrirArchivo, miniaturas, abrirVista, huellaDePagina, leerPagina, blobDeGris };
 })(window);
