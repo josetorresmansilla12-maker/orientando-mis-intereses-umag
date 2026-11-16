@@ -569,7 +569,7 @@ body.modulo-paes .topbar-acciones { display: none !important; }
 #modulo-paes button.paes-ed-chip.activo { border-color: var(--c); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 28%, transparent); background: color-mix(in srgb, var(--c) 10%, white); }
 .paes-ed-nuevo { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--texto-suave); }
 .paes-ed-nuevo select { width: auto; }
-.paes-ed-hojas { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; user-select: none; -webkit-user-select: none; }
+.paes-ed-hojas { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; user-select: none; -webkit-user-select: none; }
 .paes-ed-hojas.ocupado { opacity: 0.6; pointer-events: none; }
 .paes-ed-hoja { position: relative; border: 3px solid #dcd8e6; border-radius: 7px; background: white; cursor: pointer; overflow: hidden; line-height: 0; }
 .paes-ed-hoja img { width: 100%; display: block; pointer-events: none; }

@@ -2995,7 +2995,8 @@
   // escáner, se elige un curso y se marcan sus hojas (pinchando o arrastrando); al finalizar,
   // cada grupo de hojas se corrige en su curso con el clavijero elegido.
 
-  const COLORES_EDITOR = ["#1f6fb5", "#c62828", "#2e7d32", "#b26a00", "#6a3fb5", "#00838f", "#ad1457", "#5d4037", "#455a64", "#827717"];
+  // sin rojo ni azul: esos colores son de CL y M1
+  const COLORES_EDITOR = ["#2e7d32", "#b26a00", "#6a3fb5", "#00838f", "#ad1457", "#5d4037", "#455a64", "#827717", "#4e342e", "#00695c"];
   const editorVacio = (previo) => ({ archivos: [], hojas: [], cargando: null, colegio: previo ? previo.colegio : "", cursos: previo ? previo.cursos : [], activo: null, clavijeroId: previo ? previo.clavijeroId : null, fecha: hoyIso(), resultado: null, corrigiendo: null, ultimo: null });
   function editor() {
     if (!est.editor) est.editor = editorVacio();
