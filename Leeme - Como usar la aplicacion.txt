@@ -478,6 +478,10 @@ El trabajo va en cinco pasos:
      pilotaje, que quedan en naranjo y no suman. Los cursos que usan ese
      clavijero se recalculan solos. Si cuentan más preguntas que las de la tabla
      de puntajes, aparece un aviso naranjo.
+   - Hojas dobladas o arrugadas: la app endereza sola las hojas torcidas y eso no
+     se avisa. Si aun enderezada muchas burbujas no calzan (hoja doblada o
+     arrugada), la hoja queda "por revisar" con el aviso "La hoja parece doblada o
+     arrugada", para comparar sus respuestas con la imagen.
    - Puntajes de CL y de M1: cada prueba convierte las correctas a puntaje con su
      propia tabla. La app pone sola la de la prueba del ensayo (o de su clavijero).
      En el paso 2, "Tabla de conversión", se ve cuál está en uso y se puede cambiar

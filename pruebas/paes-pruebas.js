@@ -152,6 +152,10 @@ function ejecutarPruebasPaes(opciones) {
   comprobar("hoja sin RUT", tipos(hoja("x", "A".repeat(100))).includes("id-vacio"));
   comprobar("RUT que no está en la lista", tipos(hoja("x", "A".repeat(100), { lectura: { resp: "A".repeat(100), id: "999999999" } })).includes("rut-sin-coincidencia"));
   comprobar("hoja sin problemas: sin advertencias", tipos(hoja("x", "A".repeat(100), { estudianteId: "A", asignacion: "exacta", lectura: { resp: "A".repeat(100), id: "111111111" } })).length === 0);
+  const lecOk = (extra) => ({ estudianteId: "A", asignacion: "exacta", lectura: Object.assign({ resp: "A".repeat(100), id: "111111111", total: 595 }, extra) });
+  comprobar("hoja doblada (calzan pocas burbujas): se avisa", tipos(hoja("x", "A".repeat(100), lecOk({ pares: 514, deltas: [] }))).includes("deformada"));
+  comprobar("hoja con un bloque de preguntas muy corrido: se avisa", tipos(hoja("x", "A".repeat(100), lecOk({ pares: 590, deltas: [["q1", 6.5, 2]] }))).includes("deformada"));
+  comprobar("hoja torcida que se enderezó bien: no se avisa", tipos(hoja("x", "A".repeat(100), lecOk({ pares: 588, deltas: [["q1", 3, 3.8], ["id", 9, 0]] }))).length === 0);
   comprobar("huella: mismo contenido, misma huella", L.huellaDeBytes(new Uint8Array([1, 2, 3])) === L.huellaDeBytes(new Uint8Array([1, 2, 3])) && L.huellaDeBytes(new Uint8Array([1, 2, 3])) !== L.huellaDeBytes(new Uint8Array([1, 2, 4])));
 
   // ------------------------------------------------------------ lector con hojas sintéticas

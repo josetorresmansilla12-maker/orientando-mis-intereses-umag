@@ -595,6 +595,16 @@
     (lec.problemas || []).forEach((p) => {
       if (p.tipo === "bloque") agregar("bloque", p.detalle);
     });
+    // Hoja doblada o arrugada. El lector endereza sola una hoja torcida y eso no se avisa;
+    // se avisa solo cuando, aun enderezada, muchas burbujas no quedaron donde debían o un
+    // bloque de preguntas quedó muy corrido: ahí una marca puede haberse leído en otra burbuja.
+    if (lec.total) {
+      const calce = lec.pares / lec.total;
+      const corrido = (lec.deltas || []).reduce((m, d) => (d[0] === "id" || d[0] === "key" ? m : Math.max(m, Math.hypot(d[1] || 0, d[2] || 0))), 0);
+      if (calce < (o.minCalce || 0.93) || corrido > (o.maxCorrido || 6)) {
+        agregar("deformada", `La hoja parece doblada o arrugada (calzaron ${lec.pares} de ${lec.total} burbujas): compara sus respuestas con la imagen, porque alguna marca pudo leerse corrida.`);
+      }
+    }
     return lista;
   }
 
