@@ -884,13 +884,20 @@
         <span class="ayuda" style="margin:0;">o arrastra los archivos hasta aquí</span>
       </div>
       ${cursoActual() ? `<div class="acciones-form"><button type="button" class="secundario" data-accion="cancelar-curso">← Volver a ${esc(nombreCurso(cursoActual()))}</button></div>` : ""}
-    </div>` + htmlFormDisperso() + htmlFormCurso();
+    </div>` + htmlEntradaEditor() + htmlFormDisperso() + htmlFormCurso();
+  }
+
+  // anuncia el Editor de PDF desde «Trabajar un curso», para quien no sabe que existe
+  function htmlEntradaEditor() {
+    return `<div class="tarjeta"><h2 style="font-size:16px;">Ingresar cursos con edición de PDF</h2>
+      <p class="ayuda">Para cuando <b>un mismo PDF trae hojas de más de un curso</b> (por ejemplo, escaneaste juntos el 4° A, el 4° B y el 4° C). Ves las hojas en el orden en que salieron del escáner, marcas cuáles son de cada curso y eliges el clavijero: la app reparte y corrige cada grupo en su curso.</p>
+      <div class="acciones-form" style="margin-top:0;"><button type="button" data-vista="editor">✂️ Abrir el Editor de PDF</button></div></div>`;
   }
 
   function htmlFormDisperso() {
     const intro = `<h2 style="font-size:16px;">Agregar curso disperso</h2>
       <p class="ayuda">Para cuando de un colegio rindieron solo algunos estudiantes y no un curso completo. Subes el PDF, indicas el colegio y las hojas pasan a la revisión, donde asignas a cada estudiante con el buscador. No necesita lista oficial.</p>`;
-    if (!est.formDisperso) return `<div class="tarjeta">${intro}<div class="acciones-form" style="margin-top:0;"><button type="button" class="secundario" data-accion="abrir-disperso">➕ Agregar curso disperso</button></div></div>`;
+    if (!est.formDisperso) return `<div class="tarjeta">${intro}<div class="acciones-form" style="margin-top:0;"><button type="button" data-accion="abrir-disperso">➕ Agregar curso disperso</button></div></div>`;
     return `<div class="tarjeta">${intro}
       <div class="grid-form">
         <div class="campo-ancho"><label>Colegio *</label><input type="text" id="paes-disp-colegio" list="paes-colegios-disp" autocomplete="off" placeholder="Ej: CMC" />
@@ -3080,18 +3087,18 @@
     }
     const ocupado = !!(est.lectura || ed.cargando || ed.corrigiendo);
     const chip = (key, texto, extra) => `<button type="button" class="secundario paes-ed-chip${ed.activo === key ? " activo" : ""}" data-accion="ed-activar" data-key="${esc(key)}" style="--c:${key === "borrar" ? "#6b6480" : colorEd(ed, key)}" ${ocupado ? "disabled" : ""}><i></i>${texto} <small data-ed-cuenta="${esc(key)}"></small>${extra || ""}</button>`;
-    h += `<div class="tarjeta"><h2 style="font-size:16px;">1 · Colegio y cursos</h2>
+    h += `<div class="tarjeta"><h2 class="paes-ed-paso">1 · Colegio y cursos</h2>
       <div class="grid-form"><div><label>Colegio *</label><input type="text" data-cambio="ed-colegio" list="paes-ed-colegios" value="${esc(ed.colegio)}" placeholder="Escribe o elige el colegio" autocomplete="off" ${ocupado ? "disabled" : ""} /><datalist id="paes-ed-colegios">${colegiosConocidos().map((n) => `<option value="${esc(n)}"></option>`).join("")}</datalist></div></div>
       ${ed.colegio ? `<p class="ayuda" style="margin:10px 0 6px;">Pincha un curso para dejarlo <b>activo</b>: todo lo que marques después en las hojas queda en ese curso.</p>
         <div class="paes-ed-chips">${ed.cursos.map((x) => chip(x.key, esc(etiquetaEd(x)) + (x.cursoId ? "" : " · nuevo"))).join("")}${ed.cursos.length ? chip("borrar", "🧽 Quitar del curso") : ""}</div>
         <div class="paes-ed-nuevo"><span>Agregar un curso:</span><select id="paes-ed-nivel" ${ocupado ? "disabled" : ""}>${NIVELES.filter((n) => n !== NIVEL_DISPERSO).map((n) => `<option>${n}</option>`).join("")}</select><input type="text" id="paes-ed-letra" maxlength="3" placeholder="Letra" style="width:80px;" ${ocupado ? "disabled" : ""} /><button type="button" class="secundario chico" data-accion="ed-agregar-curso" ${ocupado ? "disabled" : ""}>➕ Agregar curso</button></div>` : `<p class="ayuda" style="margin:10px 0 0;">Escribe el colegio (o elige uno ya guardado) para ver y agregar sus cursos.</p>`}</div>`;
-    h += `<div class="tarjeta"><h2 style="font-size:16px;">2 · Hojas, en el orden del escáner <small id="paes-ed-resumen" style="font-weight:400;"></small></h2>
+    h += `<div class="tarjeta"><h2 class="paes-ed-paso">2 · Hojas, en el orden del escáner <small id="paes-ed-resumen" style="font-weight:400;"></small></h2>
       <p class="ayuda">Cada miniatura muestra la franja de la hoja con el nombre, el curso («Class») y la fecha; con <b>🔍 Abrir visor</b> ves esa franja en grande, la hoja completa, y también puedes marcarla ahí. Con un curso activo: <b>pincha</b> una hoja, o <b>arrastra</b> desde la primera hasta la última hoja del curso (también sirve pinchar la primera y, con Mayúsculas, la última). Pinchar de nuevo una hoja del curso activo la saca.</p>
       <div class="paes-ed-hojas${ocupado ? " ocupado" : ""}">${ed.hojas.map((x, i) => `<div class="paes-ed-hoja" data-i="${i}"><img src="${x.url}" alt="Hoja ${i + 1}" draggable="false" /><b>${i + 1}</b><button type="button" class="secundario paes-ed-ver" data-accion="ed-ver" data-i="${i}" title="Ver la hoja en grande">🔍 Abrir visor</button><span></span></div>`).join("")}</div>
       ${entrada}<div id="paes-ed-carga">${htmlCargaEditor()}</div>
       <div class="acciones-form" style="margin-top:10px;"><button type="button" class="secundario chico" data-accion="ed-elegir" ${ocupado ? "disabled" : ""}>➕ Agregar otro PDF</button><button type="button" class="secundario chico" data-accion="ed-limpiar" ${ocupado ? "disabled" : ""}>Quitar todas las hojas y empezar de nuevo</button></div></div>`;
     const clvs = est.clavijeros.slice().sort((a, b) => a.prueba.localeCompare(b.prueba) || a.nombre.localeCompare(b.nombre, "es"));
-    h += `<div class="tarjeta"><h2 style="font-size:16px;">3 · Clavijero y finalizar</h2>
+    h += `<div class="tarjeta"><h2 class="paes-ed-paso">3 · Clavijero y finalizar</h2>
       ${clvs.length ? `<p class="ayuda">Elige con qué clavijero se corrigen estas hojas (por ejemplo, Competencia Lectora o M1). Si el curso ya tiene ese ensayo, las hojas se suman a él; si no, se crea. Lo ya corregido no cambia.</p>
         <div class="paes-checks paes-clv-opciones">${clvs.map((k) => `<label><input type="radio" name="paes-ed-clv" data-cambio="ed-clv" value="${esc(k.id)}" ${ed.clavijeroId === k.id ? "checked" : ""} ${ocupado ? "disabled" : ""} /> <span class="paes-pill ${clasePrueba(k)}"><b>${esc(siglaPrueba(k))}</b>${esc(k.nombre)}</span></label>`).join("")}</div>
         <div class="grid-form" style="margin-top:8px;"><div><label>Fecha de aplicación</label><input type="date" data-cambio="ed-fecha" value="${esc(ed.fecha || "")}" ${ocupado ? "disabled" : ""} /></div></div>` : `<p class="ayuda">Aún no hay clavijeros guardados. Agrégalo en «Clavijeros subidos» y vuelve: las hojas marcadas se conservan mientras no cierres la app.</p><div class="acciones-form"><button type="button" class="secundario chico" data-vista="clavijeros">Ir a Clavijeros subidos</button></div>`}

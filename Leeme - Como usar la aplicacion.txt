@@ -452,7 +452,8 @@ El trabajo va en cinco pasos:
      esos, los PDF se suman a ese ensayo; si eliges otro, se crea el ensayo. No
      borra lo ya corregido.
    - Pestaña "✂️ Editor de PDF": para un escaneo que trae varios cursos en una
-     sola pila. Muestra las hojas en el orden del escáner. Escribes o eliges el
+     sola pila. También se llega desde "Trabajar un curso", con "Ingresar
+     cursos con edición de PDF". Muestra las hojas en el orden del escáner. Escribes o eliges el
      colegio, pinchas un curso (o lo agregas) y marcas sus hojas pinchando o
      arrastrando de la primera a la última; después eliges el siguiente curso y
      marcas las suyas. Al final eliges el clavijero (por ejemplo CL o M1) y

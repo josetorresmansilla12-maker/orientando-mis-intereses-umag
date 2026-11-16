@@ -612,3 +612,7 @@ body.modulo-paes .topbar-acciones { display: none !important; }
 .paes-ed-visor-datos img { width: 100%; display: block; }
 .paes-ed-visor-img { min-height: 160px; }
 .paes-ed-hojas { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+
+/* Editor de PDF: cada apartado numerado con franja morada y letra blanca */
+#modulo-paes h2.paes-ed-paso { background: var(--morado, #5b2a86); color: white; font-size: 18px; border-radius: 8px; padding: 8px 14px; margin: 0 0 12px; }
+#modulo-paes h2.paes-ed-paso small { color: white; font-size: 13px; opacity: 0.92; }
