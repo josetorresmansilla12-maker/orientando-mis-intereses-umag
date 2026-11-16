@@ -4232,8 +4232,8 @@
       g.cursos.forEach((c) => {
         const ensayos = ensayosDelCurso(c.id);
         const conHojas = ensayos.filter((e) => hojasDelEnsayo(e.id).some(vigente));
-        h += `<details class="paes-detalle paes-res-curso" ${est.cursoId === c.id || g.cursos.length === 1 || est.verCurso === c.id || est.editarEn === c.id ? "open" : ""}><summary><b class="paes-res-nombre">${esc(etiquetaCurso(c))}</b> <span class="paes-res-meta">${esc(c.anio)} · ${plural(c.estudiantes.length, "estudiante", "estudiantes")}${c.listaOficial === false ? " · lista provisoria" : ""}</span> ${pildorasDePruebas(c)}
-          <span class="paes-res-botones"><button type="button" class="${est.verCurso === c.id ? "" : "secundario "}chico" data-accion="res-ver-curso" data-curso="${esc(c.id)}">👁 ${est.verCurso === c.id ? "Ocultar curso" : "Ver curso"}</button><button type="button" class="${est.editarEn === c.id ? "" : "secundario "}chico" data-accion="res-editar" data-curso="${esc(c.id)}">✏️ Editar resultados</button></span></summary>`;
+        h += `<details class="paes-detalle paes-res-curso" ${est.cursoId === c.id || g.cursos.length === 1 || est.verCurso === c.id || est.editarEn === c.id ? "open" : ""}><summary><b class="paes-res-nombre">${esc(etiquetaCurso(c))}</b> <span class="paes-res-meta">${esc(c.anio)} · ${c.estudiantes.length || c.disperso ? plural(c.estudiantes.length, "estudiante", "estudiantes") : `<b class="paes-sin-lista">sin lista de curso</b>`}${c.listaOficial === false ? " · lista provisoria" : ""}</span> ${pildorasDePruebas(c)}
+          <span class="paes-res-botones">${c.disperso ? "" : `<button type="button" class="${c.estudiantes.length ? "secundario " : "secundario paes-btn-lista "}chico" data-accion="res-lista" data-curso="${esc(c.id)}" title="${c.estudiantes.length ? "Ver, corregir o reemplazar la lista de este curso" : "Este curso se cargó sin lista: súbela para que las hojas se identifiquen solas por RUT"}">📋 ${c.estudiantes.length ? "Editar lista del curso" : "Subir lista del curso"}</button>`}<button type="button" class="${est.verCurso === c.id ? "" : "secundario "}chico" data-accion="res-ver-curso" data-curso="${esc(c.id)}">👁 ${est.verCurso === c.id ? "Ocultar curso" : "Ver curso"}</button><button type="button" class="${est.editarEn === c.id ? "" : "secundario "}chico" data-accion="res-editar" data-curso="${esc(c.id)}">✏️ Editar resultados</button></span></summary>`;
         if (est.editarEn === c.id) h += htmlEditarResultados(c);
         if (est.verCurso === c.id) h += htmlVerCurso(c);
         if (!ensayos.length) h += `<p class="ayuda" style="margin:0 0 8px;">Este curso aún no tiene ensayos.</p><div class="acciones-form"><button type="button" class="secundario chico" data-accion="res-ver" data-curso="${esc(c.id)}" data-ensayo="" data-ir="ensayo">Crear su primer ensayo →</button></div>`;
@@ -5328,6 +5328,20 @@
         pintar();
         global.scrollTo({ top: 0 });
         break;
+      case "res-lista": {
+        // paso 1 del curso: ahí está la lista; si no tiene, se abre de inmediato el selector de archivo
+        ev.preventDefault();
+        const c = est.cursos.find((x) => x.id === b.dataset.curso);
+        if (!c) break;
+        Object.assign(est, { enBlanco: false, cursoId: c.id, ensayoId: (ensayosDelCurso(c.id)[0] || {}).id || null, vista: "curso", paso: "curso", formCurso: null, formEnsayo: false, previa: null, listas: null });
+        pintar();
+        global.scrollTo({ top: 0 });
+        if (!c.estudiantes.length) {
+          elegirArchivo("lista");
+          toast("Elige el archivo con la lista del curso (.xls, .xlsx o .csv). Al guardarla, las hojas se identifican solas por RUT");
+        } else toast("Aquí puedes corregir la lista, agregar a alguien o cargar otro archivo para sumarla o reemplazarla");
+        break;
+      }
       case "res-ver-curso":
         ev.preventDefault();
         est.verCurso = est.verCurso === b.dataset.curso ? null : b.dataset.curso;

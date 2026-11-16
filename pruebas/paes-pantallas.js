@@ -244,6 +244,12 @@
       await clic(`[data-accion="res-ver-curso"][data-curso="${cursoA().id}"]`);
       return qa(".paes-ver-prueba.cl").length === 1 && qa(".paes-ver-prueba tbody tr").length === 2;
     });
+    await prueba("«Editar lista del curso» lleva al paso 1 de ese curso, donde está su lista", async () => {
+      await clic(`[data-accion="res-lista"][data-curso="${cursoB().id}"]`);
+      const ok = E.vista === "curso" && E.paso === "curso" && E.cursoId === cursoB().id && !!q('[data-archivo="lista"]');
+      await clic('[data-vista="resultados"]');
+      return ok;
+    });
     await prueba("«Editar resultados» lleva a la revisión del ensayo", async () => {
       await clic(`[data-accion="res-editar"][data-curso="${cursoA().id}"]`);
       return E.vista === "curso" && E.paso === "revision";

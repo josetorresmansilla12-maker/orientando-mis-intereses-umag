@@ -680,3 +680,8 @@ body.modulo-paes .topbar-acciones { display: none !important; }
 .paes-piloto-muestra { font-style: normal; background: #f28c28; color: white; font-weight: 700; border-radius: 5px; padding: 0 6px; }
 .paes-piloto-cuenta { font-weight: 700; color: #1d6b3f; }
 .paes-piloto-cuenta.falta { color: #a04a00; }
+
+/* Resultados guardados: curso sin lista y botón para subirla */
+.paes-sin-lista { color: #a04a00; background: #fff1e0; border: 1px solid #f0b678; border-radius: 6px; padding: 0 6px; font-weight: 700; }
+#modulo-paes button.secundario.paes-btn-lista { background: #d6f0ff; border: 2px solid #1e9be0; color: #07527f; font-weight: 700; }
+#modulo-paes button.secundario.paes-btn-lista:hover { background: #bfe6ff; }

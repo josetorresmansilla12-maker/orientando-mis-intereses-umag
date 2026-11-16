@@ -512,6 +512,9 @@ El trabajo va en cinco pasos:
    - En "Resultados guardados", cada curso tiene "👁 Ver curso" (muestra sus
      ensayos y resultados, separados en CL y M1) y "✏️ Editar resultados" (lleva a
      las hojas del ensayo que elijas, CL o M1, para corregirlas).
+   - En "Resultados guardados", cada curso tiene también "📋 Subir lista del curso"
+     (si se cargó sin lista) o "📋 Editar lista del curso". Al subirla, las hojas ya
+     corregidas se identifican solas por RUT.
    - Colores: Competencia Lectora siempre en rojo y Matemática M1 siempre en azul.
    - "Ensayos aplicados" (arriba en "Resultados guardados"): por cada ensayo,
      primero Competencia Lectora y después Matemática, qué clavijero se aplicó y a
