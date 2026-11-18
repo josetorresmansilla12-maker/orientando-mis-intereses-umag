@@ -196,6 +196,17 @@
       await clic('[data-vista="clavijeros"]');
       return /CL de prueba/.test(texto()) && /M1 de prueba/.test(texto());
     });
+    await prueba("En el editor del clavijero se puede cambiar la prueba (CL o M1) con sus botones", async () => {
+      await clic('[data-accion="clv-abrir"][data-id="k-m1"]');
+      const k = E.clavijeros.find((x) => x.id === "k-m1");
+      await clic('[data-accion="clv-prueba"][data-id="k-m1"][data-prueba="CL"]');
+      await espera(300);
+      const paso = k.prueba === "CL";
+      await clic('[data-accion="clv-prueba"][data-id="k-m1"][data-prueba="M1"]');
+      await espera(300);
+      await clic('[data-accion="clv-abrir"][data-id="k-m1"]');
+      return paso && k.prueba === "M1";
+    });
     await prueba("En el editor del clavijero, «Piloto» deja la pregunta en naranjo y descuenta una pregunta válida", async () => {
       await clic('[data-accion="clv-abrir"][data-id="k-cl"]');
       const k = E.clavijeros.find((x) => x.id === "k-cl");

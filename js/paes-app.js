@@ -3927,6 +3927,20 @@
   const ensayosConClavijero = (id) => est.ensayos.filter((e) => e.clavijeroId === id);
   const guardarClavijeros = () => guardar("ajustes", { clave: "clavijeros", valor: est.clavijeros });
 
+  // botones grandes «CL / M1» para decir a qué prueba corresponde un clavijero
+  function botonesPruebaClavijero(actual, accion, extra) {
+    return `<div class="paes-clv-prueba"><span>¿A qué prueba corresponde? *</span>${Object.values(L.PRUEBAS_PAES)
+      .map((p) => `<button type="button" class="paes-prueba-btn ${p.id === "CL" ? "cl" : "m1"}${actual === p.id ? " activa" : ""}" data-accion="${accion}" data-prueba="${p.id}" ${extra || ""}><b>${p.id}</b><span>${esc(p.nombre)}</span><small>${actual === p.id ? "✔ elegida" : "Elegir"}</small></button>`)
+      .join("")}</div>`;
+  }
+  // adivina la prueba por el nombre (del clavijero o del archivo): «M1», «matemática» → M1; «CL», «lenguaje», «lectora» → CL
+  function pruebaPorNombre(texto) {
+    const t = L.sinTildes(String(texto || "")).toLowerCase();
+    if (/(^|[^a-z0-9])m1([^a-z0-9]|$)|matemat/.test(t)) return "M1";
+    if (/(^|[^a-z0-9])cl([^a-z0-9]|$)|lenguaje|lectora|lectura/.test(t)) return "CL";
+    return "";
+  }
+
   function crearClavijero(datos) {
     const base = `${datos.prueba === "OTRA" ? datos.pruebaNombre || "Otra" : datos.prueba}${datos.forma ? " · Forma " + datos.forma : ""}`;
     let nombre = (datos.nombre || "").trim() || base;
@@ -4059,9 +4073,10 @@
       h += `<div class="paes-pegar">
         <div class="grid-form">
           <div class="campo-ancho"><label>Nombre</label><input type="text" id="paes-clv-nombre" placeholder="Ej: CL · Forma 3 · 2026" /></div>
-          <div><label>Prueba *</label><select id="paes-clv-prueba">${Object.values(L.PRUEBAS_PAES).map((p) => `<option value="${p.id}">${esc(p.nombre)}</option>`).join("")}</select></div>
           <div><label>Forma</label><input type="text" id="paes-clv-forma" maxlength="12" placeholder="Ej: 3" /></div>
         </div>
+        <input type="hidden" id="paes-clv-prueba" value="${esc(est.clvFormPrueba || "")}" />
+        ${botonesPruebaClavijero(est.clvFormPrueba || "", "clv-form-prueba")}
         <label style="margin-top:10px;">Sube el archivo (CSV o Excel, también el formato de ZipGrade) o escribe una letra por pregunta, en orden.</label>
         <textarea id="paes-clv-texto" rows="3" placeholder="DDBCA…  (o: 1 D, 2 D, 3 B)"></textarea>
         <input type="file" data-archivo="clavijero" accept=".csv,.xls,.xlsx" style="display:none;" />
@@ -4090,9 +4105,12 @@
               <button type="button" class="chico peligro" data-accion="clv-eliminar" data-id="${esc(k.id)}">🗑 Eliminar</button>
             </div>
           </div>
+          ${!abierto && pruebaPorNombre(k.nombre) && L.PRUEBAS_PAES[k.prueba] && pruebaPorNombre(k.nombre) !== k.prueba ? `<p class="paes-tabla-mal grande">⚠ El nombre parece de ${esc(pruebaPorNombre(k.nombre))}, pero está marcado como ${esc(k.prueba)}. Ábrelo con «✏️ Editar clavijero» y elige la prueba correcta.</p>` : ""}
           ${sobran > 0 ? `<p class="paes-piloto-aviso">⚠ Cuentan ${validas} preguntas y la tabla de puntajes llega a ${tope} correctas: ${sobran === 1 ? "falta marcar 1 pregunta piloto" : "faltan por marcar " + sobran + " preguntas piloto"}. Mientras no se marquen, suman correctas de más. Usa «✏️ Editar clavijero».</p>` : ""}`;
         if (abierto) {
           const letras = L.LETRAS_PAES.slice(0, k.alternativas || 4).split("");
+          h += botonesPruebaClavijero(k.prueba, "clv-prueba", `data-id="${esc(k.id)}"`);
+          if (pruebaPorNombre(k.nombre) && L.PRUEBAS_PAES[k.prueba] && pruebaPorNombre(k.nombre) !== k.prueba) h += `<p class="paes-tabla-mal grande">⚠ El nombre «${esc(k.nombre)}» parece de ${esc(pruebaPorNombre(k.nombre))}, pero el clavijero está marcado como ${esc(k.prueba)}. Revisa cuál corresponde.</p>`;
           h += `<div class="grid-form" style="margin-top:14px;">
               <div class="campo-ancho"><label>Nombre</label><input type="text" data-clv-campo="nombre" data-id="${esc(k.id)}" value="${esc(k.nombre)}" /></div>
               <div><label>Forma</label><input type="text" data-clv-campo="forma" data-id="${esc(k.id)}" maxlength="12" value="${esc(k.forma || "")}" /></div>
@@ -4127,7 +4145,7 @@
   }
 
   function datosFormClavijero() {
-    const prueba = raiz.querySelector("#paes-clv-prueba").value;
+    const prueba = raiz.querySelector("#paes-clv-prueba").value || est.clvFormPrueba || "";
     return { nombre: raiz.querySelector("#paes-clv-nombre").value, prueba, pruebaNombre: "", forma: raiz.querySelector("#paes-clv-forma").value.trim() };
   }
 
@@ -4136,12 +4154,24 @@
       toast(leido.avisos[0] || "No se encontró una clave.");
       return;
     }
+    const campo = raiz.querySelector("#paes-clv-prueba");
+    if (campo && !campo.value) {
+      const adivinada = pruebaPorNombre(raiz.querySelector("#paes-clv-nombre").value) || pruebaPorNombre(origen);
+      if (!adivinada) {
+        toast("Antes de guardar, elige si el clavijero es de Competencia Lectora (CL) o de Matemática (M1).");
+        const caja = raiz.querySelector(".paes-clv-prueba");
+        if (caja) caja.classList.add("falta");
+        return;
+      }
+      campo.value = est.clvFormPrueba = adivinada;
+    }
     const max = leido.clave.reduce((a, x) => Math.max(a, x.n), 0);
     const porN = new Map(leido.clave.map((x) => [x.n, x]));
     const clave = Array.from({ length: Math.min(100, max) }, (_, i) => porN.get(i + 1) || { n: i + 1, r: "", valida: true });
     const k = crearClavijero(Object.assign(datosFormClavijero(), { clave }));
     await guardarClavijeros();
     est.clvForm = false;
+    est.clvFormPrueba = "";
     est.clvAbierto = k.id;
     pintar();
     const pilotos = clave.filter((x) => !x.valida).length;
@@ -4175,7 +4205,10 @@
           if (el && v && (el.tagName !== "SELECT" || Array.from(el.options).some((o) => o.value === v))) el.value = v;
         };
         if (!raiz.querySelector("#paes-clv-nombre").value.trim()) pone("#paes-clv-nombre", valor("nombre"));
-        pone("#paes-clv-prueba", valor("prueba"));
+        if (L.PRUEBAS_PAES[valor("prueba")]) {
+          pone("#paes-clv-prueba", valor("prueba"));
+          est.clvFormPrueba = valor("prueba");
+        }
         if (!raiz.querySelector("#paes-clv-forma").value.trim()) pone("#paes-clv-forma", valor("forma"));
       }
       await guardarClavijeroNuevo(L.leerClave(clave.filas), archivo.name);
@@ -5540,8 +5573,57 @@
         else descargarInforme(b.dataset.formato);
         break;
       // ---- clavijeros
+      case "clv-form-prueba":
+        est.clvFormPrueba = b.dataset.prueba;
+        {
+          const campo = raiz.querySelector("#paes-clv-prueba");
+          if (campo) campo.value = b.dataset.prueba;
+          const caja = b.closest(".paes-clv-prueba");
+          if (caja) {
+            caja.classList.remove("falta");
+            caja.querySelectorAll("button").forEach((x) => {
+              x.classList.toggle("activa", x === b);
+              x.querySelector("small").textContent = x === b ? "✔ elegida" : "Elegir";
+            });
+          }
+        }
+        break;
+      case "clv-prueba": {
+        const k = est.clavijeros.find((y) => y.id === id);
+        const nueva = b.dataset.prueba;
+        if (!k || k.prueba === nueva || !L.PRUEBAS_PAES[nueva]) break;
+        const usos = ensayosConClavijero(k.id);
+        const aplicar = async () => {
+          const antes = k.prueba;
+          k.prueba = nueva;
+          k.pruebaNombre = "";
+          k.modificado = new Date().toISOString();
+          // los ensayos que usan este clavijero pasan a esa prueba; su tabla de puntajes también,
+          // salvo que alguien la haya cambiado a mano
+          for (const e of usos) {
+            e.prueba = nueva;
+            e.pruebaNombre = "";
+            if (L.TABLAS_PAES[antes] && e.tabla.join(",") === L.TABLAS_PAES[antes].join(",")) await cambiarTabla(e, L.TABLAS_PAES[nueva].slice(), "puntajes de " + nueva + " (el clavijero cambió de prueba)");
+            else await guardar("ensayos", e);
+            auditar(e.id, null, "prueba del ensayo (cambió la del clavijero)", antes, nueva);
+          }
+          await guardarClavijeros();
+          pintar();
+          toast(`El clavijero quedó como ${L.PRUEBAS_PAES[nueva].nombre}${usos.length ? ` · ${plural(usos.length, "curso pasó", "cursos pasaron")} a esa prueba y se recalcularon sus puntajes` : ""}`);
+        };
+        if (usos.length)
+          confirmar({
+            titulo: "Cambiar la prueba del clavijero",
+            texto: `«${k.nombre}» ya se aplicó a ${plural(usos.length, "curso", "cursos")}. Si lo cambias a ${L.PRUEBAS_PAES[nueva].nombre}, esos ensayos también pasan a esa prueba y sus puntajes se recalculan con la tabla de ${nueva}.`,
+            textoBoton: `Cambiar a ${nueva}`,
+            onConfirmar: aplicar,
+          });
+        else aplicar();
+        break;
+      }
       case "clv-nuevo":
         est.clvForm = !est.clvForm;
+        est.clvFormPrueba = "";
         pintar();
         break;
       case "clv-elegir":

@@ -685,3 +685,8 @@ body.modulo-paes .topbar-acciones { display: none !important; }
 .paes-sin-lista { color: #a04a00; background: #fff1e0; border: 1px solid #f0b678; border-radius: 6px; padding: 0 6px; font-weight: 700; }
 #modulo-paes button.secundario.paes-btn-lista { background: #d6f0ff; border: 2px solid #1e9be0; color: #07527f; font-weight: 700; }
 #modulo-paes button.secundario.paes-btn-lista:hover { background: #bfe6ff; }
+
+/* clavijero: a qué prueba corresponde (CL o M1) */
+.paes-clv-prueba { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 14px 0 4px; padding: 8px 10px; border-radius: 10px; border: 2px solid transparent; }
+.paes-clv-prueba > span { font-weight: 700; color: var(--paes-oscuro); font-size: 13.5px; }
+.paes-clv-prueba.falta { border-color: #c62828; background: #fdeaea; }

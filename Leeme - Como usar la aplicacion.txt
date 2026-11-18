@@ -472,6 +472,11 @@ El trabajo va en cinco pasos:
    - Pestaña "🏠 Inicio": pregunta "¿Qué quieres hacer?" y lleva al lugar correcto
      (cursos nuevos, un PDF con varios cursos, agregar otra prueba, estudiantes
      sueltos, ver resultados).
+   - Prueba del clavijero: al agregar un clavijero se elige con los botones CL o M1
+     (si no se elige, la app la deduce del nombre: «M1», «Matemática», «CL»,
+     «Lenguaje»). En «✏️ Editar clavijero» se puede cambiar; si ya se aplicó a
+     cursos, esos ensayos pasan a la prueba nueva y se recalculan con su tabla. Si
+     el nombre no calza con la prueba marcada, aparece un aviso rojo.
    - Preguntas piloto: de las 65 preguntas solo 60 cuentan para el puntaje. En
      "Clavijeros subidos", "✏️ Editar clavijero" abre el editor: en cada pregunta
      se elige la respuesta correcta y con el botón "Piloto" se marcan las de
