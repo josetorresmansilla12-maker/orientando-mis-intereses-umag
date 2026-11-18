@@ -690,3 +690,17 @@ body.modulo-paes .topbar-acciones { display: none !important; }
 .paes-clv-prueba { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 14px 0 4px; padding: 8px 10px; border-radius: 10px; border: 2px solid transparent; }
 .paes-clv-prueba > span { font-weight: 700; color: var(--paes-oscuro); font-size: 13.5px; }
 .paes-clv-prueba.falta { border-color: #c62828; background: #fdeaea; }
+
+/* hojas por revisar: cuadro naranjo en Resultados guardados y pestaña Revisión */
+#modulo-paes button.secundario.paes-pendientes, .paes-pendientes { display: inline-block; background: #f28c28; color: white; border: 2px solid #c96a10; border-radius: 7px; padding: 3px 10px; font-size: 13px; font-weight: 800; line-height: 1.3; vertical-align: middle; margin: 0 6px 4px 0; }
+#modulo-paes button.secundario.paes-pendientes:hover { background: #e07812; }
+.paes-pendientes.quieto { font-size: 12px; padding: 1px 8px; }
+.paes-rev-curso { border: 1px solid var(--paes-borde); border-radius: 10px; padding: 10px 12px; margin-top: 10px; scroll-margin-top: 12px; }
+.paes-rev-curso.destacado { border: 2px solid #f28c28; box-shadow: 0 0 0 3px rgba(242, 140, 40, 0.18); }
+.paes-rev-curso h3 { margin: 0 0 8px; font-size: 16px; color: var(--paes-oscuro); }
+.paes-rev-ensayo { border-left: 5px solid #b9b4c7; padding: 4px 0 4px 10px; margin: 8px 0 12px; }
+.paes-rev-ensayo.cl { border-left-color: var(--paes-cl); } .paes-rev-ensayo.m1 { border-left-color: var(--paes-m1); }
+.paes-rev-cab { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.paes-rev-cab small { color: var(--texto-suave); }
+.paes-rev-cab button { margin-left: auto; }
+.paes-rev-avisos { margin: 0; padding-left: 18px; font-size: 12.5px; }

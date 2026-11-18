@@ -520,6 +520,10 @@ El trabajo va en cinco pasos:
    - En "Resultados guardados", cada curso tiene también "📋 Subir lista del curso"
      (si se cargó sin lista) o "📋 Editar lista del curso". Al subirla, las hojas ya
      corregidas se identifican solas por RUT.
+   - Hojas por revisar: en "Resultados guardados" cada curso con pendientes muestra
+     un cuadro naranjo "⚠ N hojas por revisar". La pestaña "🔎 Revisión" reúne
+     todas las hojas pendientes de todos los cursos (por colegio, curso y prueba),
+     con el estudiante y qué hay que revisar; "Revisar" abre la hoja con su imagen.
    - Colores: Competencia Lectora siempre en rojo y Matemática M1 siempre en azul.
    - "Ensayos aplicados" (arriba en "Resultados guardados"): por cada ensayo,
      primero Competencia Lectora y después Matemática, qué clavijero se aplicó y a

@@ -151,8 +151,8 @@
 
     titulo("Inicio y pestañas");
     await prueba("El módulo abre en «¿Qué quieres hacer?» con sus opciones", () => E.vista === "inicio" && qa(".paes-ini-op").length >= 5);
-    await prueba("Quedan seis pestañas (Inicio, Trabajar un curso, Resultados, Clavijeros, Editor de PDF, Configuración)", () => qa(".paes-vistas > button").length === 6);
-    for (const v of ["curso", "resultados", "clavijeros", "editor", "config", "carpetas", "papelera", "acciones", "inicio"]) {
+    await prueba("Quedan siete pestañas (Inicio, Trabajar un curso, Resultados, Revisión, Clavijeros, Editor de PDF, Configuración)", () => qa(".paes-vistas > button").length === 7);
+    for (const v of ["curso", "resultados", "revision", "clavijeros", "editor", "config", "carpetas", "papelera", "acciones", "inicio"]) {
       await prueba(`La pantalla «${v}» se abre sin errores`, async () => {
         const antes = erroresApp.length;
         if (v === "carpetas" || v === "papelera" || v === "acciones") await clic('.paes-vistas [data-vista="config"]');
@@ -266,6 +266,20 @@
       return E.vista === "curso" && E.paso === "revision";
     });
 
+    await prueba("Las hojas con aviso salen en el cuadro naranjo del curso y en la pestaña Revisión, y «Revisar» abre la hoja", async () => {
+      await clic('[data-vista="resultados"]');
+      const cuadro = q(`[data-accion="ir-revision"][data-curso="${cursoA().id}"]`);
+      if (!cuadro) throw new Error("no aparece el cuadro naranjo");
+      const n = Number((cuadro.textContent.match(/\d+/) || [0])[0]);
+      await clic(cuadro);
+      const filas = qa(`#paes-rev-${cursoA().id} [data-accion="rev-hoja"]`);
+      if (E.vista !== "revision" || filas.length !== n) throw new Error(`el cuadro dice ${n} y la pestaña Revisión muestra ${filas.length}`);
+      const id = filas[0].dataset.id;
+      await clic(filas[0]);
+      const abierta = E.vista === "curso" && E.paso === "revision" && E.visor === id;
+      await clic('[data-accion="cerrar-visor"]');
+      return n > 0 && abierta;
+    });
     titulo("Editor de PDF");
     await prueba("El editor carga un PDF de cuatro hojas y muestra sus miniaturas", async () => {
       await clic('[data-vista="editor"]');
