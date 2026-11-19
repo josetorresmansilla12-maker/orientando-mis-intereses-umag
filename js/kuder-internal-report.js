@@ -123,9 +123,10 @@ function calcularEstadisticasInternasKuder(archivos) {
   });
   const estudiantesPorNivel = [...porNivel.values()].sort((a, b) => a.orden - b.orden);
 
-  // ---- 5. intereses: solo los tests que se pueden usar
-  const validos = registros.filter((r) => testUsableInterno(r.e));
-  const excluidos = totalEstudiantes - validos.length;
+  // ---- 5. intereses: todos los tests, con sus puntajes tal como están. Solo importa qué
+  // áreas tienen 7 o más; que el test sume 45 o no (si se traspasó bien la hoja) no
+  // cambia nada, porque la unidad revisa los casos que sí podrían cambiar un área.
+  const validos = registros;
   const todosLosEstudiantes = validos.map((r) => r.e);
   const nValidos = validos.length;
   const conteosAreas = {};
@@ -145,7 +146,7 @@ function calcularEstadisticasInternasKuder(archivos) {
       if (!niveles.has(n.etiqueta)) niveles.set(n.etiqueta, { nivel: n.etiqueta, orden: n.orden, cursos: new Set() });
       niveles.get(n.etiqueta).cursos.add(claveCurso(r));
     });
-    const ests = c.registros.filter((r) => testUsableInterno(r.e)).map((r) => r.e);
+    const ests = c.registros.map((r) => r.e);
     return {
       grupo: c.colegio,
       total: ests.length,
@@ -159,7 +160,6 @@ function calcularEstadisticasInternasKuder(archivos) {
     totalEstudiantes,
     duplicados,
     sinRut,
-    excluidos,
     nValidos,
     colegiosDistintos: rankingColegios.length,
     promedioPorCurso,
@@ -320,7 +320,7 @@ function construirResumenEjecutivoInternoKuder(stats, { compacto = false, nColeg
 
       <div class="ejec-nota">
         <b>Estudiante evaluado</b> = cada estudiante una sola vez, por su RUT. <b>Curso evaluado</b> = un curso distinto de un colegio. <b>Área de interés clara</b> = puntaje 7 o más en esa área (los 45 puntos del test se reparten entre 10 áreas). "est." = estudiantes.
-        ${stats.excluidos ? `Las cifras de áreas no incluyen ${pluralInterno(stats.excluidos, "test que no suma 45 y que no fue revisado", "tests que no suman 45 y que no fueron revisados")} en «Corrección». ` : ""}El método de cada cifra está en las notas al pie de cada tabla.
+        El método de cada cifra está en las notas al pie de cada tabla.
       </div>
     </div>`;
 }

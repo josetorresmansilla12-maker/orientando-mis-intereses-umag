@@ -245,10 +245,10 @@ Paso 2: las pestañas
    - Reglas de conteo (cada tabla las explica en su "Nota." al pie, en palabras
      simples): cada estudiante se cuenta una sola vez, por su RUT (si un curso se
      cargó dos veces no se duplica); los colegios se juntan aunque estén escritos con
-     o sin tilde o mayúsculas; los cursos se cuentan por colegio + curso + letra. Un
-     test que no suma 45 se usa igual si el error no puede cambiar ninguna área de lado
-     del 7; solo queda fuera del análisis de áreas si el error sí podría cambiarlas y
-     nadie lo revisó ("Dejar así"), y el informe dice cuántos fueron.
+     o sin tilde o mayúsculas; los cursos se cuentan por colegio + curso + letra. Se
+     usan todos los tests con sus puntajes tal como están, sumen 45 o no: solo importa
+     qué áreas tienen 7 o más. Por eso conviene revisar antes la pestaña "Corrección"
+     (o usar "Configuración → Marcar todos los test como revisados y correctos").
    - Hoja 1: resumen ejecutivo. Estudiantes, colegios, cursos y % con al menos un
      área clara; los 5 colegios con más estudiantes evaluados; las 5 áreas más
      frecuentes y los estudiantes por nivel.
