@@ -74,26 +74,6 @@ const claveTextoInterno = (t) =>
 const rutInterno = (r) => (r || "").toString().replace(/[^0-9kK]/g, "").toUpperCase().replace(/^0+/, "");
 const testUsableInterno = (e) => !analizarTraspasoKuder(e.puntajes).afecta || traspasoDejadoAsiKuder(e);
 
-// perfiles de carrera: las carreras UMAG agrupadas por el conjunto exacto de áreas al que
-// están vinculadas en la lista de orientación (las que tienen las mismas áreas van juntas,
-// porque el test no puede distinguirlas)
-function perfilesCarrerasUMAGKuder() {
-  const porCarrera = new Map();
-  AREAS_KUDER.forEach((area) =>
-    area.carrerasUMAG.forEach((c) => {
-      if (!porCarrera.has(c)) porCarrera.set(c, []);
-      porCarrera.get(c).push(area);
-    })
-  );
-  const perfiles = new Map();
-  for (const [carrera, areas] of porCarrera) {
-    const clave = areas.map((a) => a.id).sort().join("|");
-    if (!perfiles.has(clave)) perfiles.set(clave, { areas, carreras: [] });
-    perfiles.get(clave).carreras.push(carrera);
-  }
-  return [...perfiles.values()].map((p) => ({ ...p, carreras: p.carreras.sort((a, b) => a.localeCompare(b, "es")) }));
-}
-
 function calcularEstadisticasInternasKuder(archivos) {
   // ---- 1. un registro por estudiante (por RUT)
   const registros = [];
@@ -156,34 +136,6 @@ function calcularEstadisticasInternasKuder(archivos) {
   const promedioAreasInteres = nValidos > 0 ? nAreas.reduce((a, n) => a + n, 0) / nValidos : 0;
   const areasOrdenadas = [...AREAS_KUDER].sort((a, b) => (conteosAreas[b.id] || 0) - (conteosAreas[a.id] || 0));
 
-  // área más frecuente (y la segunda) de cada colegio, sobre sus tests válidos
-  const areaPorColegio = rankingColegios.map((c) => {
-    const ests = c.registros.filter((r) => testUsableInterno(r.e)).map((r) => r.e);
-    return { grupo: c.colegio, ...areasMasFrecuentesKuder(ests) };
-  });
-
-  // ---- 6. tabla A: perfiles de carrera compatibles (el estudiante tiene 7 o más en TODAS las áreas del perfil)
-  const perfiles = perfilesCarrerasUMAGKuder()
-    .map((p) => {
-      const ids = p.areas.map((a) => a.id);
-      const n = todosLosEstudiantes.filter((e) => {
-        const suyas = new Set(areasDe.get(e).map((a) => a.id));
-        return ids.every((id) => suyas.has(id));
-      }).length;
-      return { ...p, estudiantes: n };
-    })
-    .sort((a, b) => a.areas.length - b.areas.length || b.estudiantes - a.estudiantes || a.carreras[0].localeCompare(b.carreras[0], "es"));
-
-  // ---- 7. tabla B: combinación exacta de áreas de cada estudiante (cada uno cuenta una sola vez)
-  const combos = new Map();
-  todosLosEstudiantes.forEach((e) => {
-    const areas = AREAS_KUDER.filter((a) => areasDe.get(e).includes(a));
-    const clave = areas.map((a) => a.id).join("|");
-    if (!combos.has(clave)) combos.set(clave, { areas, estudiantes: 0 });
-    combos.get(clave).estudiantes++;
-  });
-  const combinaciones = [...combos.values()].sort((a, b) => b.estudiantes - a.estudiantes || a.areas.length - b.areas.length);
-
   return {
     totalTests,
     totalEstudiantes,
@@ -205,25 +157,6 @@ function calcularEstadisticasInternasKuder(archivos) {
     promedioCursosPorColegio: rankingColegios.length > 0 ? totalTests / rankingColegios.length : 0,
     conAreaClara: nValidos - sinAreaClara,
     pctConAreaClara: nValidos > 0 ? Math.round(((nValidos - sinAreaClara) / nValidos) * 100) : 0,
-    areaPorColegio,
-    perfiles,
-    combinaciones,
-  };
-}
-
-// el área (o las áreas, si empatan) que más estudiantes del grupo tienen como interés
-// (7 o más), con cuántos estudiantes la tienen, y la segunda más frecuente
-function areasMasFrecuentesKuder(estudiantes) {
-  const conteos = {};
-  estudiantes.forEach((e) => calcularAreasDeInteresKuder(e.puntajes).forEach((a) => (conteos[a.id] = (conteos[a.id] || 0) + 1)));
-  const max = Math.max(0, ...Object.values(conteos));
-  const segundo = Math.max(0, ...Object.values(conteos).filter((v) => v < max));
-  return {
-    total: estudiantes.length,
-    areas: max > 0 ? AREAS_KUDER.filter((a) => conteos[a.id] === max) : [],
-    conArea: max,
-    segundas: segundo > 0 ? AREAS_KUDER.filter((a) => conteos[a.id] === segundo) : [],
-    conSegunda: segundo,
   };
 }
 
@@ -357,40 +290,6 @@ function construirResumenEjecutivoInternoKuder(stats, { compacto = false, nColeg
     </div>`;
 }
 
-// hoja 2 del resumen: los perfiles de carrera con más estudiantes compatibles (2 áreas, y 3 o
-// más, por separado, porque no se comparan entre sí) y las combinaciones más frecuentes
-function construirResumenEjecutivo2InternoKuder(stats) {
-  const n = stats.nValidos;
-  const fila = (texto, sub, c, color) => `
-    <div class="ejec-barra-fila">
-      <div class="ejec-barra-texto"><b>${texto}</b><span>${pctInterno(c, n)} · ${c} est.</span></div>
-      ${sub ? `<div class="ejec-perfil-carreras">${sub}</div>` : ""}
-      <div class="ejec-barra"><div style="width:${porcentajeInterno(c, n)}%;${color ? ` background:${color};` : ""}"></div></div>
-    </div>`;
-  const perfil = (p) => fila(p.areas.map((a) => a.nombre).join(" + "), p.carreras.map(escaparHtmlKuder).join(" · "), p.estudiantes);
-  const de2 = stats.perfiles.filter((p) => p.areas.length === 2).sort((a, b) => b.estudiantes - a.estudiantes).slice(0, 5);
-  const de3 = stats.perfiles.filter((p) => p.areas.length >= 3).sort((a, b) => b.estudiantes - a.estudiantes).slice(0, 4);
-  const combos = stats.combinaciones.slice(0, 6);
-  return `
-    <div class="ejec">
-      <div class="ejec-caja">
-        <div class="ejec-caja-titulo">Perfiles de carreras UMAG con más estudiantes compatibles</div>
-        <div class="ejec-caja-sub">estudiantes con 7 o más en todas las áreas del perfil · de ${n} con test válido</div>
-        <div class="ejec-dos ejec-dos-interno">
-          <div><div class="ejec-subgrupo">Perfiles de 2 áreas</div>${de2.map(perfil).join("")}</div>
-          <div><div class="ejec-subgrupo">Perfiles de 3 o 4 áreas</div>${de3.map(perfil).join("")}</div>
-        </div>
-        <div class="ejec-caja-pie">Un estudiante puede calzar con varios perfiles (los % no suman 100%). Mide intereses compatibles, no intención de estudiar la carrera. Detalle y método en la Tabla 4.</div>
-      </div>
-      <div class="ejec-caja">
-        <div class="ejec-caja-titulo">Combinaciones de áreas de interés más frecuentes</div>
-        <div class="ejec-caja-sub">cada estudiante en una sola combinación · de ${n} con test válido</div>
-        ${combos.map((c) => fila(nombreCombinacionKuder(c.areas), "", c.estudiantes)).join("")}
-        <div class="ejec-caja-pie">Lista completa (suma 100%) y método en la Tabla 5.</div>
-      </div>
-    </div>`;
-}
-
 // ==================== rankings: colegios y niveles ====================
 
 // "intro": un párrafo corto entre el título y la tabla
@@ -450,81 +349,6 @@ function tablaRankingColegiosInterno(stats) {
   }));
   return tablaInterno(titulo, filas, columnas, {
     nota: `Cada fila es un colegio. «Estudiantes» es cuántos estudiantes de ese colegio rindieron el test (cada uno contado una sola vez, por su RUT) y «% del total» es esa cantidad dividida por los ${stats.totalEstudiantes} estudiantes evaluados. «Cursos evaluados» es cuántos cursos distintos del colegio rindieron el test. La tabla muestra dónde se aplicó el test, no el tamaño de los colegios ni su interés por la universidad.`,
-  });
-}
-
-// área más frecuente de cada colegio (si dos o más empatan, van todas) y la que le sigue.
-// Los colegios con pocos estudiantes llevan un asterisco: con pocos casos, uno o dos
-// estudiantes deciden cuál es el área más frecuente.
-const MUESTRA_PEQUENA_INTERNO = 20;
-function tablaAreaFrecuenteInterno(titulo, etiquetaGrupo, grupos) {
-  const nombres = (areas) => areas.map((a) => `${a.icono} ${a.nombre}`).join(" / ");
-  const filas = grupos.map((g) => ({
-    grupo: `${escaparHtmlKuder(g.grupo)}${g.total < MUESTRA_PEQUENA_INTERNO ? " *" : ""}`,
-    total: g.total,
-    area: g.areas.length ? nombres(g.areas) : "—",
-    pct: g.areas.length ? `${g.conArea} (${pctInterno(g.conArea, g.total)})` : "—",
-    segunda: g.segundas && g.segundas.length ? `${nombres(g.segundas)} <span class="kuder-tabla-secundario">${pctInterno(g.conSegunda, g.total)}</span>` : "—",
-  }));
-  const pequenos = grupos.filter((g) => g.total < MUESTRA_PEQUENA_INTERNO).length;
-  return tablaInterno(titulo, filas, [
-    { key: "grupo", label: etiquetaGrupo },
-    { key: "total", label: "Estudiantes con test válido", align: "right" },
-    { key: "area", label: "Área más frecuente" },
-    { key: "pct", label: "Estudiantes con esa área", align: "right" },
-    { key: "segunda", label: "Le sigue" },
-  ], {
-    nota: `Para cada colegio se contó cuántos de sus estudiantes tienen 7 puntos o más en cada una de las 10 áreas, y se muestra el área con más estudiantes (si dos o más empatan, aparecen todas) y la que le sigue. El porcentaje es sobre los estudiantes del colegio con test válido. Un mismo estudiante puede tener interés en varias áreas, por eso los porcentajes de un colegio no suman 100%. Muestra lo que más se repite en cada colegio, no lo que eligen todos sus estudiantes.${pequenos ? ` * Colegios con menos de ${MUESTRA_PEQUENA_INTERNO} estudiantes evaluados: con tan pocos casos, uno o dos estudiantes pueden cambiar el resultado, así que hay que leerlos con cautela.` : ""}`,
-  });
-}
-
-// ---- tabla A: perfiles de carreras UMAG compatibles con los intereses de los estudiantes
-function tablaPerfilesCarrerasInterno(stats) {
-  const n = stats.nValidos;
-  const filas = stats.perfiles.map((p) => ({
-    nAreas: p.areas.length,
-    perfil: p.areas.map((a) => `${a.icono} ${a.nombre}`).join(" + "),
-    carreras: p.carreras.map(escaparHtmlKuder).join(" · "),
-    estudiantes: p.estudiantes,
-    pct: pctInterno(p.estudiantes, n),
-  }));
-  return tablaInterno("Tabla 4. Estudiantes con el perfil de intereses de cada grupo de carreras UMAG", filas, [
-    { key: "nAreas", label: "Áreas", align: "right" },
-    { key: "perfil", label: "Áreas de interés del perfil" },
-    { key: "carreras", label: "Carreras UMAG con ese perfil" },
-    { key: "estudiantes", label: "Estudiantes", align: "right" },
-    { key: "pct", label: "%", align: "right" },
-  ], {
-    intro: "Cada carrera UMAG está vinculada a un conjunto de áreas de interés (su «perfil»). La tabla cuenta cuántos estudiantes tienen interés en todas las áreas de cada perfil.",
-    nota: `Un estudiante cuenta para un perfil solo si tiene 7 puntos o más en <b>todas</b> las áreas de ese perfil; por ejemplo, para Fonoaudiología necesita interés en Científica, Musical y Servicio Social. Las carreras vinculadas a las mismas áreas van en una sola fila, porque el test no puede distinguirlas. El porcentaje es sobre los ${n} estudiantes con test válido. La tabla está ordenada primero por cantidad de áreas del perfil y luego de mayor a menor: un perfil de una sola área siempre reúne más estudiantes que uno de cuatro, así que solo conviene comparar perfiles con la misma cantidad de áreas. Un estudiante puede calzar con varios perfiles, por eso los porcentajes no suman 100%. La relación entre áreas y carreras sale de la lista de orientación de la unidad, no de una tabla validada. La cifra muestra cuántos estudiantes tienen intereses compatibles con esas carreras; no indica que quieran estudiarlas ni estima postulaciones.`,
-  });
-}
-
-// ---- tabla B: combinaciones de áreas (cada estudiante una sola vez; suma 100%)
-const COMBINACIONES_EN_TABLA = 15;
-function nombreCombinacionKuder(areas) {
-  if (!areas.length) return "Sin áreas con 7 o más";
-  if (areas.length === 1) return `Solo ${areas[0].icono} ${areas[0].nombre}`;
-  return areas.map((a) => `${a.icono} ${a.nombre}`).join(" + ");
-}
-function tablaCombinacionesInterno(stats) {
-  const n = stats.nValidos;
-  const primeras = stats.combinaciones.slice(0, COMBINACIONES_EN_TABLA);
-  const resto = stats.combinaciones.slice(COMBINACIONES_EN_TABLA);
-  const filas = primeras.map((c, i) => ({ pos: i + 1, combinacion: nombreCombinacionKuder(c.areas), estudiantes: c.estudiantes, pct: pctInterno(c.estudiantes, n) }));
-  if (resto.length) {
-    const suma = resto.reduce((a, c) => a + c.estudiantes, 0);
-    filas.push({ pos: "", combinacion: `Otras ${resto.length} combinaciones (cada una con pocos estudiantes)`, estudiantes: suma, pct: pctInterno(suma, n) });
-  }
-  filas.push({ pos: "", combinacion: "<b>Total</b>", estudiantes: `<b>${n}</b>`, pct: "<b>100%</b>" });
-  return tablaInterno("Tabla 5. Combinaciones de áreas de interés más frecuentes", filas, [
-    { key: "pos", label: "N°", align: "right" },
-    { key: "combinacion", label: "Áreas con 7 puntos o más" },
-    { key: "estudiantes", label: "Estudiantes", align: "right" },
-    { key: "pct", label: "%", align: "right" },
-  ], {
-    intro: "Cada estudiante se ubica en una sola fila: la de su combinación exacta de áreas con 7 puntos o más.",
-    nota: `Para cada estudiante se anotaron sus áreas con 7 puntos o más y se agrupó a quienes tienen exactamente la misma combinación (por ejemplo, «Científica + Servicio Social»). Un estudiante con una sola área aparece en «Solo» esa área. Cada estudiante cuenta una sola vez, por eso esta tabla suma 100% de los ${n} estudiantes con test válido. A diferencia de la Tabla 4, no usa la lista de carreras: describe cómo se combinan los intereses de los estudiantes. Los porcentajes están redondeados, así que su suma puede diferir del total en uno o dos puntos.`,
   });
 }
 
@@ -659,13 +483,10 @@ function construirTodasLasPaginasInternoKuder(stats, periodo) {
   const opcionQueCabe = intentos.find((o) => medirAlturaFragmento(armarResumen(o)) <= ALTO_PAGINA_PX - PADDING_INFERIOR_PX);
   hojaResumen.innerHTML = armarResumen(opcionQueCabe || intentos[intentos.length - 1]);
 
-  // el detalle parte en la hoja 3 (la 2 es la segunda parte del resumen), todas con el mismo encabezado liviano
+  // el detalle parte en la hoja 2, todas con el mismo encabezado liviano
   const htmlEncabezadoCont = `
     <div class="espaciador-inicio-pagina"></div>
     <div class="linea-estudiante"><span><b>${TITULO_INFORME_GLOBAL_KUDER}</b> — Test Vocacional de Kuder (uso interno)</span></div>`;
-  const hojaResumen2 = document.createElement("div");
-  hojaResumen2.className = "informe-page";
-  hojaResumen2.innerHTML = `${htmlEncabezadoCont}<div class="kuder-resumen-titulo ejec-titulo-hoja2">Resumen ejecutivo (continuación): intereses y carreras</div>${construirResumenEjecutivo2InternoKuder(stats)}${construirAvisoContinua()}`;
   const htmlAviso = construirAvisoContinua();
 
   // las tarjetas de área (con sus carreras UMAG) van con un título y una nota que dice qué
@@ -691,9 +512,6 @@ function construirTodasLasPaginasInternoKuder(stats, periodo) {
     tablaRankingColegiosInterno(stats),
     tablaNivelesInterno(stats),
     { html: construirBloqueGraficoAreasInterno(stats), compacto: construirBloqueGraficoAreasInterno(stats, { compacto: true }) },
-    tablaAreaFrecuenteInterno("Tabla 3. Áreas de interés más frecuentes por colegio", "Colegio", stats.areaPorColegio),
-    tablaPerfilesCarrerasInterno(stats),
-    tablaCombinacionesInterno(stats),
     ...htmlTarjetasArea.map((html, i) => ({ html: i === 0 ? htmlIntroTarjetas + html : html })),
   ];
 
@@ -772,7 +590,6 @@ function construirTodasLasPaginasInternoKuder(stats, periodo) {
 
   return [
     hojaResumen,
-    hojaResumen2,
     ...hojas.map((piezas, i) => {
       const contenedor = document.createElement("div");
       contenedor.className = "informe-page";
