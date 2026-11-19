@@ -276,9 +276,9 @@
       if (E.vista !== "revision" || filas.length !== n) throw new Error(`el cuadro dice ${n} y la pestaña Revisión muestra ${filas.length}`);
       const id = filas[0].dataset.id;
       await clic(filas[0]);
-      const abierta = E.vista === "curso" && E.paso === "revision" && E.visor === id;
-      await clic('[data-accion="cerrar-visor"]');
-      return n > 0 && abierta;
+      // «Revisar» lleva a la revisión de ese curso, filtrada, con la ficha arriba y la hoja resaltada (sin abrirla)
+      const ok = E.vista === "curso" && E.paso === "revision" && E.cursoId === cursoA().id && E.soloPorRevisar && !E.visor && !!q(".paes-ficha") && !!q(`#paes-hoja-${id}`);
+      return n > 0 && ok;
     });
     titulo("Editor de PDF");
     await prueba("El editor carga un PDF de cuatro hojas y muestra sus miniaturas", async () => {
@@ -349,6 +349,56 @@
       return !!c && c.estudiantes.length === 1 && c.listaOficial === true;
     });
 
+    titulo("Resultados guardados y revisión");
+    await prueba("Resultados guardados: el colegio parte cerrado, se abre al pincharlo, queda abierto y muestra el clavijero de cada prueba", async () => {
+      E.colegiosAbiertos.clear();
+      await clic('[data-vista="resultados"]');
+      const col = q("details.paes-colegio");
+      const cerrado = col && !col.open;
+      col.querySelector("summary").click();
+      await espera(150);
+      const abierto = col.open && E.colegiosAbiertos.has(col.dataset.colegio);
+      const clv = /CL:.*CL de prueba/.test(col.textContent) && /M1:.*M1 de prueba/.test(col.textContent);
+      await clic('[data-vista="resultados"]');
+      return cerrado && abierto && clv && q("details.paes-colegio").open;
+    });
+    await prueba("El buscador de Resultados guardados filtra por curso", async () => {
+      const caja = q("#paes-res-buscar");
+      caja.value = "4 b";
+      caja.dispatchEvent(new win.Event("input", { bubbles: true }));
+      const visibles = qa("details.paes-res-curso").filter((d) => d.style.display !== "none").length;
+      caja.value = "";
+      caja.dispatchEvent(new win.Event("input", { bubbles: true }));
+      return visibles === 1;
+    });
+    await prueba("«Agregar otro clavijero» crea un segundo ensayo de la misma prueba en el curso", async () => {
+      await clic('[data-vista="resultados"]');
+      await clic(`[data-accion="res-nuevo-clv"][data-curso="${cursoA().id}"]`);
+      const r = q('input[name="paes-nuevo-clv"][value="k-cl"]');
+      r.checked = true;
+      const antes = E.ensayos.filter((e) => e.cursoId === cursoA().id && e.prueba === "CL").length;
+      await clic(`[data-accion="res-nuevo-clv-ok"][data-curso="${cursoA().id}"]`);
+      await espera(300);
+      const nuevos = E.ensayos.filter((e) => e.cursoId === cursoA().id && e.prueba === "CL");
+      const ok = nuevos.length === antes + 1 && E.paso === "hojas";
+      const vacio = nuevos.find((e) => !E.hojas.some((h) => h.ensayoId === e.id));
+      if (vacio) {
+        await win.PaesDB.borrarEnsayo(vacio.id);
+        E.ensayos.splice(E.ensayos.indexOf(vacio), 1);
+      }
+      return ok;
+    });
+    await prueba("En la revisión, la ficha del curso muestra colegio, curso y clavijero, y cambia entre CL y M1 sin salir", async () => {
+      Object.assign(E, { vista: "curso", enBlanco: false, cursoId: cursoA().id, ensayoId: E.ensayos.find((e) => e.cursoId === cursoA().id && e.prueba === "CL").id, paso: "revision" });
+      await clic('[data-vista="curso"]');
+      const ficha = q(".paes-ficha");
+      if (!ficha || !/4° Medio A/.test(ficha.textContent) || !/CL de prueba/.test(ficha.textContent)) throw new Error("la ficha no muestra el curso o el clavijero");
+      const otro = qa('[data-accion="ficha-prueba"]').find((x) => !x.classList.contains("activa"));
+      if (!otro) throw new Error("no aparece el cambio de prueba en la ficha");
+      const antes = E.ensayoId;
+      await clic(otro);
+      return E.paso === "revision" && E.ensayoId !== antes && /M1 de prueba/.test(q(".paes-ficha").textContent);
+    });
     titulo("Configuración: informes, respaldo y borrado");
     await prueba("«Descargar informes» entrega un ZIP con un PDF por prueba de cada curso", async () => {
       await clic('[data-vista="config"]');

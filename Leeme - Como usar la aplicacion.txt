@@ -529,6 +529,19 @@ El trabajo va en cinco pasos:
      un cuadro naranjo "⚠ N hojas por revisar". La pestaña "🔎 Revisión" reúne
      todas las hojas pendientes de todos los cursos (por colegio, curso y prueba),
      con el estudiante y qué hay que revisar; "Revisar" abre la hoja con su imagen.
+   - "Resultados guardados": cada colegio es una barra plegable (cerrada al entrar; la
+     app recuerda cuáles abriste). Arriba hay un buscador ("Experimental", "3 A") y
+     "Abrir todos" / "Cerrar todos". Cada curso muestra el nombre de su clavijero por
+     prueba ("CL: CL FORMA 3 2026 NOV · M1: …") y tiene "🔑 Agregar otro clavijero",
+     que crea un ensayo nuevo en el curso (por ejemplo, el del segundo semestre) sin
+     tocar los anteriores.
+   - Revisión: "Revisar" (en la pestaña Revisión) lleva a la revisión de ese curso,
+     filtrada en lo pendiente y con la hoja resaltada. Arriba hay una ficha con el
+     colegio, el curso, la prueba, el clavijero, la fecha, la lista y los archivos, y
+     botones para cambiar entre CL y M1 sin salir. El visor de cada hoja también
+     muestra el colegio, el curso y el clavijero.
+   - Recordatorio de respaldo: si nunca se hizo un respaldo, o el último tiene más de
+     7 días, la pantalla de Inicio y Configuración lo avisan.
    - Colores: Competencia Lectora siempre en rojo y Matemática M1 siempre en azul.
    - "Ensayos aplicados" (arriba en "Resultados guardados"): por cada ensayo,
      primero Competencia Lectora y después Matemática, qué clavijero se aplicó y a

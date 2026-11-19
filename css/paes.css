@@ -704,3 +704,50 @@ body.modulo-paes .topbar-acciones { display: none !important; }
 .paes-rev-cab small { color: var(--texto-suave); }
 .paes-rev-cab button { margin-left: auto; }
 .paes-rev-avisos { margin: 0; padding-left: 18px; font-size: 12.5px; }
+
+/* Resultados guardados: colegios plegables, buscador y clavijeros de cada curso */
+.paes-res-barra { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px 14px; }
+.paes-res-barra input[type="search"] { flex: 1 1 320px; max-width: 520px; }
+.paes-res-barra small { color: var(--texto-suave); margin-left: auto; }
+details.paes-colegio { padding: 0; overflow: hidden; }
+details.paes-colegio > summary.paes-colegio-cab { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; cursor: pointer; padding: 13px 18px; list-style: none; background: linear-gradient(90deg, var(--paes-fondo), #fff); border-bottom: 1px solid transparent; }
+details.paes-colegio > summary.paes-colegio-cab::-webkit-details-marker { display: none; }
+details.paes-colegio > summary.paes-colegio-cab::before { content: "▸"; color: var(--paes-oscuro); font-size: 15px; width: 12px; transition: transform 0.15s; }
+details.paes-colegio[open] > summary.paes-colegio-cab::before { transform: rotate(90deg); }
+details.paes-colegio[open] > summary.paes-colegio-cab { border-bottom-color: var(--paes-borde); }
+details.paes-colegio > summary:hover { background: var(--paes-fondo); }
+.paes-colegio-nombre { font-size: 17px; font-weight: 800; color: var(--paes-oscuro); }
+.paes-colegio-datos { font-size: 12.5px; color: var(--texto-suave); }
+.paes-colegio-ok { font-size: 12px; font-weight: 700; color: #1d6b3f; background: #e6f5ec; border: 1px solid #b7e0c6; border-radius: 7px; padding: 1px 8px; }
+details.paes-colegio[open] { padding-bottom: 12px; }
+details.paes-colegio > .paes-res-curso { margin-left: 16px; margin-right: 16px; }
+.paes-res-clvs { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; margin-top: 6px; }
+.paes-res-clv { font-size: 12px; font-weight: 600; border-radius: 7px; padding: 2px 9px; background: #f3f1f8; color: #4a4460; border: 1px solid #e0dcea; }
+.paes-res-clv b { font-weight: 800; }
+.paes-res-clv.cl { background: var(--paes-cl-fondo); color: var(--paes-cl-oscuro); border-color: #f1b9b9; }
+.paes-res-clv.m1 { background: var(--paes-m1-fondo); color: var(--paes-m1-oscuro); border-color: #b5d2ee; }
+.paes-res-clv small { font-weight: 400; opacity: 0.85; }
+
+/* ficha del curso y la prueba que se está revisando */
+.paes-ficha { border-top: 5px solid #b9b4c7; }
+.paes-ficha.cl { border-top-color: var(--paes-cl); } .paes-ficha.m1 { border-top-color: var(--paes-m1); }
+.paes-ficha-cab { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.paes-ficha-prueba b { display: inline-flex; align-items: center; justify-content: center; min-width: 52px; height: 52px; border-radius: 12px; font-size: 20px; color: white; background: #6b6480; }
+.paes-ficha.cl .paes-ficha-prueba b { background: var(--paes-cl); } .paes-ficha.m1 .paes-ficha-prueba b { background: var(--paes-m1); }
+.paes-ficha-cab > div { flex: 1 1 260px; }
+.paes-ficha-titulo { font-size: 18px; font-weight: 800; color: var(--paes-oscuro); }
+.paes-ficha-titulo small { font-size: 13px; font-weight: 400; color: var(--texto-suave); }
+.paes-ficha-sub { font-size: 13.5px; color: var(--texto); margin-top: 2px; }
+.paes-ficha-datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 12px; }
+.paes-ficha-dato { background: #f7f6fb; border: 1px solid #ebe8f2; border-radius: 9px; padding: 6px 10px; min-width: 0; }
+.paes-ficha-dato span { display: block; font-size: 11px; color: var(--texto-suave); text-transform: uppercase; letter-spacing: 0.3px; }
+.paes-ficha-dato b { display: block; font-size: 13px; color: var(--texto); overflow-wrap: anywhere; }
+.paes-ficha-cambiar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--paes-borde); }
+.paes-ficha-cambiar > span { font-weight: 700; color: var(--paes-oscuro); font-size: 13px; }
+.paes-hoja.paes-hoja-foco { box-shadow: 0 0 0 4px rgba(242, 140, 40, 0.55); transition: box-shadow 0.4s; }
+.paes-visor-ctx { font-size: 13px; color: var(--texto); margin-bottom: 4px; }
+.paes-visor-ctx .paes-pill { margin: 0 4px 0 0; }
+
+/* recordatorio de respaldo */
+.paes-aviso-respaldo { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #fff6d6; border: 2px solid #ecd27a; color: #5c4300; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; font-size: 13.5px; font-weight: 600; }
+.paes-aviso-respaldo span { flex: 1 1 300px; }
