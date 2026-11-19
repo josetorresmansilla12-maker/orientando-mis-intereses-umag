@@ -387,7 +387,7 @@ function tablaRankingColegiosInterno(stats) {
   });
 }
 
-// tabla 3: por colegio, sus niveles evaluados (con cuántos cursos de cada uno) y sus 3 áreas
+// tabla 3: por colegio, el total de cursos evaluados, cuántos de cada nivel, y sus 3 áreas
 // de interés más frecuentes con el % de estudiantes del colegio que tiene cada una. Los
 // colegios con pocos estudiantes llevan un asterisco: con pocos casos, uno o dos
 // estudiantes cambian el resultado.
@@ -400,7 +400,7 @@ function tablaAreaFrecuenteInterno(titulo, grupos) {
   };
   const filas = grupos.map((g) => ({
     grupo: `${escaparHtmlKuder(g.grupo)}${g.total < MUESTRA_PEQUENA_INTERNO ? " *" : ""}<br><span class="kuder-tabla-secundario">${pluralInterno(g.total, "estudiante", "estudiantes")}</span>`,
-    niveles: g.niveles.length,
+    cursosTotal: g.niveles.reduce((a, n) => a + n.cursos, 0),
     cursos: g.niveles.map((n) => `${escaparHtmlKuder(n.nivel)}: ${pluralInterno(n.cursos, "curso", "cursos")}`).join("<br>"),
     a1: puesto(g, 0),
     a2: puesto(g, 1),
@@ -409,13 +409,13 @@ function tablaAreaFrecuenteInterno(titulo, grupos) {
   const pequenos = grupos.filter((g) => g.total < MUESTRA_PEQUENA_INTERNO).length;
   return tablaInterno(titulo, filas, [
     { key: "grupo", label: "Colegio" },
-    { key: "niveles", label: "Niveles", align: "right" },
+    { key: "cursosTotal", label: "Cursos evaluados", align: "right" },
     { key: "cursos", label: "Cursos por nivel" },
     { key: "a1", label: "1ª área más frecuente" },
     { key: "a2", label: "2ª área" },
     { key: "a3", label: "3ª área" },
   ], {
-    nota: `Para cada colegio se muestran cuántos niveles rindieron el test y cuántos cursos de cada nivel (un curso = un nivel y una letra; por ejemplo, 3° Medio A y 3° Medio B son 2 cursos). Luego, las tres áreas en que más estudiantes del colegio tienen 7 puntos o más, de mayor a menor. Bajo cada área va el porcentaje de estudiantes del colegio que la tiene. Un estudiante puede tener interés en varias áreas, por eso los tres porcentajes no suman 100%. Si dos o más áreas empatan en el tercer lugar, aparecen juntas.${pequenos ? ` * Colegios con menos de ${MUESTRA_PEQUENA_INTERNO} estudiantes: con tan pocos casos, uno o dos estudiantes pueden cambiar el resultado, así que hay que leerlos con cautela.` : ""}`,
+    nota: `Para cada colegio se muestra el total de cursos que rindieron el test y cuántos de cada nivel (un curso = un nivel y una letra; por ejemplo, 3° Medio A y 3° Medio B son 2 cursos). Luego, las tres áreas en que más estudiantes del colegio tienen 7 puntos o más, de mayor a menor. Bajo cada área va el porcentaje de estudiantes del colegio que la tiene. Un estudiante puede tener interés en varias áreas, por eso los tres porcentajes no suman 100%. Si dos o más áreas empatan en el tercer lugar, aparecen juntas.${pequenos ? ` * Colegios con menos de ${MUESTRA_PEQUENA_INTERNO} estudiantes: con tan pocos casos, uno o dos estudiantes pueden cambiar el resultado, así que hay que leerlos con cautela.` : ""}`,
   });
 }
 
@@ -579,7 +579,7 @@ function construirTodasLasPaginasInternoKuder(stats, periodo) {
     tablaRankingColegiosInterno(stats),
     tablaNivelesInterno(stats),
     { html: construirBloqueGraficoAreasInterno(stats), compacto: construirBloqueGraficoAreasInterno(stats, { compacto: true }) },
-    tablaAreaFrecuenteInterno("Tabla 3. Niveles evaluados y áreas de interés más frecuentes por colegio", stats.areaPorColegio),
+    tablaAreaFrecuenteInterno("Tabla 3. Cursos evaluados y áreas de interés más frecuentes por colegio", stats.areaPorColegio),
     ...htmlTarjetasArea.map((html, i) => ({ html: i === 0 ? htmlIntroTarjetas + html : html })),
   ];
 

@@ -253,8 +253,8 @@ Paso 2: las pestañas
      área clara; los 5 colegios con más estudiantes evaluados; las 5 áreas más
      frecuentes y los estudiantes por nivel.
    - Detalle: Tabla 1 (colegios con más estudiantes evaluados), Tabla 2 (estudiantes
-     por nivel), Figura 1 (gráfico de las 10 áreas), Tabla 3 (por colegio: niveles
-     evaluados, cursos de cada nivel y sus 3 áreas más frecuentes con el % de
+     por nivel), Figura 1 (gráfico de las 10 áreas), Tabla 3 (por colegio: cursos
+     evaluados en total, cursos de cada nivel y sus 3 áreas más frecuentes con el % de
      estudiantes del colegio; los colegios con menos de 20 estudiantes llevan * por
      ser muestra pequeña) y una tarjeta por área con sus carreras UMAG y las que la UMAG podría
      incorporar (lista editorial, no una estadística).
