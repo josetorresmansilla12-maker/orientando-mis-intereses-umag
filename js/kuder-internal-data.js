@@ -35,3 +35,15 @@ const CARRERAS_POTENCIALES_KUDER = {
   social: ["Sociología", "Criminología", "Antropología", "Obstetricia"],
   oficina: ["Administración Pública", "Ingeniería en Recursos Humanos", "Logística", "Comercio Internacional"],
 };
+
+// Perfil ajustado SOLO para la Tabla 4 del informe interno (no cambia las tarjetas de área
+// ni los informes para orientadores y estudiantes). Son las carreras a las que la lista de
+// orientación les asigna una sola área: con una sola área, cualquier estudiante que tenga
+// ese interés "calza", y la carrera queda inflada frente a las de 2 o más áreas. Acá se les
+// da un perfil de 2 áreas, como al resto. Propuesta inicial: revisar con la unidad.
+const PERFILES_AJUSTADOS_TABLA4_KUDER = {
+  "Técnico de Nivel Superior en Mantenimiento Industrial": ["mecanica", "calculo"],
+  "Técnico de Nivel Superior en Enfermería": ["cientifica", "social"],
+  "Pedagogía en Educación Diferencial": ["artistica", "social"],
+  "Técnico de Nivel Superior en Educación Especial": ["artistica", "social"],
+};
