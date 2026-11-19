@@ -172,6 +172,7 @@ function render() {
   if (estado.tab === "correccion") renderCorreccion();
   if (estado.tab === "papelera") renderPapelera();
   if (estado.tab === "estadisticas") renderEstadisticas();
+  if (estado.tab === "configuracion") renderConfiguracion();
   if (estado.tab === "kuder-interno" && typeof renderCsvInternoKuder === "function") renderCsvInternoKuder();
   // las pestañas de informes vuelven a leer los cursos elegidos de la app (por si se
   // corrigió algo en otra pestaña), y el editor de carpetas se pone al día
@@ -276,24 +277,8 @@ function cablearTopbar() {
     mostrarToast("Respaldo en Excel descargado");
   });
 
-  document.getElementById("btn-borrar-todo").addEventListener("click", () => {
-    const c = cfg();
-    const total = c.store.listar({ incluirPapelera: true }).length;
-    if (total === 0) {
-      mostrarToast(`No hay datos guardados del ${c.nombre} todavía`);
-      return;
-    }
-    confirmarAccion({
-      titulo: `⚠ Borrar todos los datos del ${c.nombre}`,
-      texto: `Esto elimina para siempre los ${total} estudiantes guardados del ${c.nombre} (incluida su papelera). Los datos del otro test no se tocan. Esta acción no se puede deshacer una vez que cierres o recargues la página. ¿Seguro que quieres continuar?`,
-      textoBoton: "Sí, borrar todo",
-      onConfirmar: () => {
-        c.store.borrarTodo();
-        mostrarToast("Todos los datos del test fueron eliminados");
-        render();
-      },
-    });
-  });
+  // misma confirmación que en "Configuración": hay que escribir ELIMINAR
+  document.getElementById("btn-borrar-todo").addEventListener("click", pedirEliminarTodo);
 
   const btnPlanillaKuder = document.getElementById("btn-planilla-kuder");
   if (btnPlanillaKuder) btnPlanillaKuder.addEventListener("click", descargarPlanillaEnBlancoKuder);
@@ -3395,3 +3380,115 @@ function renderDesglose(idContenedor, filas, nombreCampo) {
       </tbody>
     </table>`;
 }
+
+// ---------------- pestaña: configuración (solo del test elegido) ----------------
+
+function renderConfiguracion() {
+  const c = cfg();
+  const btnEliminar = document.getElementById("config-btn-eliminar");
+  btnEliminar.textContent = `🗑 Eliminar todos los datos del ${c.nombre}`;
+  btnEliminar.disabled = c.store.listar({ incluirPapelera: true }).length === 0;
+  if (c.id !== "kuder") return;
+
+  const resumen = document.getElementById("config-resumen-kuder");
+  // mismas cifras que el informe de datos cargados (cada estudiante una vez, por RUT)
+  const r = resumenDatosCargadosKuder();
+  const nEst = r.totalEstudiantes;
+  resumen.innerHTML = nEst
+    ? `Hay <b>${nEst} ${nEst === 1 ? "estudiante" : "estudiantes"}</b> en ${r.totalCursos} ${r.totalCursos === 1 ? "curso" : "cursos"} de ${r.colegios.length} ${r.colegios.length === 1 ? "colegio" : "colegios"} (sin contar la papelera).`
+    : "Todavía no hay cursos de Kuder cargados en la app.";
+  document.getElementById("config-btn-csv").disabled = !nEst;
+  document.getElementById("config-btn-informe-datos").disabled = !nEst;
+
+  const pendientes = c.revisarTraspaso ? c.store.listar().filter((e) => pendienteTraspaso(e)) : [];
+  document.getElementById("config-revisados-texto").innerHTML = pendientes.length
+    ? `Hay <b>${pendientes.length} ${pendientes.length === 1 ? "test pendiente" : "tests pendientes"}</b> en «Corrección» (no suman ${SUMA_ESPERADA_KUDER}). Este botón los deja a todos como revisados y correctos, con sus puntajes tal como están (lo mismo que «✓ Dejar así» uno por uno): dejan de aparecer como pendientes, sus informes salen sin la marca y el informe global los usa. Se puede deshacer con «↩ Deshacer» arriba.`
+    : `No hay tests pendientes en «Corrección»: todos suman ${SUMA_ESPERADA_KUDER} o ya fueron revisados.`;
+  document.getElementById("config-btn-revisados").disabled = !pendientes.length;
+}
+
+function marcarTodosRevisadosKuder() {
+  const c = cfg();
+  if (c.id !== "kuder" || !c.huellaTraspaso) return;
+  const pendientes = c.store.listar().filter((e) => pendienteTraspaso(e));
+  if (!pendientes.length) return;
+  confirmarAccion({
+    titulo: "✓ Marcar todos los test como revisados y correctos",
+    texto: `Los ${pendientes.length} tests pendientes del Test de Kuder quedarán como revisados, con sus puntajes tal como están, aunque no sumen ${SUMA_ESPERADA_KUDER}. Dejarán de aparecer en «Corrección» y el informe global los usará. Se puede deshacer con «↩ Deshacer» mientras no recargues la página. ¿Continuar?`,
+    textoBoton: `✓ Sí, marcar los ${pendientes.length}`,
+    onConfirmar: () => {
+      estado.edicionEnLista = null;
+      c.store.marcarTraspasoAceptado(
+        pendientes.map((e) => e.id),
+        c.huellaTraspaso
+      );
+      render();
+      mostrarToast(`✓ ${pendientes.length === 1 ? "1 test quedó revisado" : `${pendientes.length} tests quedaron revisados`}`);
+    },
+  });
+}
+
+// borra todos los datos del test elegido; solo si se escribe ELIMINAR (en mayúsculas)
+const PALABRA_ELIMINAR = "ELIMINAR";
+function pedirEliminarTodo() {
+  const c = cfg();
+  const total = c.store.listar({ incluirPapelera: true }).length;
+  if (total === 0) {
+    mostrarToast(`No hay datos guardados del ${c.nombre} todavía`);
+    return;
+  }
+  const modal = document.getElementById("modal-eliminar");
+  const input = document.getElementById("modal-eliminar-palabra");
+  const btn = document.getElementById("modal-eliminar-confirmar");
+  document.getElementById("modal-eliminar-titulo").textContent = `⚠ Eliminar todos los datos del ${c.nombre}`;
+  document.getElementById("modal-eliminar-texto").textContent = `Se eliminarán los ${total} ${total === 1 ? "estudiante guardado" : "estudiantes guardados"} del ${c.nombre} (incluida su papelera). Los otros módulos no se tocan. Una vez que recargues o cierres la página, no se puede recuperar: descarga antes el respaldo.`;
+  input.value = "";
+  btn.disabled = true;
+  input.oninput = () => (btn.disabled = input.value.trim() !== PALABRA_ELIMINAR);
+  input.onkeydown = (ev) => {
+    if (ev.key === "Enter" && !btn.disabled) btn.click();
+    if (ev.key === "Escape") cerrar();
+  };
+  const cerrar = () => (modal.style.display = "none");
+  document.getElementById("modal-eliminar-cancelar").onclick = cerrar;
+  modal.onclick = (ev) => {
+    if (ev.target === modal) cerrar();
+  };
+  btn.onclick = () => {
+    if (input.value.trim() !== PALABRA_ELIMINAR) return; // sin la palabra exacta no se borra nada
+    cerrar();
+    eliminarTodoDelTest(c);
+  };
+  modal.style.display = "flex";
+  input.focus();
+}
+
+function eliminarTodoDelTest(c) {
+  if (estado.editandoId) cancelarEdicion({ volver: false });
+  c.store.borrarTodo();
+  try {
+    localStorage.removeItem(c.storageKeyCurso);
+  } catch (e) {
+    console.error(e);
+  }
+  if (cfg().id === c.id) cargarCursoHeaderDesdeLocal();
+  estado.edicionEnLista = null;
+  estado.agregarEnCurso = null;
+  if (typeof reiniciarPanelOrientadores === "function") reiniciarPanelOrientadores();
+  if (typeof reiniciarMasiva === "function") reiniciarMasiva();
+  if (typeof carpetasEstado !== "undefined") carpetasEstado.marcados.clear();
+  if (c.id === "kuder" && typeof quitarCursosAppInterno === "function") quitarCursosAppInterno();
+  render();
+  mostrarToast(`Se eliminaron todos los datos del ${c.nombre}`);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const csv = document.getElementById("config-btn-csv");
+  if (csv) csv.addEventListener("click", () => descargarCsvCursosKuder(csv));
+  const inf = document.getElementById("config-btn-informe-datos");
+  if (inf) inf.addEventListener("click", () => descargarInformeDatosCargadosKuder(inf));
+  const rev = document.getElementById("config-btn-revisados");
+  if (rev) rev.addEventListener("click", marcarTodosRevisadosKuder);
+  const el = document.getElementById("config-btn-eliminar");
+  if (el) el.addEventListener("click", pedirEliminarTodo);
+});

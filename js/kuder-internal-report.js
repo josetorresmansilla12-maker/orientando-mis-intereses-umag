@@ -74,39 +74,6 @@ const claveTextoInterno = (t) =>
 const rutInterno = (r) => (r || "").toString().replace(/[^0-9kK]/g, "").toUpperCase().replace(/^0+/, "");
 const testUsableInterno = (e) => !analizarTraspasoKuder(e.puntajes).afecta || traspasoDejadoAsiKuder(e);
 
-// perfiles de carrera para la Tabla 4: las carreras UMAG agrupadas por el conjunto exacto de
-// áreas al que están vinculadas (las que tienen las mismas áreas van juntas, porque el test no
-// puede distinguirlas). Las de PERFILES_AJUSTADOS_TABLA4_KUDER usan su perfil ajustado.
-function perfilesCarrerasUMAGKuder() {
-  const ajustes = typeof PERFILES_AJUSTADOS_TABLA4_KUDER !== "undefined" ? PERFILES_AJUSTADOS_TABLA4_KUDER : {};
-  const porCarrera = new Map();
-  AREAS_KUDER.forEach((area) =>
-    area.carrerasUMAG.forEach((c) => {
-      if (!porCarrera.has(c)) porCarrera.set(c, []);
-      porCarrera.get(c).push(area);
-    })
-  );
-  Object.entries(ajustes).forEach(([c, ids]) => {
-    if (porCarrera.has(c)) porCarrera.set(c, AREAS_KUDER.filter((a) => ids.includes(a.id)));
-  });
-  const perfiles = new Map();
-  for (const [carrera, areas] of porCarrera) {
-    const clave = areas.map((a) => a.id).sort().join("|");
-    if (!perfiles.has(clave)) perfiles.set(clave, { areas, carreras: [], ajustadas: [] });
-    perfiles.get(clave).carreras.push(carrera);
-    if (ajustes[carrera]) perfiles.get(clave).ajustadas.push(carrera);
-  }
-  return [...perfiles.values()].map((p) => ({ ...p, carreras: p.carreras.sort((a, b) => a.localeCompare(b, "es")) }));
-}
-
-// parecido entre las áreas de un estudiante y las de un perfil: áreas en común ÷ áreas
-// distintas entre ambos (1 = calzan exacto). Bajo este mínimo, el estudiante no se asigna.
-const SIMILITUD_MINIMA_PERFIL_KUDER = 0.5;
-function similitudPerfilKuder(suyas, idsPerfil) {
-  const comunes = idsPerfil.filter((id) => suyas.has(id)).length;
-  return comunes / (suyas.size + idsPerfil.length - comunes);
-}
-
 function calcularEstadisticasInternasKuder(archivos) {
   // ---- 1. un registro por estudiante (por RUT)
   const registros = [];
@@ -175,29 +142,6 @@ function calcularEstadisticasInternasKuder(archivos) {
     return { grupo: c.colegio, ...areasMasFrecuentesKuder(ests) };
   });
 
-  // tabla 4: cada estudiante va a UN perfil, el más parecido a sus áreas con 7 o más (si
-  // empata entre varios, se reparte por partes iguales); así la tabla suma 100%
-  const perfilesBase = perfilesCarrerasUMAGKuder();
-  const asignados = new Map(perfilesBase.map((p) => [p, 0]));
-  let perfilSinAreas = 0;
-  let perfilSinCercano = 0;
-  todosLosEstudiantes.forEach((e) => {
-    const suyas = new Set(areasDe.get(e).map((a) => a.id));
-    if (!suyas.size) return void perfilSinAreas++;
-    let mejor = 0;
-    let empatados = [];
-    perfilesBase.forEach((p) => {
-      const sim = similitudPerfilKuder(suyas, p.areas.map((a) => a.id));
-      if (sim > mejor + 1e-9) (mejor = sim), (empatados = [p]);
-      else if (sim > 0 && Math.abs(sim - mejor) < 1e-9) empatados.push(p);
-    });
-    if (mejor < SIMILITUD_MINIMA_PERFIL_KUDER - 1e-9) return void perfilSinCercano++;
-    empatados.forEach((p) => asignados.set(p, asignados.get(p) + 1 / empatados.length));
-  });
-  const perfiles = perfilesBase
-    .map((p) => ({ ...p, estudiantes: asignados.get(p) }))
-    .sort((a, b) => b.estudiantes - a.estudiantes || a.carreras[0].localeCompare(b.carreras[0], "es"));
-
   return {
     totalTests,
     totalEstudiantes,
@@ -220,9 +164,6 @@ function calcularEstadisticasInternasKuder(archivos) {
     conAreaClara: nValidos - sinAreaClara,
     pctConAreaClara: nValidos > 0 ? Math.round(((nValidos - sinAreaClara) / nValidos) * 100) : 0,
     areaPorColegio,
-    perfiles,
-    perfilSinAreas,
-    perfilSinCercano,
   };
 }
 
@@ -459,33 +400,6 @@ function tablaAreaFrecuenteInterno(titulo, etiquetaGrupo, grupos) {
   });
 }
 
-// ---- tabla 4: grupo de carreras UMAG más parecido a los intereses de cada estudiante
-function cifraEstudiantesKuder(x) {
-  if (x === 0) return "0";
-  return x < 0.5 ? "<1" : String(Math.round(x));
-}
-function tablaPerfilesCarrerasInterno(stats) {
-  const n = stats.nValidos;
-  const hayAjustes = stats.perfiles.some((p) => p.ajustadas.length);
-  const filas = stats.perfiles.map((p) => ({
-    perfil: p.areas.map((a) => `${a.icono} ${a.nombre}`).join(" + "),
-    carreras: p.carreras.map((c) => `${escaparHtmlKuder(c)}${p.ajustadas.includes(c) ? " †" : ""}`).join(" · "),
-    estudiantes: cifraEstudiantesKuder(p.estudiantes),
-    pct: pctInterno(p.estudiantes, n),
-  }));
-  filas.push({ perfil: "—", carreras: "<i>Sus intereses no se parecen lo suficiente a ningún grupo de carreras UMAG</i>", estudiantes: String(stats.perfilSinCercano), pct: pctInterno(stats.perfilSinCercano, n) });
-  filas.push({ perfil: "—", carreras: "<i>Sin áreas con 7 puntos o más</i>", estudiantes: String(stats.perfilSinAreas), pct: pctInterno(stats.perfilSinAreas, n) });
-  return tablaInterno("Tabla 4. Grupo de carreras UMAG más parecido a los intereses de cada estudiante", filas, [
-    { key: "perfil", label: "Áreas de interés del grupo" },
-    { key: "carreras", label: "Carreras UMAG del grupo" },
-    { key: "estudiantes", label: "Estudiantes", align: "right" },
-    { key: "pct", label: "%", align: "right" },
-  ], {
-    intro: "Cada carrera UMAG está vinculada a unas áreas de interés; las carreras con las mismas áreas forman un grupo. Cada estudiante se ubica en un solo grupo: el que más se parece a sus intereses.",
-    nota: `Para cada estudiante se tomaron sus áreas con 7 puntos o más y se compararon con las de cada grupo. El parecido es la cantidad de áreas en común dividida por la cantidad de áreas distintas entre ambos: por ejemplo, un estudiante con Mecánica, Cálculo y Oficina se parece 100% al grupo de Computación e Informática (las mismas tres áreas) y 67% al de Ingeniería Mecánica (Mecánica y Cálculo: dos de sus tres áreas). El estudiante va al grupo con el mayor parecido; si empata entre varios, se reparte por partes iguales (por eso las cifras están redondeadas). Si su mayor parecido es menor a 50%, queda en «no se parecen lo suficiente». Así cada estudiante cuenta una sola vez, la tabla suma 100% de los ${n} estudiantes con test válido y los grupos se pueden comparar entre sí, tengan una o cuatro áreas.${hayAjustes ? " † Carreras que en la lista de orientación tienen una sola área; para esta tabla se les dio un perfil de dos áreas (propuesta de la unidad), porque con una sola área cualquier estudiante con ese interés calzaría y la carrera quedaría inflada." : ""} La relación entre áreas y carreras sale de la lista de orientación de la unidad, no de una tabla validada. La cifra muestra cuántos estudiantes tienen intereses parecidos a los de esas carreras; no indica que quieran estudiarlas ni estima postulaciones.`,
-  });
-}
-
 function tablaNivelesInterno(stats) {
   const filas = stats.estudiantesPorNivel.map((f) => ({
     nivel: escaparHtmlKuder(f.nivel),
@@ -647,7 +561,6 @@ function construirTodasLasPaginasInternoKuder(stats, periodo) {
     tablaNivelesInterno(stats),
     { html: construirBloqueGraficoAreasInterno(stats), compacto: construirBloqueGraficoAreasInterno(stats, { compacto: true }) },
     tablaAreaFrecuenteInterno("Tabla 3. Áreas de interés más frecuentes por colegio", "Colegio", stats.areaPorColegio),
-    tablaPerfilesCarrerasInterno(stats),
     ...htmlTarjetasArea.map((html, i) => ({ html: i === 0 ? htmlIntroTarjetas + html : html })),
   ];
 

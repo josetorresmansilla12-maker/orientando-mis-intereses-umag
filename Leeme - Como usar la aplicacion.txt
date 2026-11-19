@@ -255,18 +255,8 @@ Paso 2: las pestañas
    - Detalle: Tabla 1 (colegios con más estudiantes evaluados), Tabla 2 (estudiantes
      por nivel), Figura 1 (gráfico de las 10 áreas), Tabla 3 (área más frecuente por
      colegio y la que le sigue; los colegios con menos de 20 estudiantes llevan * por
-     ser muestra pequeña), Tabla 4 (grupo de carreras UMAG más parecido a cada
-     estudiante) y una tarjeta por área con sus carreras UMAG y las que la UMAG podría
+     ser muestra pequeña) y una tarjeta por área con sus carreras UMAG y las que la UMAG podría
      incorporar (lista editorial, no una estadística).
-   - Tabla 4: las carreras con las mismas áreas forman un grupo. Cada estudiante va a
-     UN grupo, el más parecido a sus áreas con 7 o más (parecido = áreas en común ÷
-     áreas distintas entre ambos); si empata, se reparte. Con parecido menor a 50% queda
-     en "no se parecen lo suficiente". Suma 100% y los grupos se pueden comparar. Las
-     carreras con una sola área en la lista de orientación (Mantenimiento Industrial,
-     TNS Enfermería, Educación Diferencial, TNS Educación Especial) usan en esta tabla
-     un perfil de dos áreas (marcadas con †); se editan en
-     PERFILES_AJUSTADOS_TABLA4_KUDER (js/kuder-internal-data.js). Mide intereses
-     parecidos, no intención de postular.
    - Es de uso interno, así que no lleva datos de contacto.
    - La app NO guarda los archivos CSV que subes (ni ahí ni en "Ingresar datos"): solo
      los lee. Por eso, "⬇ Descargar todos los CSV (ZIP)" arma de nuevo un CSV por
@@ -280,6 +270,23 @@ Paso 2: las pestañas
 
 6. "Papelera": ahí puedes restaurar a un estudiante eliminado, o borrarlo para
    siempre.
+
+7. "Configuración": todo lo que se hace aquí afecta solo al test elegido arriba
+   (8° básico o Kuder); los otros módulos no se tocan. Ensayos PAES tiene su
+   propia Configuración.
+   - "Eliminar todos los datos": borra todos los estudiantes del test elegido
+     (incluida su papelera). Pide escribir ELIMINAR en mayúsculas; si no se escribe
+     exactamente así, no borra nada. El botón "🗑 Borrar todo" de arriba pide lo
+     mismo. Se puede deshacer con "Deshacer" mientras no recargues la página.
+   - Solo Kuder, "Respaldar CSV (ZIP)": un CSV por curso con los datos actuales
+     (mismo formato del prellenado; se vuelven a cargar con "Importación masiva").
+   - Solo Kuder, "Descargar informe de datos cargados": un PDF con la fecha de
+     exportación, el total de estudiantes evaluados (una vez por RUT), los colegios,
+     sus cursos y cuántos estudiantes por colegio. Guárdalo en la misma carpeta que
+     los CSV del mismo día.
+   - Solo Kuder, "Marcar todos los test como revisados y correctos": deja todos los
+     tests pendientes de "Corrección" como "Dejar así" (puntajes tal como están).
+     El informe global los usa. Se puede deshacer con "Deshacer".
 
 Revisión de traspaso (solo Kuder)
 ---------------------------------

@@ -5769,7 +5769,7 @@
       case "cfg-borrar-si": {
         const palabra = raiz.querySelector("#paes-cfg-palabra");
         const clv = raiz.querySelector("#paes-cfg-clv");
-        if (!palabra || palabra.value.trim().toUpperCase() !== "ELIMINAR") {
+        if (!palabra || palabra.value.trim() !== "ELIMINAR") {
           toast("Para confirmar, escribe ELIMINAR en el cuadro.");
           if (palabra) palabra.focus();
           break;

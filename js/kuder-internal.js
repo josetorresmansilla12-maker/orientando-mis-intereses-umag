@@ -374,3 +374,131 @@ document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("kuder-interno-btn-csv");
   if (btn) btn.addEventListener("click", () => descargarCsvCursosKuder(btn));
 });
+
+// al eliminar todos los datos de Kuder, los cursos elegidos "de la app" dejan de existir:
+// se quitan de la lista del informe global (los archivos subidos se quedan)
+function quitarCursosAppInterno() {
+  if (!kuderInternoEstadoActual.some((f) => f.origen === "app")) return;
+  kuderInternoEstadoActual = kuderInternoEstadoActual.filter((f) => f.origen !== "app");
+  if (!kuderInternoEstadoActual.length) document.getElementById("kuder-interno-revision").style.display = "none";
+  else renderKuderInternoListaArchivos();
+}
+
+// ==================== informe de datos cargados (Configuración → Respaldo) ====================
+// Un PDF corto para guardar junto a los CSV de respaldo: cuántos estudiantes hay cargados,
+// de qué colegios y cuántos por colegio, con la fecha de exportación. Mismas reglas de
+// conteo que el informe global: cada estudiante una vez, por RUT (los que no tienen RUT
+// cuentan cada uno); colegios juntos aunque estén escritos con o sin tilde o mayúsculas;
+// cursos = colegio + curso + letra. No incluye la papelera.
+
+function resumenDatosCargadosKuder() {
+  const vistos = new Set();
+  let repetidos = 0;
+  const colegios = new Map();
+  storeKuder.listar().forEach((e) => {
+    const rut = rutInterno(e.rut);
+    if (rut && vistos.has(rut)) return void repetidos++;
+    if (rut) vistos.add(rut);
+    const nombre = (e.colegio || "").trim() || "Sin colegio";
+    const clave = claveTextoInterno(nombre);
+    if (!colegios.has(clave)) colegios.set(clave, { colegio: nombre, estudiantes: 0, cursos: new Map() });
+    const g = colegios.get(clave);
+    g.estudiantes++;
+    const etiqueta = [e.curso, e.letra].filter(Boolean).join(" ").trim() || "Sin curso";
+    g.cursos.set(claveTextoInterno(etiqueta), etiqueta);
+  });
+  const lista = [...colegios.values()]
+    .map((g) => ({ ...g, cursos: [...g.cursos.values()].sort((a, b) => compararNombres(a, b)) }))
+    .sort((a, b) => compararNombres(a.colegio, b.colegio));
+  return {
+    colegios: lista,
+    totalEstudiantes: lista.reduce((a, g) => a + g.estudiantes, 0),
+    totalCursos: lista.reduce((a, g) => a + g.cursos.length, 0),
+    repetidos,
+  };
+}
+
+function construirPaginasDatosCargadosKuder(r, fechaExportacion) {
+  const titulo = "Informe de datos cargados";
+  const kpi = (num, lbl, sub) => `<div class="ejec-kpi"><div class="ejec-num">${num}</div><div class="ejec-lbl">${lbl}</div><div class="ejec-sub">${sub}</div></div>`;
+  const cabecera = `
+    ${construirBanner(titulo, "Test Vocacional de Kuder · respaldo de los datos guardados en la app", { antetitulo: "Universidad de Magallanes" })}
+    <div class="id-card-wrap">
+      <div class="id-card">
+        <div class="id-card-avatar">${ICONO_INTERNO_KUDER}</div>
+        <div class="id-card-datos">
+          <div class="id-card-nombre">Exportado el ${escaparHtmlKuder(fechaExportacion)}</div>
+          <div class="id-card-sub">${pluralInterno(r.totalEstudiantes, "estudiante evaluado", "estudiantes evaluados")} · ${pluralInterno(r.colegios.length, "colegio", "colegios")} · ${pluralInterno(r.totalCursos, "curso", "cursos")}</div>
+        </div>
+      </div>
+    </div>
+    <div class="ejec">
+      <div class="ejec-kpis ejec-kpis-3">
+        ${kpi(r.totalEstudiantes, "Estudiantes evaluados", "cada uno una sola vez, por RUT")}
+        ${kpi(r.colegios.length, "Colegios", "con al menos un estudiante cargado")}
+        ${kpi(r.totalCursos, "Cursos", "colegio + curso + letra")}
+      </div>
+    </div>`;
+  const encabezadoCont = `
+    <div class="espaciador-inicio-pagina"></div>
+    <div class="linea-estudiante"><span><b>${titulo}</b> — Test Vocacional de Kuder · exportado el ${escaparHtmlKuder(fechaExportacion)}</span></div>`;
+  const filas = r.colegios.map((g, i) => ({
+    pos: i + 1,
+    colegio: escaparHtmlKuder(g.colegio),
+    cursos: escaparHtmlKuder(g.cursos.join(", ")),
+    estudiantes: g.estudiantes,
+    pct: pctInterno(g.estudiantes, r.totalEstudiantes),
+  }));
+  filas.push({ pos: "", colegio: "<b>Total</b>", cursos: `<b>${pluralInterno(r.totalCursos, "curso", "cursos")}</b>`, estudiantes: `<b>${r.totalEstudiantes}</b>`, pct: "<b>100%</b>" });
+  const columnas = [
+    { key: "pos", label: "N°" },
+    { key: "colegio", label: "Colegio" },
+    { key: "cursos", label: "Cursos cargados" },
+    { key: "estudiantes", label: "Estudiantes", align: "right" },
+    { key: "pct", label: "% del total", align: "right" },
+  ];
+  const nota = `Datos guardados en la app al momento de exportar, sin contar los estudiantes en la papelera. Cada estudiante se cuenta una sola vez, por su RUT${r.repetidos ? ` (${pluralInterno(r.repetidos, "registro repetido no se contó", "registros repetidos no se contaron")} dos veces)` : ""}; los que no tienen RUT se cuentan cada uno. Los colegios escritos con o sin tilde o mayúsculas se juntan en uno. Los colegios van en orden alfabético.`;
+  const tabla = (desde, hasta, cont) =>
+    construirTablaRankingKuder(`Tabla 1. Estudiantes evaluados por colegio${cont ? " (continuación)" : ""}`, filas.slice(desde, hasta), columnas, "", hasta >= filas.length ? nota : "");
+  const pie = `<div class="informe-footer"><p>Respaldo de uso interno de la Unidad de Admisión y Marketing. Guárdalo junto a los CSV exportados el mismo día.</p></div>`;
+  const limite = ALTO_PAGINA_PX - PADDING_INFERIOR_PX;
+  const paginas = [];
+  let desde = 0;
+  let primera = true;
+  while (desde < filas.length || primera) {
+    const arriba = primera ? cabecera : encabezadoCont;
+    const armar = (hasta) => `${arriba}${tabla(desde, hasta, !primera)}${hasta >= filas.length ? pie : construirAvisoContinua()}`;
+    let hasta = filas.length;
+    while (hasta > desde + 1 && medirAlturaFragmento(armar(hasta)) > limite) hasta--;
+    const pagina = document.createElement("div");
+    pagina.className = "informe-page";
+    pagina.innerHTML = armar(hasta);
+    paginas.push(pagina);
+    desde = hasta;
+    primera = false;
+  }
+  return paginas;
+}
+
+async function descargarInformeDatosCargadosKuder(btn) {
+  const r = resumenDatosCargadosKuder();
+  if (!r.totalEstudiantes) {
+    mostrarToast("Todavía no hay estudiantes de Kuder cargados");
+    return;
+  }
+  const ahora = new Date();
+  const fecha = ahora.toLocaleDateString("es-CL", { day: "numeric", month: "long", year: "numeric" });
+  const hora = ahora.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit", hour12: false });
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Generando…";
+  try {
+    const blob = await paginasAPdfBlob(construirPaginasDatosCargadosKuder(r, `${fecha}, ${hora}`));
+    const iso = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, "0")}-${String(ahora.getDate()).padStart(2, "0")}`;
+    descargarArchivo(blob, `Kuder Informe de datos cargados ${iso}.pdf`);
+    mostrarToast("Informe de datos cargados descargado");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+}

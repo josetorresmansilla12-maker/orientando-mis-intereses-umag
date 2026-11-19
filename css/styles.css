@@ -1825,3 +1825,9 @@ details.grupo-colegio > summary .btn-lapiz-colegio:focus-visible { opacity: 1; c
 .informe-page .kuder-tabla-intro { font-size: 10.5px; margin: -2px 0 7px; }
 .informe-page .kuder-nota-tabla { background: #f8f6fb; border-left: 3px solid #b9a6d8; border-radius: 0 6px 6px 0; padding: 6px 10px; margin-top: 6px; }
 .informe-page .kuder-ranking-bloque, .informe-page .kuder-chart-bloque { margin-bottom: 16px; }
+
+/* ---- pestaña Configuración ---- */
+.config-peligro { border-left: 5px solid #c0392b; }
+#modal-eliminar label { display: block; margin: 10px 0 4px; }
+#modal-eliminar input { width: 100%; box-sizing: border-box; font-size: 16px; letter-spacing: 1px; }
+.ejec-kpis.ejec-kpis-3 { grid-template-columns: repeat(3, 1fr); }

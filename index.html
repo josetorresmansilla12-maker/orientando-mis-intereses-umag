@@ -4,8 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Orientando mis Intereses — Informes</title>
-<link rel="stylesheet" href="css/styles.css?v=20261064" />
-<link rel="stylesheet" href="css/paes.css?v=20261064" />
+<link rel="stylesheet" href="css/styles.css?v=20261065" />
+<link rel="stylesheet" href="css/paes.css?v=20261065" />
 </head>
 <body class="test-octavo">
 
@@ -59,6 +59,7 @@
       <button class="tab-btn" data-tab="kuder">🏫 Informes para orientadores</button>
       <button class="tab-btn" data-tab="kuder-interno" data-solo-test="kuder">🔒 Uso interno</button>
       <button class="tab-btn" data-tab="papelera">🗑 Papelera</button>
+      <button class="tab-btn" data-tab="configuracion">⚙️ Configuración</button>
     </div>
   </nav>
 
@@ -418,6 +419,40 @@
       </div>
     </section>
 
+    <!-- ===================== CONFIGURACIÓN (solo del test elegido) ===================== -->
+    <section id="panel-configuracion" class="panel">
+      <div class="tarjeta">
+        <h2>⚙️ Configuración <span class="badge-test" data-badge-test></span></h2>
+        <p class="ayuda" style="margin-bottom:0;">Todo lo que hagas aquí se aplica solo al <b data-badge-test></b>. Los datos de los otros módulos no se tocan.</p>
+      </div>
+
+      <div class="tarjeta" data-solo-test="kuder">
+        <h2 style="font-size:16px;">💾 Respaldo de los datos cargados</h2>
+        <p class="ayuda">Descarga los dos archivos y guárdalos juntos en una carpeta. Con los <b>CSV</b> (uno por curso) puedes volver a cargar los cursos más adelante («Ingresar datos» → «📦 Importación masiva») y generar de nuevo cualquier informe. El <b>informe de datos cargados</b> (PDF) responde de un vistazo cuántos estudiantes se evaluaron, de qué colegios y cuántos por colegio, con la fecha en que se exportó.</p>
+        <p class="ayuda" id="config-resumen-kuder" style="margin-top:0;"></p>
+        <div class="acciones-form">
+          <button type="button" id="config-btn-csv">⬇ Respaldar CSV (ZIP)</button>
+          <button type="button" id="config-btn-informe-datos" class="secundario">📄 Descargar informe de datos cargados</button>
+        </div>
+      </div>
+
+      <div class="tarjeta" data-solo-test="kuder">
+        <h2 style="font-size:16px;">✓ Tests mal traspasados</h2>
+        <p class="ayuda" id="config-revisados-texto"></p>
+        <div class="acciones-form">
+          <button type="button" id="config-btn-revisados" class="exito">✓ Marcar todos los test como revisados y correctos</button>
+        </div>
+      </div>
+
+      <div class="tarjeta config-peligro">
+        <h2 style="font-size:16px;">🗑 Eliminar todos los datos</h2>
+        <p class="ayuda">Borra todos los estudiantes del <b data-badge-test></b> guardados en este navegador, incluida su papelera, y los datos del curso que estabas ingresando. Los otros módulos no se tocan. Antes de hacerlo, descarga el respaldo.</p>
+        <div class="acciones-form">
+          <button type="button" id="config-btn-eliminar" class="peligro">🗑 Eliminar todos los datos</button>
+        </div>
+      </div>
+    </section>
+
     <!-- ===================== ENSAYOS PAES ===================== -->
     <!-- módulo aparte de los test: se muestra al elegir «Ensayos PAES» arriba y lo dibuja js/paes-app.js -->
     <section id="modulo-paes"></section>
@@ -437,6 +472,20 @@
       <div class="modal-acciones">
         <button type="button" id="modal-btn-cancelar" class="secundario">Cancelar</button>
         <button type="button" id="modal-btn-confirmar" class="peligro">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== MODAL: ELIMINAR TODO (hay que escribir ELIMINAR) ===================== -->
+  <div id="modal-eliminar" class="modal-overlay" style="display:none;">
+    <div class="modal-caja">
+      <h3 id="modal-eliminar-titulo">Eliminar todos los datos</h3>
+      <p id="modal-eliminar-texto"></p>
+      <label for="modal-eliminar-palabra">Para confirmar, escribe <b>ELIMINAR</b> en mayúsculas:</label>
+      <input type="text" id="modal-eliminar-palabra" autocomplete="off" spellcheck="false" autocapitalize="off" />
+      <div class="modal-acciones">
+        <button type="button" id="modal-eliminar-cancelar" class="secundario">Cancelar</button>
+        <button type="button" id="modal-eliminar-confirmar" class="peligro" disabled>🗑 Eliminar todo</button>
       </div>
     </div>
   </div>
@@ -611,45 +660,45 @@
        cada actualización (si no, puede mezclar archivos nuevos con otros guardados en
        caché y la app deja de funcionar); se cambia cada vez que se publica una versión -->
   <!-- datos de cada test (van primero: js/store.js arma un guardado por test) -->
-  <script src="js/data.js?v=20261064"></script>
-  <script src="js/icons.js?v=20261064"></script>
-  <script src="js/kuder-data.js?v=20261064"></script>
-  <script src="js/kuder-icons.js?v=20261064"></script>
-  <script src="js/cursos.js?v=20261064"></script>
-  <script src="js/logo.js?v=20261064"></script>
-  <script src="js/store.js?v=20261064"></script>
+  <script src="js/data.js?v=20261065"></script>
+  <script src="js/icons.js?v=20261065"></script>
+  <script src="js/kuder-data.js?v=20261065"></script>
+  <script src="js/kuder-icons.js?v=20261065"></script>
+  <script src="js/cursos.js?v=20261065"></script>
+  <script src="js/logo.js?v=20261065"></script>
+  <script src="js/store.js?v=20261065"></script>
 
   <!-- informes: 8° básico (individual) y Kuder (grupal para orientadores e individual) -->
-  <script src="js/report.js?v=20261064"></script>
-  <script src="js/excel.js?v=20261064"></script>
-  <script src="js/kuder.js?v=20261064"></script>
-  <script src="js/kuder-report.js?v=20261064"></script>
-  <script src="js/kuder-individual-report.js?v=20261064"></script>
+  <script src="js/report.js?v=20261065"></script>
+  <script src="js/excel.js?v=20261065"></script>
+  <script src="js/kuder.js?v=20261065"></script>
+  <script src="js/kuder-report.js?v=20261065"></script>
+  <script src="js/kuder-individual-report.js?v=20261065"></script>
 
   <!-- interfaz común (selector de test, pestañas, formularios) -->
-  <script src="js/app.js?v=20261064"></script>
+  <script src="js/app.js?v=20261065"></script>
   <!-- elegir cursos de la app, editar carpetas e importación masiva -->
-  <script src="js/selector-cursos.js?v=20261064"></script>
-  <script src="js/carpetas.js?v=20261064"></script>
-  <script src="js/importacion-masiva.js?v=20261064"></script>
-  <script src="js/anadir-curso-csv.js?v=20261064"></script>
+  <script src="js/selector-cursos.js?v=20261065"></script>
+  <script src="js/carpetas.js?v=20261065"></script>
+  <script src="js/importacion-masiva.js?v=20261065"></script>
+  <script src="js/anadir-curso-csv.js?v=20261065"></script>
 
   <!-- informe interno de Kuder (Admisión y Marketing) — reutiliza el lector de
        planillas de js/kuder.js y varias utilidades genéricas de js/kuder-report.js -->
-  <script src="js/kuder-internal-data.js?v=20261064"></script>
-  <script src="js/kuder-internal-report.js?v=20261064"></script>
-  <script src="js/kuder-internal.js?v=20261064"></script>
+  <script src="js/kuder-internal-data.js?v=20261065"></script>
+  <script src="js/kuder-internal-report.js?v=20261065"></script>
+  <script src="js/kuder-internal.js?v=20261065"></script>
 
   <!-- módulo Ensayos PAES: plantilla de la hoja, lector de hojas, reglas (RUT, vinculación,
        corrección y puntaje), guardado propio, lectura de PDF, Excel y pantalla. El lector
        de PDF (vendor/pdfjs) se carga solo cuando se sube el primer archivo. -->
-  <script src="js/paes-plantillas.js?v=20261064"></script>
-  <script src="js/paes-lector.js?v=20261064"></script>
-  <script src="js/paes-logica.js?v=20261064"></script>
-  <script src="js/paes-db.js?v=20261064"></script>
-  <script src="js/paes-pdf.js?v=20261064"></script>
-  <script src="js/paes-excel.js?v=20261064"></script>
-  <script src="js/paes-informe.js?v=20261064"></script>
-  <script src="js/paes-app.js?v=20261064"></script>
+  <script src="js/paes-plantillas.js?v=20261065"></script>
+  <script src="js/paes-lector.js?v=20261065"></script>
+  <script src="js/paes-logica.js?v=20261065"></script>
+  <script src="js/paes-db.js?v=20261065"></script>
+  <script src="js/paes-pdf.js?v=20261065"></script>
+  <script src="js/paes-excel.js?v=20261065"></script>
+  <script src="js/paes-informe.js?v=20261065"></script>
+  <script src="js/paes-app.js?v=20261065"></script>
 </body>
 </html>
