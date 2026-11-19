@@ -23,13 +23,13 @@ const CARRERAS_POTENCIALES_KUDER = {
   exterior: ["Medicina Veterinaria", "Ingeniería Forestal", "Geología", "Ciencias Ambientales", "Oceanografía"],
   // sin "Mecánica Automotriz": la UMAG ya imparte Ingeniería Mecánica, así que es redundante
   mecanica: ["Ingeniería en Minas", "Ingeniería Mecatrónica", "Ingeniería Aeroespacial", "Ingeniería en Robótica"],
-  calculo: ["Estadística", "Ingeniería Civil Industrial", "Ingeniería en Telecomunicaciones"],
-  cientifica: ["Odontología", "Química y Farmacia", "Bioquímica", "Ingeniería Biomédica", "Medicina Veterinaria"],
-  persuasiva: ["Marketing", "Publicidad", "Relaciones Internacionales", "Ciencias Políticas"],
+  calculo: ["Ingeniería Civil Industrial", "Economía", "Estadística", "Ingeniería en Telecomunicaciones"],
+  cientifica: ["Odontología", "Química y Farmacia", "Tecnología Médica", "Medicina Veterinaria", "Bioquímica", "Ingeniería Biomédica"],
+  persuasiva: ["Publicidad", "Marketing", "Relaciones Públicas", "Ciencias Políticas", "Relaciones Internacionales"],
   // Artística: la UMAG solo ofrece 4 carreras en esta área — se amplía la lista más
   // que en las demás para reflejar cuánta oferta relevante falta.
-  artistica: ["Diseño Gráfico", "Diseño Industrial", "Cine", "Licenciatura en Artes Visuales", "Teatro y Artes Escénicas", "Diseño de Moda"],
-  literaria: ["Periodismo", "Licenciatura en Letras", "Comunicación Social"],
+  artistica: ["Diseño Gráfico", "Gastronomía", "Diseño Industrial", "Cine", "Licenciatura en Artes Visuales", "Teatro y Artes Escénicas", "Diseño de Moda"],
+  literaria: ["Periodismo", "Comunicación Audiovisual", "Licenciatura en Letras", "Comunicación Social"],
   // Musical: la UMAG solo ofrece 2 carreras en esta área — mismo criterio que Artística.
   musical: ["Interpretación Musical", "Composición Musical", "Ingeniería en Sonido", "Producción Musical"],
   social: ["Sociología", "Criminología", "Antropología", "Obstetricia"],

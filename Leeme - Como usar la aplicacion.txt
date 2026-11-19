@@ -242,28 +242,33 @@ Paso 2: las pestañas
      solo uno.
    - En la revisión de este informe no se marcan los tests mal traspasados (a esa
      altura los informes individuales ya se entregaron).
-   - La primera hoja es un resumen ejecutivo para gerencia, breve y con cifras
-     grandes: estudiantes evaluados, colegios atendidos, cursos evaluados y % con al
-     menos un área de interés clara (cada uno con su promedio debajo: estudiantes por
-     curso, por colegio, cursos por colegio y áreas por estudiante); los 5 colegios que
-     más solicitan el test (3 si los nombres son tan largos que no caben 5); las 5
-     áreas de interés más frecuentes y los estudiantes evaluados por nivel.
-   - El ranking de colegios se ordena por estudiantes evaluados (lo principal); si dos
-     empatan, va primero el que tiene más cursos evaluados. Los cursos de cada colegio
-     van aparte, en gris, como dato complementario: no cambian el orden. No se
-     comparan colegios por curso (un colegio con un solo curso no podría competir).
-   - Desde la hoja 2 va el detalle: la tabla de todos los colegios (estudiantes, % del
-     total y cursos evaluados); los estudiantes por nivel (todos los primeros juntos,
-     todos los segundos juntos..., sin separar por letra; el nivel sale del curso de
-     cada estudiante); el gráfico de las 10 áreas; el área de interés más frecuente de
-     cada colegio y de cada nivel (si dos empatan, van las dos), y una tarjeta por área
-     con sus carreras UMAG. Las tablas largas se cortan entre filas para llenar cada
-     hoja (lo que no cabe sigue en la siguiente, "continuación").
-   - No hay una "demanda por carrera": el informe muestra las carreras UMAG vinculadas a
-     cada área (la lista de orientación de la unidad), sin un número por carrera. Los
-     puntajes del Kuder son preferencias relativas entre áreas (las 10 suman 45), no
-     intención de estudiar una carrera; y como cada carrera está vinculada a un número
-     distinto de áreas, un conteo por carrera favorecería a las que tienen más áreas.
+   - Reglas de conteo (cada tabla las explica en su "Nota." al pie, en palabras
+     simples): cada estudiante se cuenta una sola vez, por su RUT (si un curso se
+     cargó dos veces no se duplica); los colegios se juntan aunque estén escritos con
+     o sin tilde o mayúsculas; los cursos se cuentan por colegio + curso + letra. Un
+     test que no suma 45 se usa igual si el error no puede cambiar ninguna área de lado
+     del 7; solo queda fuera del análisis de áreas si el error sí podría cambiarlas y
+     nadie lo revisó ("Dejar así"), y el informe dice cuántos fueron.
+   - Hojas 1 y 2: resumen ejecutivo. Hoja 1: estudiantes, colegios, cursos y % con al
+     menos un área clara; los 5 colegios con más estudiantes evaluados; las 5 áreas
+     más frecuentes y los estudiantes por nivel. Hoja 2: los perfiles de carreras UMAG
+     con más estudiantes compatibles (los de 2 áreas y los de 3 o 4, por separado) y
+     las combinaciones de áreas más frecuentes.
+   - Detalle: colegios con más estudiantes evaluados; estudiantes por nivel; gráfico
+     de las 10 áreas; áreas más frecuentes por colegio (con la que le sigue; los
+     colegios con menos de 20 estudiantes llevan * por ser muestra pequeña); Tabla A;
+     Tabla B, y una tarjeta por área con sus carreras UMAG y las que la UMAG podría
+     incorporar (lista editorial, no una estadística).
+   - Tabla A, "perfil de intereses de cada grupo de carreras": cada carrera UMAG está
+     vinculada a unas áreas (su perfil; por ejemplo, Fonoaudiología = Científica +
+     Musical + Servicio Social). Un estudiante cuenta para un perfil solo si tiene 7 o
+     más en todas sus áreas. Las carreras con las mismas áreas van en una fila. Se
+     ordena por cantidad de áreas del perfil y luego de mayor a menor (solo se comparan
+     perfiles con la misma cantidad de áreas). Mide intereses compatibles, no
+     intención de estudiar la carrera; un estudiante puede estar en varias filas.
+   - Tabla B, "combinaciones de áreas": cada estudiante en una sola fila, la de su
+     combinación exacta de áreas con 7 o más ("Solo Mecánica", "Científica + Servicio
+     Social", "Sin áreas con 7 o más"...). Suma 100%.
    - Es de uso interno, así que no lleva datos de contacto.
    - La app NO guarda los archivos CSV que subes (ni ahí ni en "Ingresar datos"): solo
      los lee. Por eso, "⬇ Descargar todos los CSV (ZIP)" arma de nuevo un CSV por
