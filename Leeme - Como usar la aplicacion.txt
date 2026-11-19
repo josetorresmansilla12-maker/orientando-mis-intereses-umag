@@ -256,17 +256,17 @@ Paso 2: las pestañas
      las combinaciones de áreas más frecuentes.
    - Detalle: colegios con más estudiantes evaluados; estudiantes por nivel; gráfico
      de las 10 áreas; áreas más frecuentes por colegio (con la que le sigue; los
-     colegios con menos de 20 estudiantes llevan * por ser muestra pequeña); Tabla A;
-     Tabla B, y una tarjeta por área con sus carreras UMAG y las que la UMAG podría
+     colegios con menos de 20 estudiantes llevan * por ser muestra pequeña); Tabla 4 (perfiles de carreras);
+     Tabla 5 (combinaciones de áreas), y una tarjeta por área con sus carreras UMAG y las que la UMAG podría
      incorporar (lista editorial, no una estadística).
-   - Tabla A, "perfil de intereses de cada grupo de carreras": cada carrera UMAG está
+   - Tabla 4, "perfil de intereses de cada grupo de carreras": cada carrera UMAG está
      vinculada a unas áreas (su perfil; por ejemplo, Fonoaudiología = Científica +
      Musical + Servicio Social). Un estudiante cuenta para un perfil solo si tiene 7 o
      más en todas sus áreas. Las carreras con las mismas áreas van en una fila. Se
      ordena por cantidad de áreas del perfil y luego de mayor a menor (solo se comparan
      perfiles con la misma cantidad de áreas). Mide intereses compatibles, no
      intención de estudiar la carrera; un estudiante puede estar en varias filas.
-   - Tabla B, "combinaciones de áreas": cada estudiante en una sola fila, la de su
+   - Tabla 5, "combinaciones de áreas": cada estudiante en una sola fila, la de su
      combinación exacta de áreas con 7 o más ("Solo Mecánica", "Científica + Servicio
      Social", "Sin áreas con 7 o más"...). Suma 100%.
    - Es de uso interno, así que no lleva datos de contacto.

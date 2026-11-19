@@ -261,6 +261,13 @@ function decimalInterno(n) {
   return n.toLocaleString("es-CL", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
 
+// texto del porcentaje: entero, salvo que haya casos y redondee a 0 («<1%»)
+function pctInterno(parte, total) {
+  if (!(total > 0)) return "—";
+  const v = (parte / total) * 100;
+  return parte > 0 && v < 0.5 ? "<1%" : `${Math.round(v)}%`;
+}
+
 function porcentajeInterno(parte, total) {
   return total > 0 ? Math.round((parte / total) * 100) : 0;
 }
@@ -279,12 +286,12 @@ function construirTopColegiosInterno(colegios, total) {
           <span class="ejec-pos">${i + 1}</span>
           <span class="ejec-nombre">${escaparHtmlKuder(f.colegio)}</span>
           <span class="ejec-rank-barra"><span style="width:${(f.estudiantes / max) * 100}%;"></span></span>
-          <span class="ejec-dato"><b>${f.estudiantes}</b> est. · ${porcentajeInterno(f.estudiantes, total)}%</span>
+          <span class="ejec-dato"><b>${f.estudiantes}</b> est. · ${pctInterno(f.estudiantes, total)}</span>
           <span class="ejec-cursos">${pluralInterno(f.aplicaciones, "curso", "cursos")}</span>
         </div>`
         )
         .join("")}
-      <div class="ejec-caja-pie">Estos ${colegios.length} colegios suman <b>${suma}</b> de los ${total} estudiantes evaluados (<b>${porcentajeInterno(suma, total)}%</b>).</div>
+      <div class="ejec-caja-pie">Estos ${colegios.length} colegios suman <b>${suma}</b> de los ${total} estudiantes evaluados (<b>${pctInterno(suma, total)}</b>).</div>
     </div>`;
 }
 
@@ -308,7 +315,7 @@ function construirResumenEjecutivoInternoKuder(stats, { compacto = false, nColeg
         ${kpi(total, "Estudiantes evaluados", `${decimalInterno(stats.promedioPorCurso)} por curso, en promedio`)}
         ${kpi(stats.colegiosDistintos, "Colegios atendidos", `${decimalInterno(stats.promedioPorColegio)} estudiantes por colegio`)}
         ${kpi(stats.totalTests, "Cursos evaluados", `${decimalInterno(stats.promedioCursosPorColegio)} cursos por colegio`)}
-        ${kpi(`${stats.pctConAreaClara}%`, "Con al menos un área de interés clara", `${decimalInterno(stats.promedioAreasInteres)} áreas por estudiante`)}
+        ${kpi(`${stats.pctConAreaClara}%`, "Con al menos un área de interés clara", `${decimalInterno(stats.promedioAreasInteres)} áreas por estudiante${stats.excluidos ? ` · de ${stats.nValidos} con test válido` : ""}`)}
       </div>
 
       ${construirTopColegiosInterno(stats.rankingColegios.slice(0, nColegios), total)}
@@ -321,7 +328,7 @@ function construirResumenEjecutivoInternoKuder(stats, { compacto = false, nColeg
             .map(
               ({ area, c }) => `
             <div class="ejec-barra-fila">
-              <div class="ejec-barra-texto"><b>${area.icono} ${area.nombre}</b><span>${porcentajeInterno(c, nValidos)}% · ${c} est.</span></div>
+              <div class="ejec-barra-texto"><b>${area.icono} ${area.nombre}</b><span>${pctInterno(c, nValidos)} · ${c} est.</span></div>
               <div class="ejec-barra"><div style="width:${porcentajeInterno(c, nValidos)}%; background:${area.color};"></div></div>
             </div>`
             )
@@ -334,7 +341,7 @@ function construirResumenEjecutivoInternoKuder(stats, { compacto = false, nColeg
             .map(
               (n) => `
             <div class="ejec-barra-fila">
-              <div class="ejec-barra-texto"><b>${escaparHtmlKuder(n.nivel)}</b><span>${n.estudiantes} est. · ${porcentajeInterno(n.estudiantes, total)}%</span></div>
+              <div class="ejec-barra-texto"><b>${escaparHtmlKuder(n.nivel)}</b><span>${n.estudiantes} est. · ${pctInterno(n.estudiantes, total)}</span></div>
               <div class="ejec-barra"><div style="width:${(n.estudiantes / maxNivel) * 100}%;"></div></div>
             </div>`
             )
@@ -356,7 +363,7 @@ function construirResumenEjecutivo2InternoKuder(stats) {
   const n = stats.nValidos;
   const fila = (texto, sub, c, color) => `
     <div class="ejec-barra-fila">
-      <div class="ejec-barra-texto"><b>${texto}</b><span>${porcentajeInterno(c, n)}% · ${c} est.</span></div>
+      <div class="ejec-barra-texto"><b>${texto}</b><span>${pctInterno(c, n)} · ${c} est.</span></div>
       ${sub ? `<div class="ejec-perfil-carreras">${sub}</div>` : ""}
       <div class="ejec-barra"><div style="width:${porcentajeInterno(c, n)}%;${color ? ` background:${color};` : ""}"></div></div>
     </div>`;
@@ -373,13 +380,13 @@ function construirResumenEjecutivo2InternoKuder(stats) {
           <div><div class="ejec-subgrupo">Perfiles de 2 áreas</div>${de2.map(perfil).join("")}</div>
           <div><div class="ejec-subgrupo">Perfiles de 3 o 4 áreas</div>${de3.map(perfil).join("")}</div>
         </div>
-        <div class="ejec-caja-pie">Un estudiante puede calzar con varios perfiles (los % no suman 100%). Mide intereses compatibles, no intención de estudiar la carrera. Detalle y método en la Tabla A.</div>
+        <div class="ejec-caja-pie">Un estudiante puede calzar con varios perfiles (los % no suman 100%). Mide intereses compatibles, no intención de estudiar la carrera. Detalle y método en la Tabla 4.</div>
       </div>
       <div class="ejec-caja">
         <div class="ejec-caja-titulo">Combinaciones de áreas de interés más frecuentes</div>
         <div class="ejec-caja-sub">cada estudiante en una sola combinación · de ${n} con test válido</div>
         ${combos.map((c) => fila(nombreCombinacionKuder(c.areas), "", c.estudiantes)).join("")}
-        <div class="ejec-caja-pie">Lista completa (suma 100%) y método en la Tabla B.</div>
+        <div class="ejec-caja-pie">Lista completa (suma 100%) y método en la Tabla 5.</div>
       </div>
     </div>`;
 }
@@ -426,7 +433,7 @@ function htmlTablaInterno(t, nFilas) {
 }
 
 function tablaRankingColegiosInterno(stats) {
-  const titulo = "Colegios con más estudiantes evaluados";
+  const titulo = "Tabla 1. Colegios con más estudiantes evaluados";
   const columnas = [
     { key: "posicion", label: "N°", align: "right" },
     { key: "colegio", label: "Colegio" },
@@ -438,7 +445,7 @@ function tablaRankingColegiosInterno(stats) {
     ...f,
     posicion: i + 1,
     colegio: escaparHtmlKuder(f.colegio),
-    pct: `${porcentajeInterno(f.estudiantes, stats.totalEstudiantes)}%`,
+    pct: pctInterno(f.estudiantes, stats.totalEstudiantes),
     cursos: `<span class="kuder-tabla-secundario">${f.aplicaciones}</span>`,
   }));
   return tablaInterno(titulo, filas, columnas, {
@@ -456,18 +463,18 @@ function tablaAreaFrecuenteInterno(titulo, etiquetaGrupo, grupos) {
     grupo: `${escaparHtmlKuder(g.grupo)}${g.total < MUESTRA_PEQUENA_INTERNO ? " *" : ""}`,
     total: g.total,
     area: g.areas.length ? nombres(g.areas) : "—",
-    pct: g.areas.length ? `${g.conArea} (${porcentajeInterno(g.conArea, g.total)}%)` : "—",
-    segunda: g.segundas && g.segundas.length ? `${nombres(g.segundas)} <span class="kuder-tabla-secundario">${porcentajeInterno(g.conSegunda, g.total)}%</span>` : "—",
+    pct: g.areas.length ? `${g.conArea} (${pctInterno(g.conArea, g.total)})` : "—",
+    segunda: g.segundas && g.segundas.length ? `${nombres(g.segundas)} <span class="kuder-tabla-secundario">${pctInterno(g.conSegunda, g.total)}</span>` : "—",
   }));
   const pequenos = grupos.filter((g) => g.total < MUESTRA_PEQUENA_INTERNO).length;
   return tablaInterno(titulo, filas, [
     { key: "grupo", label: etiquetaGrupo },
-    { key: "total", label: "Estudiantes", align: "right" },
+    { key: "total", label: "Estudiantes con test válido", align: "right" },
     { key: "area", label: "Área más frecuente" },
     { key: "pct", label: "Estudiantes con esa área", align: "right" },
     { key: "segunda", label: "Le sigue" },
   ], {
-    nota: `Para cada colegio se contó cuántos de sus estudiantes tienen 7 puntos o más en cada una de las 10 áreas, y se muestra el área con más estudiantes (si dos o más empatan, aparecen todas) y la que le sigue. El porcentaje es sobre los estudiantes de ese colegio. Un mismo estudiante puede tener interés en varias áreas, por eso los porcentajes de un colegio no suman 100%. Muestra lo que más se repite en cada colegio, no lo que eligen todos sus estudiantes.${pequenos ? ` * Colegios con menos de ${MUESTRA_PEQUENA_INTERNO} estudiantes evaluados: con tan pocos casos, uno o dos estudiantes pueden cambiar el resultado, así que hay que leerlos con cautela.` : ""}`,
+    nota: `Para cada colegio se contó cuántos de sus estudiantes tienen 7 puntos o más en cada una de las 10 áreas, y se muestra el área con más estudiantes (si dos o más empatan, aparecen todas) y la que le sigue. El porcentaje es sobre los estudiantes del colegio con test válido. Un mismo estudiante puede tener interés en varias áreas, por eso los porcentajes de un colegio no suman 100%. Muestra lo que más se repite en cada colegio, no lo que eligen todos sus estudiantes.${pequenos ? ` * Colegios con menos de ${MUESTRA_PEQUENA_INTERNO} estudiantes evaluados: con tan pocos casos, uno o dos estudiantes pueden cambiar el resultado, así que hay que leerlos con cautela.` : ""}`,
   });
 }
 
@@ -479,9 +486,9 @@ function tablaPerfilesCarrerasInterno(stats) {
     perfil: p.areas.map((a) => `${a.icono} ${a.nombre}`).join(" + "),
     carreras: p.carreras.map(escaparHtmlKuder).join(" · "),
     estudiantes: p.estudiantes,
-    pct: `${porcentajeInterno(p.estudiantes, n)}%`,
+    pct: pctInterno(p.estudiantes, n),
   }));
-  return tablaInterno("Tabla A. Estudiantes con el perfil de intereses de cada grupo de carreras UMAG", filas, [
+  return tablaInterno("Tabla 4. Estudiantes con el perfil de intereses de cada grupo de carreras UMAG", filas, [
     { key: "nAreas", label: "Áreas", align: "right" },
     { key: "perfil", label: "Áreas de interés del perfil" },
     { key: "carreras", label: "Carreras UMAG con ese perfil" },
@@ -504,20 +511,20 @@ function tablaCombinacionesInterno(stats) {
   const n = stats.nValidos;
   const primeras = stats.combinaciones.slice(0, COMBINACIONES_EN_TABLA);
   const resto = stats.combinaciones.slice(COMBINACIONES_EN_TABLA);
-  const filas = primeras.map((c, i) => ({ pos: i + 1, combinacion: nombreCombinacionKuder(c.areas), estudiantes: c.estudiantes, pct: `${porcentajeInterno(c.estudiantes, n)}%` }));
+  const filas = primeras.map((c, i) => ({ pos: i + 1, combinacion: nombreCombinacionKuder(c.areas), estudiantes: c.estudiantes, pct: pctInterno(c.estudiantes, n) }));
   if (resto.length) {
     const suma = resto.reduce((a, c) => a + c.estudiantes, 0);
-    filas.push({ pos: "", combinacion: `Otras ${resto.length} combinaciones (cada una con pocos estudiantes)`, estudiantes: suma, pct: `${porcentajeInterno(suma, n)}%` });
+    filas.push({ pos: "", combinacion: `Otras ${resto.length} combinaciones (cada una con pocos estudiantes)`, estudiantes: suma, pct: pctInterno(suma, n) });
   }
   filas.push({ pos: "", combinacion: "<b>Total</b>", estudiantes: `<b>${n}</b>`, pct: "<b>100%</b>" });
-  return tablaInterno("Tabla B. Combinaciones de áreas de interés más frecuentes", filas, [
+  return tablaInterno("Tabla 5. Combinaciones de áreas de interés más frecuentes", filas, [
     { key: "pos", label: "N°", align: "right" },
     { key: "combinacion", label: "Áreas con 7 puntos o más" },
     { key: "estudiantes", label: "Estudiantes", align: "right" },
     { key: "pct", label: "%", align: "right" },
   ], {
     intro: "Cada estudiante se ubica en una sola fila: la de su combinación exacta de áreas con 7 puntos o más.",
-    nota: `Para cada estudiante se anotaron sus áreas con 7 puntos o más y se agrupó a quienes tienen exactamente la misma combinación (por ejemplo, «Científica + Servicio Social»). Un estudiante con una sola área aparece en «Solo» esa área. Cada estudiante cuenta una sola vez, por eso esta tabla suma 100% de los ${n} estudiantes con test válido. A diferencia de la Tabla A, no usa la lista de carreras: describe cómo se combinan los intereses de los estudiantes. Los porcentajes están redondeados, así que su suma puede diferir del total en uno o dos puntos.`,
+    nota: `Para cada estudiante se anotaron sus áreas con 7 puntos o más y se agrupó a quienes tienen exactamente la misma combinación (por ejemplo, «Científica + Servicio Social»). Un estudiante con una sola área aparece en «Solo» esa área. Cada estudiante cuenta una sola vez, por eso esta tabla suma 100% de los ${n} estudiantes con test válido. A diferencia de la Tabla 4, no usa la lista de carreras: describe cómo se combinan los intereses de los estudiantes. Los porcentajes están redondeados, así que su suma puede diferir del total en uno o dos puntos.`,
   });
 }
 
@@ -525,10 +532,10 @@ function tablaNivelesInterno(stats) {
   const filas = stats.estudiantesPorNivel.map((f) => ({
     nivel: escaparHtmlKuder(f.nivel),
     estudiantes: f.estudiantes,
-    pct: `${porcentajeInterno(f.estudiantes, stats.totalEstudiantes)}%`,
+    pct: pctInterno(f.estudiantes, stats.totalEstudiantes),
   }));
   const noReconocido = stats.estudiantesPorNivel.find((n) => n.nivel === "Nivel no reconocido");
-  return tablaInterno("Estudiantes evaluados por nivel (todos los cursos de un mismo nivel juntos)", filas, [
+  return tablaInterno("Tabla 2. Estudiantes evaluados por nivel", filas, [
     { key: "nivel", label: "Nivel" },
     { key: "estudiantes", label: "Estudiantes", align: "right" },
     { key: "pct", label: "% del total", align: "right" },
@@ -561,7 +568,7 @@ function construirBloqueGraficoAreasInterno(stats, { compacto = false } = {}) {
 
   return `
     <div class="kuder-chart-bloque${compacto ? " kuder-chart-interno-compacto" : ""}">
-      <div class="kuder-resumen-titulo">Áreas de interés más frecuentes (los ${total} estudiantes con test válido)</div>
+      <div class="kuder-resumen-titulo">Figura 1. Áreas de interés más frecuentes (${total} estudiantes con test válido)</div>
       <div class="kuder-chart-plot">
         <div class="kuder-chart-gridlines">
           ${marcas.map((m) => `<div class="kuder-chart-gridline" style="left:${(m / dominioMax) * 100}%;"><span>${m}%</span></div>`).join("")}
@@ -684,7 +691,7 @@ function construirTodasLasPaginasInternoKuder(stats, periodo) {
     tablaRankingColegiosInterno(stats),
     tablaNivelesInterno(stats),
     { html: construirBloqueGraficoAreasInterno(stats), compacto: construirBloqueGraficoAreasInterno(stats, { compacto: true }) },
-    tablaAreaFrecuenteInterno("Áreas de interés más frecuentes por colegio", "Colegio", stats.areaPorColegio),
+    tablaAreaFrecuenteInterno("Tabla 3. Áreas de interés más frecuentes por colegio", "Colegio", stats.areaPorColegio),
     tablaPerfilesCarrerasInterno(stats),
     tablaCombinacionesInterno(stats),
     ...htmlTarjetasArea.map((html, i) => ({ html: i === 0 ? htmlIntroTarjetas + html : html })),
