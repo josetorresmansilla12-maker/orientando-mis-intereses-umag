@@ -113,6 +113,7 @@ document.addEventListener("DOMContentLoaded", () => {
   cablearVistaPdf();
   cablearDatosAlumno();
   cablearRenombrarColegio();
+  cablearCambiarCurso();
   render();
 });
 
@@ -1362,7 +1363,7 @@ function renderEstudiantes() {
       const ordenados = [...estudiantesCurso].sort((a, b) => compararNombres(a.nombre, b.nombre));
       const claveCur = claveGrupoCurso(colegio, claveCurso);
       html += `<details class="grupo-curso" data-grupo="${escaparHtml(claveCur)}" ${grupoAbierto(claveCur, soloUnCurso) ? "open" : ""}>
-        <summary>📘 ${escaparHtml(claveCurso)} <span class="chip">${estudiantesCurso.length} ${estudiantesCurso.length === 1 ? "estudiante" : "estudiantes"}</span>${chipTraspasoHtml(estudiantesCurso)}</summary>
+        <summary>📘 ${escaparHtml(claveCurso)}<button type="button" class="btn-lapiz btn-lapiz-curso" data-colegio="${escaparHtml(colegio)}" data-curso="${escaparHtml(claveCurso)}" title="Cambiar el curso o la letra" aria-label="Cambiar el curso o la letra">✏️</button> <span class="chip">${estudiantesCurso.length} ${estudiantesCurso.length === 1 ? "estudiante" : "estudiantes"}</span>${chipTraspasoHtml(estudiantesCurso)}</summary>
         <div class="grupo-curso-cont">
           <div style="margin-bottom:10px; display:flex; gap:8px; flex-wrap:wrap;">
             <button class="chico" id="${idSeguro("grp", clave)}">⬇ Descargar informes de este curso (ZIP)</button>
@@ -1420,6 +1421,13 @@ function renderEstudiantes() {
       ev.preventDefault(); // que el clic no abra ni cierre el colegio
       ev.stopPropagation();
       abrirRenombrarColegio(b.dataset.colegio);
+    };
+  });
+  cont.querySelectorAll(".btn-lapiz-curso").forEach((b) => {
+    b.onclick = (ev) => {
+      ev.preventDefault(); // que el clic no abra ni cierre el curso
+      ev.stopPropagation();
+      abrirCambiarCurso(b.dataset.colegio, b.dataset.curso);
     };
   });
   // "Minimizar alumnos": pliega todos los cursos del colegio (quedan solo los cursos y
@@ -1867,6 +1875,74 @@ function cablearRenombrarColegio() {
     } else if (ev.key === "Escape") {
       ev.preventDefault();
       cerrarRenombrarColegio();
+    }
+  });
+}
+
+// ---------------- curso y letra de un curso (lápiz ✏️ junto al curso) ----------------
+// Cambia el curso y la letra en todos los estudiantes de ese curso (también los que están
+// en la papelera): así sale en los informes, las carpetas y los CSV.
+
+let cursoACambiar = null; // { colegio, clave, ids }
+
+function abrirCambiarCurso(colegio, claveCurso) {
+  const ests = cfg().store.listar({ incluirPapelera: true }).filter((e) => e.colegio === colegio && etiquetaCurso(e) === claveCurso);
+  if (!ests.length) return;
+  const activos = ests.filter((e) => !e.eliminado).length;
+  cursoACambiar = { colegio, clave: claveCurso, ids: ests.map((e) => e.id) };
+  document.getElementById("mcc-sub").textContent = `${colegio} · ${claveCurso}. Se cambia en ${activos === 1 ? "su estudiante" : `sus ${activos} estudiantes`}: así saldrá en los informes, las carpetas y los CSV. Si escribes un curso que ya existe en este colegio, quedan juntos.`;
+  const curso = document.getElementById("mcc-curso");
+  const letra = document.getElementById("mcc-letra");
+  curso.value = ests[0].curso || "";
+  letra.value = ests[0].letra || "";
+  curso.placeholder = cfg().placeholderCurso || "";
+  curso.classList.remove("invalido");
+  document.getElementById("modal-cambiar-curso").style.display = "flex";
+  curso.focus();
+  curso.select();
+}
+
+function cerrarCambiarCurso() {
+  document.getElementById("modal-cambiar-curso").style.display = "none";
+  cursoACambiar = null;
+}
+
+function guardarCambiarCurso() {
+  const inpCurso = document.getElementById("mcc-curso");
+  const curso = inpCurso.value.replace(/\s+/g, " ").trim();
+  const letra = document.getElementById("mcc-letra").value.replace(/\s+/g, "").trim().toUpperCase();
+  inpCurso.classList.toggle("invalido", !curso);
+  if (!curso) return mostrarToast("El curso no puede quedar vacío");
+  const datos = cursoACambiar;
+  cerrarCambiarCurso();
+  if (!datos) return;
+  const c = cfg();
+  const nuevaClave = etiquetaCurso({ curso: c.store.normalizarCurso(curso), letra });
+  if (nuevaClave === datos.clave) return;
+  c.store.cambiarCurso(datos.ids, curso, letra);
+  // el curso sigue abierto (o cerrado) como estaba
+  const antes = claveGrupoCurso(datos.colegio, datos.clave);
+  const despues = claveGrupoCurso(datos.colegio, nuevaClave);
+  if (estado.gruposAbiertos.delete(antes)) estado.gruposAbiertos.add(despues);
+  if (estado.gruposCerrados.delete(antes)) estado.gruposCerrados.add(despues);
+  render();
+  mostrarToast(`Curso cambiado: ${datos.clave} → ${nuevaClave} (puedes deshacerlo arriba)`);
+}
+
+function cablearCambiarCurso() {
+  const modal = document.getElementById("modal-cambiar-curso");
+  document.getElementById("mcc-cancelar").addEventListener("click", cerrarCambiarCurso);
+  document.getElementById("mcc-guardar").addEventListener("click", guardarCambiarCurso);
+  modal.addEventListener("click", (ev) => {
+    if (ev.target === modal) cerrarCambiarCurso();
+  });
+  modal.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter") {
+      ev.preventDefault();
+      guardarCambiarCurso();
+    } else if (ev.key === "Escape") {
+      ev.preventDefault();
+      cerrarCambiarCurso();
     }
   });
 }

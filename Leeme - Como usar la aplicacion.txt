@@ -184,6 +184,9 @@ Paso 2: las pestañas
      editar a ese estudiante. En Kuder, "Guardar y seguir con el siguiente pendiente" abre al tiro al
      próximo estudiante por revisar.
    - Eliminar estudiantes (lo eliminado queda en la Papelera).
+   - Cambiar el curso o la letra de un curso completo: lápiz ✏️ junto al nombre del
+     curso (igual que el ✏️ del colegio). Se cambia en todos sus estudiantes; si
+     escribes un curso que ya existe en ese colegio, quedan juntos. Se puede deshacer.
    - "🗂 Editar carpetas" (al final de la pestaña): para ordenar colegios y cursos.
      * Avisa de carpetas que parecen duplicadas (por ejemplo "Liceo San José" y
        "Liceo San Jose", o un curso escrito de dos formas) y las fusiona con

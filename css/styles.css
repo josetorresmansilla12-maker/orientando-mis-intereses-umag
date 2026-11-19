@@ -1831,3 +1831,4 @@ details.grupo-colegio > summary .btn-lapiz-colegio:focus-visible { opacity: 1; c
 #modal-eliminar label { display: block; margin: 10px 0 4px; }
 #modal-eliminar input { width: 100%; box-sizing: border-box; font-size: 16px; letter-spacing: 1px; }
 .ejec-kpis.ejec-kpis-3 { grid-template-columns: repeat(3, 1fr); }
+details.grupo-curso > summary .btn-lapiz-curso { opacity: 1; }

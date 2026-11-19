@@ -4,8 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Orientando mis Intereses — Informes</title>
-<link rel="stylesheet" href="css/styles.css?v=20261068" />
-<link rel="stylesheet" href="css/paes.css?v=20261068" />
+<link rel="stylesheet" href="css/styles.css?v=20261069" />
+<link rel="stylesheet" href="css/paes.css?v=20261069" />
 </head>
 <body class="test-octavo">
 
@@ -544,6 +544,28 @@
     </div>
   </div>
 
+  <!-- ===================== MODAL: CURSO Y LETRA DE UN CURSO (lápiz ✏️ junto al curso) ===================== -->
+  <div id="modal-cambiar-curso" class="modal-overlay" style="display:none;">
+    <div class="modal-caja modal-caja--info">
+      <h3>✏️ Cambiar el curso</h3>
+      <p id="mcc-sub" class="ayuda" style="margin:0 0 12px;"></p>
+      <div class="grid-form" style="grid-template-columns: 2fr 1fr;">
+        <div>
+          <label for="mcc-curso">Curso *</label>
+          <input type="text" id="mcc-curso" autocomplete="off" />
+        </div>
+        <div>
+          <label for="mcc-letra">Letra</label>
+          <input type="text" id="mcc-letra" autocomplete="off" maxlength="3" placeholder="Ej: A" />
+        </div>
+      </div>
+      <div class="modal-acciones">
+        <button type="button" id="mcc-cancelar" class="secundario">Cancelar</button>
+        <button type="button" id="mcc-guardar">Guardar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===================== MODAL: NOMBRE Y RUT DE UN ESTUDIANTE (lápiz ✎ junto a su nombre) ===================== -->
   <div id="modal-datos-alumno" class="modal-overlay" style="display:none;">
     <div class="modal-caja modal-caja--info">
@@ -660,45 +682,45 @@
        cada actualización (si no, puede mezclar archivos nuevos con otros guardados en
        caché y la app deja de funcionar); se cambia cada vez que se publica una versión -->
   <!-- datos de cada test (van primero: js/store.js arma un guardado por test) -->
-  <script src="js/data.js?v=20261068"></script>
-  <script src="js/icons.js?v=20261068"></script>
-  <script src="js/kuder-data.js?v=20261068"></script>
-  <script src="js/kuder-icons.js?v=20261068"></script>
-  <script src="js/cursos.js?v=20261068"></script>
-  <script src="js/logo.js?v=20261068"></script>
-  <script src="js/store.js?v=20261068"></script>
+  <script src="js/data.js?v=20261069"></script>
+  <script src="js/icons.js?v=20261069"></script>
+  <script src="js/kuder-data.js?v=20261069"></script>
+  <script src="js/kuder-icons.js?v=20261069"></script>
+  <script src="js/cursos.js?v=20261069"></script>
+  <script src="js/logo.js?v=20261069"></script>
+  <script src="js/store.js?v=20261069"></script>
 
   <!-- informes: 8° básico (individual) y Kuder (grupal para orientadores e individual) -->
-  <script src="js/report.js?v=20261068"></script>
-  <script src="js/excel.js?v=20261068"></script>
-  <script src="js/kuder.js?v=20261068"></script>
-  <script src="js/kuder-report.js?v=20261068"></script>
-  <script src="js/kuder-individual-report.js?v=20261068"></script>
+  <script src="js/report.js?v=20261069"></script>
+  <script src="js/excel.js?v=20261069"></script>
+  <script src="js/kuder.js?v=20261069"></script>
+  <script src="js/kuder-report.js?v=20261069"></script>
+  <script src="js/kuder-individual-report.js?v=20261069"></script>
 
   <!-- interfaz común (selector de test, pestañas, formularios) -->
-  <script src="js/app.js?v=20261068"></script>
+  <script src="js/app.js?v=20261069"></script>
   <!-- elegir cursos de la app, editar carpetas e importación masiva -->
-  <script src="js/selector-cursos.js?v=20261068"></script>
-  <script src="js/carpetas.js?v=20261068"></script>
-  <script src="js/importacion-masiva.js?v=20261068"></script>
-  <script src="js/anadir-curso-csv.js?v=20261068"></script>
+  <script src="js/selector-cursos.js?v=20261069"></script>
+  <script src="js/carpetas.js?v=20261069"></script>
+  <script src="js/importacion-masiva.js?v=20261069"></script>
+  <script src="js/anadir-curso-csv.js?v=20261069"></script>
 
   <!-- informe interno de Kuder (Admisión y Marketing) — reutiliza el lector de
        planillas de js/kuder.js y varias utilidades genéricas de js/kuder-report.js -->
-  <script src="js/kuder-internal-data.js?v=20261068"></script>
-  <script src="js/kuder-internal-report.js?v=20261068"></script>
-  <script src="js/kuder-internal.js?v=20261068"></script>
+  <script src="js/kuder-internal-data.js?v=20261069"></script>
+  <script src="js/kuder-internal-report.js?v=20261069"></script>
+  <script src="js/kuder-internal.js?v=20261069"></script>
 
   <!-- módulo Ensayos PAES: plantilla de la hoja, lector de hojas, reglas (RUT, vinculación,
        corrección y puntaje), guardado propio, lectura de PDF, Excel y pantalla. El lector
        de PDF (vendor/pdfjs) se carga solo cuando se sube el primer archivo. -->
-  <script src="js/paes-plantillas.js?v=20261068"></script>
-  <script src="js/paes-lector.js?v=20261068"></script>
-  <script src="js/paes-logica.js?v=20261068"></script>
-  <script src="js/paes-db.js?v=20261068"></script>
-  <script src="js/paes-pdf.js?v=20261068"></script>
-  <script src="js/paes-excel.js?v=20261068"></script>
-  <script src="js/paes-informe.js?v=20261068"></script>
-  <script src="js/paes-app.js?v=20261068"></script>
+  <script src="js/paes-plantillas.js?v=20261069"></script>
+  <script src="js/paes-lector.js?v=20261069"></script>
+  <script src="js/paes-logica.js?v=20261069"></script>
+  <script src="js/paes-db.js?v=20261069"></script>
+  <script src="js/paes-pdf.js?v=20261069"></script>
+  <script src="js/paes-excel.js?v=20261069"></script>
+  <script src="js/paes-informe.js?v=20261069"></script>
+  <script src="js/paes-app.js?v=20261069"></script>
 </body>
 </html>
