@@ -252,8 +252,10 @@ Paso 2: las pestañas
      usan todos los tests con sus puntajes tal como están, sumen 45 o no: solo importa
      qué áreas tienen 7 o más. Por eso conviene revisar antes la pestaña "Corrección"
      (o usar "Configuración → Marcar todos los test como revisados y correctos").
-   - Hoja 1: resumen ejecutivo. Estudiantes, colegios, cursos y % con al menos un
-     área clara; los 5 colegios con más estudiantes evaluados; las 5 áreas más
+   - Hoja 1: resumen ejecutivo. Estudiantes, colegios, cursos, % con al menos un
+     área clara e intervenciones en cursos (estimación: cursos evaluados × 2, una
+     sesión de aplicación y una de devolución por curso; la cifra real puede ser algo
+     menor porque no todos piden devolución o a veces va junto con la aplicación); los 5 colegios con más estudiantes evaluados; las 5 áreas más
      frecuentes y los estudiantes por nivel.
    - Detalle: Tabla 1 (colegios con más estudiantes evaluados), Tabla 2 (estudiantes
      por nivel), Figura 1 (gráfico de las 10 áreas), Tabla 3 (por colegio: cursos

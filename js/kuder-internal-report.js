@@ -279,11 +279,12 @@ function construirResumenEjecutivoInternoKuder(stats, { compacto = false, nColeg
 
   return `
     <div class="ejec${compacto ? " ejec-compacto" : ""}">
-      <div class="ejec-kpis">
+      <div class="ejec-kpis ejec-kpis-5">
         ${kpi(total, "Estudiantes evaluados", `${decimalInterno(stats.promedioPorCurso)} por curso, en promedio`)}
-        ${kpi(stats.colegiosDistintos, "Colegios atendidos", `${decimalInterno(stats.promedioPorColegio)} estudiantes por colegio`)}
+        ${kpi(stats.colegiosDistintos, "Colegios atendidos", "con al menos un curso evaluado")}
         ${kpi(stats.totalTests, "Cursos evaluados", `${decimalInterno(stats.promedioCursosPorColegio)} cursos por colegio`)}
         ${kpi(`${stats.pctConAreaClara}%`, "Con al menos un área de interés clara", `${decimalInterno(stats.promedioAreasInteres)} áreas por estudiante`)}
+        ${kpi(`≈ ${stats.totalTests * 2}`, "Intervenciones en cursos (aprox.)", `${stats.totalTests} aplicaciones + cerca de ${stats.totalTests} devoluciones`)}
       </div>
 
       ${construirTopColegiosInterno(stats.rankingColegios.slice(0, nColegios), total)}
@@ -319,7 +320,7 @@ function construirResumenEjecutivoInternoKuder(stats, { compacto = false, nColeg
       </div>
 
       <div class="ejec-nota">
-        <b>Estudiante evaluado</b> = cada estudiante una sola vez, por su RUT. <b>Curso evaluado</b> = un curso distinto de un colegio. <b>Área de interés clara</b> = puntaje 7 o más en esa área (los 45 puntos del test se reparten entre 10 áreas). "est." = estudiantes.
+        <b>Estudiante evaluado</b> = cada estudiante una sola vez, por su RUT. <b>Curso evaluado</b> = un curso distinto de un colegio. <b>Área de interés clara</b> = puntaje 7 o más en esa área (los 45 puntos del test se reparten entre 10 áreas). <b>Intervenciones</b> = estimación: una sesión de aplicación y, en general, una de devolución por curso; algunos colegios no piden devolución y a veces se hace junto con la aplicación. "est." = estudiantes.
         El método de cada cifra está en las notas al pie de cada tabla.
       </div>
     </div>`;

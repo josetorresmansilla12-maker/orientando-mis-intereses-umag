@@ -1832,3 +1832,7 @@ details.grupo-colegio > summary .btn-lapiz-colegio:focus-visible { opacity: 1; c
 #modal-eliminar input { width: 100%; box-sizing: border-box; font-size: 16px; letter-spacing: 1px; }
 .ejec-kpis.ejec-kpis-3 { grid-template-columns: repeat(3, 1fr); }
 details.grupo-curso > summary .btn-lapiz-curso { opacity: 1; }
+/* hoja 1 del informe global: 5 cifras (la 5ª, intervenciones, es una estimación) */
+.ejec-kpis.ejec-kpis-5 { grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.ejec-kpis-5 .ejec-num { font-size: 34px; }
+.ejec-compacto .ejec-kpis-5 .ejec-num { font-size: 30px; }
