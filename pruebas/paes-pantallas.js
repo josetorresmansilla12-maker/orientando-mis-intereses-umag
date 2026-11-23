@@ -523,6 +523,21 @@
       return ok1 && ok2 && sigue && !E.revTodas && erroresApp.length === antes;
     });
 
+    await prueba("En Resultados guardados, «📄 Informe CL» descarga el informe de esa prueba, con el color de CL", async () => {
+      const antes = erroresApp.length;
+      await clic('[data-vista="resultados"]');
+      await clic('[data-accion="res-abrir-todos"]');
+      const b = qa('[data-accion="res-informe-prueba"]').find((x) => x.classList.contains("cl"));
+      if (!b) return false;
+      const color = win.getComputedStyle(b).backgroundColor;
+      const n0 = win.__descargas.length;
+      await clic(b);
+      await confirmar();
+      for (let i = 0; i < 40 && win.__descargas.length === n0; i++) await espera(250);
+      const d = win.__descargas[win.__descargas.length - 1];
+      return /Informe CL/.test(b.textContent) && color !== "rgba(0, 0, 0, 0)" && color !== "rgb(255, 255, 255)" && !!d && /Informe Ensayo PAES/.test(d.nombre) && /\.pdf$/.test(d.nombre) && erroresApp.length === antes;
+    });
+
     titulo("Errores");
     await prueba("La app no registró errores durante el recorrido", () => {
       if (erroresApp.length) throw new Error(erroresApp.slice(0, 3).join(" | "));

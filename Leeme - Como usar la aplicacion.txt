@@ -553,6 +553,9 @@ El trabajo va en cinco pasos:
      prueba ("CL: CL FORMA 3 2026 NOV · M1: …") y tiene "🔑 Agregar otro clavijero",
      que crea un ensayo nuevo en el curso (por ejemplo, el del segundo semestre) sin
      tocar los anteriores.
+     Junto al clavijero de cada prueba hay un botón "📄 Informe CL" (rojo) o
+     "📄 Informe M1" (azul) que descarga de inmediato el informe PDF de resultados
+     de esa prueba, sin abrir el curso.
    - Revisión: "Revisar" (en la pestaña Revisión) lleva a la revisión de ese curso,
      filtrada en lo pendiente y con la hoja resaltada. Arriba hay una ficha con el
      colegio, el curso, la prueba, el clavijero, la fecha, la lista y los archivos, y

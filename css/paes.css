@@ -767,3 +767,10 @@ details.paes-colegio > .paes-res-curso { margin-left: 16px; margin-right: 16px; 
 .paes-rev-banner-txt small { opacity: 0.85; }
 .paes-rev-banner .paes-pendientes { margin: 0; }
 #modulo-paes .paes-rev-banner button.secundario { background: white; color: #333; border-color: white; }
+/* Resultados guardados: «📄 Informe CL / M1» con el color de cada prueba */
+.paes-res-informes { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+#modulo-paes button.secundario.paes-res-informe { font-weight: 700; color: white; }
+#modulo-paes button.secundario.paes-res-informe.cl { background: var(--paes-cl); border-color: var(--paes-cl); }
+#modulo-paes button.secundario.paes-res-informe.m1 { background: var(--paes-m1); border-color: var(--paes-m1); }
+#modulo-paes button.secundario.paes-res-informe:hover { filter: brightness(0.92); }
+#modulo-paes button.secundario.paes-res-informe.otra { background: #5b4a86; border-color: #5b4a86; }

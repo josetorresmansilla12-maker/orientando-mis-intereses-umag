@@ -3074,9 +3074,10 @@
   }
 
   // informe para el colegio, en PDF o Word, con el estilo de los informes de Kuder
-  async function descargarInforme(formato) {
-    const c = cursoActual();
-    const e = ensayoActual();
+  // c y e: el curso y el ensayo (por omisión, los actuales)
+  async function descargarInforme(formato, cursoDado, ensayoDado) {
+    const c = cursoDado || cursoActual();
+    const e = ensayoDado || ensayoActual();
     if (!c || !e || est.generando) return;
     const datos = datosDeInforme(c, e);
     const empezar = async () => {
@@ -4521,6 +4522,19 @@
         const extra = repetidas.has(e.prueba) && e.fecha ? ` <small>${esc(PaesExcel.fechaCorta(e.fecha))}</small>` : "";
         return `<span class="paes-res-clv ${clasePrueba(e)}"><b>${esc(siglaPrueba(e))}:</b> ${k ? "🔑 " : ""}${nombre}${extra}</span>`;
       })
+      .join("")}${htmlBotonesInformeDelCurso(c, ensayos, repetidas)}</span>`;
+  }
+
+  // «📄 Informe CL», «📄 Informe M1»...: descarga el informe PDF de cada prueba con hojas,
+  // cada botón con el color de su prueba (con la fecha si la prueba se repite en el curso)
+  function htmlBotonesInformeDelCurso(c, ensayos, repetidas) {
+    const con = ensayos.filter((e) => hojasDelEnsayo(e.id).some(vigente));
+    if (!con.length) return "";
+    return `<span class="paes-res-informes">${con
+      .map((e) => {
+        const fecha = repetidas.has(e.prueba) && e.fecha ? ` (${esc(PaesExcel.fechaCorta(e.fecha))})` : "";
+        return `<button type="button" class="secundario chico paes-res-informe ${clasePrueba(e)}" data-accion="res-informe-prueba" data-curso="${esc(c.id)}" data-ensayo="${esc(e.id)}" title="Descarga el informe PDF de resultados de ${esc(nombrePrueba(e))} de ${esc(etiquetaCurso(c))}" ${est.generando ? "disabled" : ""}>📄 Informe ${esc(siglaPrueba(e))}${fecha}</button>`;
+      })
       .join("")}</span>`;
   }
 
@@ -5706,6 +5720,13 @@
         est.editarEn = null;
         pintar();
         break;
+      case "res-informe-prueba": {
+        ev.preventDefault(); // que el clic no abra ni cierre el curso
+        const c = est.cursos.find((x) => x.id === b.dataset.curso);
+        const e = est.ensayos.find((x) => x.id === b.dataset.ensayo);
+        if (c && e) descargarInforme("pdf", c, e);
+        break;
+      }
       case "res-editar": {
         ev.preventDefault();
         const con = ensayosDelCurso(b.dataset.curso).filter((e) => hojasDelEnsayo(e.id).some(vigente));
