@@ -155,6 +155,9 @@ function ejecutarPruebasPaes(opciones) {
   const lecOk = (extra) => ({ estudianteId: "A", asignacion: "exacta", lectura: Object.assign({ resp: "A".repeat(100), id: "111111111", total: 595 }, extra) });
   comprobar("hoja doblada (calzan pocas burbujas): se avisa", tipos(hoja("x", "A".repeat(100), lecOk({ pares: 514, deltas: [] }))).includes("deformada"));
   comprobar("hoja con un bloque de preguntas muy corrido: se avisa", tipos(hoja("x", "A".repeat(100), lecOk({ pares: 590, deltas: [["q1", 6.5, 2]] }))).includes("deformada"));
+  const avisoCorrido = L.advertenciasDeHoja(hoja("x", "A".repeat(100), lecOk({ pares: 590, deltas: [["q1", 6.5, 2]] })), ens65).find((a) => a.tipo === "deformada");
+  comprobar("bloque corrido: el aviso dice qué preguntas (11 a 20), sin contar burbujas", !!avisoCorrido && avisoCorrido.detalle.includes("11 a 20") && !/burbujas/.test(avisoCorrido.detalle));
+  comprobar("bloque corrido fuera del ensayo (preguntas 71 a 80 en un ensayo de 65): no se avisa", tipos(hoja("x", "A".repeat(100), lecOk({ pares: 590, deltas: [["q7", 8, 3]] }))).length === 0);
   comprobar("hoja torcida que se enderezó bien: no se avisa", tipos(hoja("x", "A".repeat(100), lecOk({ pares: 588, deltas: [["q1", 3, 3.8], ["id", 9, 0]] }))).length === 0);
   comprobar("huella: mismo contenido, misma huella", L.huellaDeBytes(new Uint8Array([1, 2, 3])) === L.huellaDeBytes(new Uint8Array([1, 2, 3])) && L.huellaDeBytes(new Uint8Array([1, 2, 3])) !== L.huellaDeBytes(new Uint8Array([1, 2, 4])));
 

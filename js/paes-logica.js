@@ -596,13 +596,24 @@
       if (p.tipo === "bloque") agregar("bloque", p.detalle);
     });
     // Hoja doblada o arrugada. El lector endereza sola una hoja torcida y eso no se avisa;
-    // se avisa solo cuando, aun enderezada, muchas burbujas no quedaron donde debían o un
-    // bloque de preguntas quedó muy corrido: ahí una marca puede haberse leído en otra burbuja.
+    // se avisa solo cuando, aun enderezada, un bloque de preguntas DEL ENSAYO quedó muy
+    // corrido (ahí una marca puede haberse leído en otra burbuja), o cuando el lector no
+    // reconoció buena parte de la hoja. La hoja trae 100 preguntas impresas, pero los
+    // bloques que el ensayo no usa (por ejemplo, de la 66 a la 100) no importan.
     if (lec.total) {
-      const calce = lec.pares / lec.total;
-      const corrido = (lec.deltas || []).reduce((m, d) => (d[0] === "id" || d[0] === "key" ? m : Math.max(m, Math.hypot(d[1] || 0, d[2] || 0))), 0);
-      if (calce < (o.minCalce || 0.93) || corrido > (o.maxCorrido || 6)) {
-        agregar("deformada", `La hoja parece doblada o arrugada (calzaron ${lec.pares} de ${lec.total} burbujas): compara sus respuestas con la imagen, porque alguna marca pudo leerse corrida.`);
+      const filas = o.filasPorBloque || 10;
+      const ultima = clave.length ? Math.max(...clave.map((k) => k.n)) : Infinity;
+      const bloques = (lec.deltas || [])
+        .filter((d) => /^q\d+$/.test(d[0]) && Number(d[0].slice(1)) * filas < ultima && Math.hypot(d[1] || 0, d[2] || 0) > (o.maxCorrido || 6))
+        .map((d) => Number(d[0].slice(1)))
+        .sort((a, b) => a - b);
+      if (bloques.length) {
+        const rangos = bloques.map((b) => `${b * filas + 1} a ${Math.min((b + 1) * filas, ultima)}`);
+        const texto = rangos.length === 1 ? rangos[0] : `${rangos.slice(0, -1).join(", ")} y ${rangos[rangos.length - 1]}`;
+        const preguntas = clave.map((k) => k.n).filter((n) => bloques.includes(Math.floor((n - 1) / filas)));
+        agregar("deformada", `La hoja parece doblada o arrugada: las preguntas ${texto} quedaron algo corridas al leerse. Compara esas respuestas con la imagen.`, { preguntas });
+      } else if (lec.pares / lec.total < (o.minCalce || 0.93)) {
+        agregar("deformada", "La hoja parece doblada, arrugada o mal escaneada: el lector no reconoció bien parte de la hoja. Compara sus respuestas con la imagen.");
       }
     }
     return lista;
