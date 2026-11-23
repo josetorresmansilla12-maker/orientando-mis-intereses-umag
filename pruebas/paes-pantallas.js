@@ -151,8 +151,8 @@
 
     titulo("Inicio y pestañas");
     await prueba("El módulo abre en «¿Qué quieres hacer?» con sus opciones", () => E.vista === "inicio" && qa(".paes-ini-op").length >= 5);
-    await prueba("Quedan siete pestañas (Inicio, Trabajar un curso, Resultados, Revisión, Clavijeros, Editor de PDF, Configuración)", () => qa(".paes-vistas > button").length === 7);
-    for (const v of ["curso", "resultados", "revision", "clavijeros", "editor", "config", "carpetas", "papelera", "acciones", "inicio"]) {
+    await prueba("Quedan ocho pestañas (Inicio, Subir CL y M1, Trabajar un curso, Resultados, Revisión, Clavijeros, Editor de PDF, Configuración)", () => qa(".paes-vistas > button").length === 8);
+    for (const v of ["subir", "curso", "resultados", "revision", "clavijeros", "editor", "config", "carpetas", "papelera", "acciones", "inicio"]) {
       await prueba(`La pantalla «${v}» se abre sin errores`, async () => {
         const antes = erroresApp.length;
         if (v === "carpetas" || v === "papelera" || v === "acciones") await clic('.paes-vistas [data-vista="config"]');
@@ -586,6 +586,37 @@
       const enEditor = E.vista === "editor" && !!ed && ed.colegio === cursoA().colegio && ed.cursos.length >= 2 && !!k && ed.clavijeroId === k.id;
       await clic('[data-vista="resultados"]');
       return cuadro && porCurso && enEditor && erroresApp.length === antes;
+    });
+
+    await prueba("«Subir CL y M1»: con el colegio y el curso elegidos y un PDF por prueba, corrige los dos en el mismo curso", async () => {
+      const antes = erroresApp.length;
+      await clic('[data-vista="subir"]');
+      const c = cursoA();
+      const campo = q('[data-cambio="sub-colegio"]');
+      campo.value = c.colegio;
+      campo.dispatchEvent(new win.Event("change", { bubbles: true }));
+      await espera(200);
+      const sel = q('[data-cambio="sub-curso"]');
+      sel.value = c.id;
+      sel.dispatchEvent(new win.Event("change", { bubbles: true }));
+      await espera(200);
+      const tarjetas = qa(".paes-sub-prueba").length >= 2;
+      const hojasAntes = E.hojas.filter((h) => E.ensayos.some((e) => e.id === h.ensayoId && e.cursoId === c.id)).length;
+      for (const prueba of ["CL", "M1"]) {
+        const pdf = pdfDeHojas(`subir_${prueba.toLowerCase()}.pdf`, claveDe(prueba === "CL" ? 1 : 3), RUTS.slice(0, 1));
+        await subir(`input[data-archivo="sub-pdf"][data-prueba="${prueba}"]`, [pdf]);
+      }
+      const listo = !q('[data-accion="sub-corregir"]').disabled;
+      await clic('[data-accion="sub-corregir"]');
+      for (let i = 0; i < 120 && (E.lectura || E.vista === "subir"); i++) await espera(250);
+      const hojasDespues = E.hojas.filter((h) => E.ensayos.some((e) => e.id === h.ensayoId && e.cursoId === c.id)).length;
+      return tarjetas && listo && E.vista === "curso" && E.paso === "revision" && E.cursoId === c.id && hojasDespues >= hojasAntes && erroresApp.length === antes;
+    });
+    await prueba("El RUT marcado se pinta naranjo con 1 dígito por revisar y rojo con 2 o más", () => {
+      const L = win.PaesLogica;
+      return L.digitosDudososDelRut("230953929", "23095392-9") === 0 && L.digitosDudososDelRut("23095392", "23095392-K") === 0 &&
+        L.digitosDudososDelRut("230953928", "") === 1 && L.digitosDudososDelRut("23095?929", "") === 1 && L.digitosDudososDelRut("2309539", "") === 1 &&
+        L.digitosDudososDelRut("23?95?9", "") >= 2 && L.digitosDudososDelRut("231953928", "23095392-9") >= 2 && L.digitosDudososDelRut("", "") >= 2;
     });
 
     titulo("Errores");

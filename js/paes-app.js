@@ -47,6 +47,7 @@
     deshacer: [], // cambios de la revisión que se pueden deshacer (por sesión)
     sinNombres: false, // informe sin nombres (uso interno)
     generando: false, // se está creando un informe
+    subir: null, // pestaña «Subir CL y M1»: { colegio, cursoId, nivel, letra, fecha, archivos: {prueba: [File]}, clv: {prueba: id}, corriendo }
     agregarPrueba: null, // Resultados guardados: { colegio, prueba } con el cuadro «Agregar ensayos X» abierto
     pdfPrueba: null, // «Agregar ensayos PDF»: prueba cuyo clavijero queda marcado de entrada
     revTodas: false, // Revisión: todas las hojas pendientes de todos los cursos en una página
@@ -797,7 +798,7 @@
       htmlVistas() +
       (est.vista === "curso"
         ? (est.importar ? htmlImportarKuder() : "") + htmlContexto() + htmlPasos() + `<div id="paes-panel">${htmlPanel()}</div>`
-        : `<div id="paes-panel">${VISTAS_DE_CONFIG.includes(est.vista) && est.vista !== "config" ? `<div class="acciones-form paes-volver-config"><button type="button" class="secundario chico" data-vista="config">← Volver a Configuración</button></div>` : ""}${est.vista === "inicio" ? htmlVistaInicio() : est.vista === "revision" ? htmlVistaRevision() : est.vista === "resultados" ? htmlVistaResultados() : est.vista === "clavijeros" ? htmlVistaClavijeros() : est.vista === "papelera" ? htmlVistaPapelera() : est.vista === "acciones" ? htmlVistaAcciones() : est.vista === "config" ? htmlVistaConfig() : est.vista === "editor" ? htmlVistaEditor() : htmlVistaCarpetas()}</div>`) +
+        : `<div id="paes-panel">${VISTAS_DE_CONFIG.includes(est.vista) && est.vista !== "config" ? `<div class="acciones-form paes-volver-config"><button type="button" class="secundario chico" data-vista="config">← Volver a Configuración</button></div>` : ""}${est.vista === "inicio" ? htmlVistaInicio() : est.vista === "revision" ? htmlVistaRevision() : est.vista === "resultados" ? htmlVistaResultados() : est.vista === "clavijeros" ? htmlVistaClavijeros() : est.vista === "papelera" ? htmlVistaPapelera() : est.vista === "acciones" ? htmlVistaAcciones() : est.vista === "config" ? htmlVistaConfig() : est.vista === "editor" ? htmlVistaEditor() : est.vista === "subir" ? htmlVistaSubir() : htmlVistaCarpetas()}</div>`) +
       `<div id="paes-visor" class="modal-overlay" style="display:none;"></div>`;
     global.scrollTo(0, y);
     if (est.vista === "editor") refrescarEditor();
@@ -2267,18 +2268,24 @@
   };
 
   // cómo se muestra el RUT que el estudiante marcó en la hoja
-  function htmlIdLeido(id) {
+  // RUT marcado en la hoja. alumno: el estudiante elegido para la hoja (si hay). El recuadro se
+  // pinta naranjo si hay 1 dígito por revisar y rojo si hay 2 o más (ver digitosDudososDelRut)
+  function htmlIdLeido(id, alumno) {
     const estado = L.estadoDelId(id);
-    if (estado === "vacio") return `<span class="paes-chip amarillo">no marcó su RUT</span>`;
+    const dudosos = L.digitosDudososDelRut(id, alumno && alumno.rut);
+    const marca = dudosos === 0 ? "" : dudosos === 1 ? " paes-id-naranjo" : " paes-id-rojo";
+    const aviso = dudosos ? `<span class="paes-chip ${dudosos === 1 ? "naranjo" : "rojo"}">⚠ ${estado === "vacio" ? "sin RUT" : dudosos === 1 ? "1 dígito por revisar" : `${dudosos} dígitos por revisar`}</span>` : "";
+    if (estado === "vacio") return `<code class="paes-id${marca}">— sin marcar —</code> <span class="paes-chip amarillo">no marcó su RUT</span>`;
     const texto = estado === "valido" ? L.formatearRutPaes(id) : id;
+    const distinto = alumno && dudosos && estado === "valido";
     const chip = {
-      valido: `<span class="paes-chip verde">válido</span>`,
+      valido: distinto ? `<span class="paes-chip amarillo">distinto al RUT del estudiante elegido</span>` : `<span class="paes-chip verde">válido</span>`,
       "sin-dv": `<span class="paes-chip gris">sin dígito verificador</span>`,
       invalido: `<span class="paes-chip amarillo">dígito verificador no calza</span>`,
       incompleto: `<span class="paes-chip amarillo">incompleto</span>`,
       ambiguo: `<span class="paes-chip amarillo">«?» = columna con dos marcas o sin marca</span>`,
     }[estado];
-    return `<code class="paes-id">${esc(texto)}</code> ${chip || ""}`;
+    return `<code class="paes-id${marca}">${esc(texto)}</code> ${chip || ""} ${aviso}`;
   }
 
   // tarjetas de las hojas de un ensayo (las del paso «Revisión» de un curso y las de la
@@ -2326,7 +2333,7 @@
             <img data-imagen="${esc(x.id)}:${x.estado === "ilegible" ? "pagina" : "nombre"}" alt="Lo que el estudiante escribió a mano en la hoja" /></button>
           <div class="paes-hoja-datos">`;
       if (x.estado !== "ilegible") {
-        h += `<div class="paes-linea"><span class="paes-etq">RUT marcado</span> ${htmlIdLeido(x.lectura.id)}</div>`;
+        h += `<div class="paes-linea"><span class="paes-etq">RUT marcado</span> ${htmlIdLeido(x.lectura.id, alumno)}</div>`;
         if (!x.repetidaDe) {
           h += `<div class="paes-linea"><span class="paes-etq">Estudiante</span>
             <span class="paes-buscar-caja"><input type="search" class="paes-buscar" data-buscar="${esc(x.id)}" placeholder="Buscar por nombre, RUT o curso…" autocomplete="off" ${x.excluida ? "disabled" : ""} /><span class="paes-sugerencias" data-sug="${esc(x.id)}"></span></span>
@@ -4019,7 +4026,7 @@
   const VISTAS_DE_CONFIG = ["config", "carpetas", "papelera", "acciones"];
   function htmlVistas() {
     const b = (id, texto, activa) => `<button type="button" class="${(activa === undefined ? est.vista === id : activa) ? "" : "secundario"}" data-vista="${id}">${texto}</button>`;
-    return `<div class="paes-vistas">${b("inicio", "🏠 Inicio")}${b("curso", "📝 Trabajar un curso")}${b("resultados", "📁 Resultados guardados")}${b("revision", `🔎 Revisión${pendientesTotales() ? " (" + pendientesTotales() + ")" : ""}`)}${b("clavijeros", `🔑 Clavijeros subidos${est.clavijeros.length ? " (" + est.clavijeros.length + ")" : ""}`)}${b("editor", "✂️ Editor de PDF")}${b("config", `⚙️ Configuración${cuentaPapelera() ? " · papelera (" + cuentaPapelera() + ")" : ""}`, VISTAS_DE_CONFIG.includes(est.vista))}</div>`;
+    return `<div class="paes-vistas">${b("inicio", "🏠 Inicio")}${b("subir", "📤 Subir CL y M1")}${b("curso", "📝 Trabajar un curso")}${b("resultados", "📁 Resultados guardados")}${b("revision", `🔎 Revisión${pendientesTotales() ? " (" + pendientesTotales() + ")" : ""}`)}${b("clavijeros", `🔑 Clavijeros subidos${est.clavijeros.length ? " (" + est.clavijeros.length + ")" : ""}`)}${b("editor", "✂️ Editor de PDF")}${b("config", `⚙️ Configuración${cuentaPapelera() ? " · papelera (" + cuentaPapelera() + ")" : ""}`, VISTAS_DE_CONFIG.includes(est.vista))}</div>`;
   }
 
   // ============================================================ REVISIÓN: todo lo pendiente
@@ -4099,6 +4106,117 @@
     return h;
   }
 
+  // ============================================================ SUBIR CL Y M1 DE UN CURSO
+  // Un curso (guardado o nuevo) y un PDF por prueba, cada uno con su clavijero: se corrigen
+  // seguidos, cada uno en su ensayo del mismo curso, y al final se abre la revisión.
+
+  function subirEstado() {
+    if (!est.subir) est.subir = { colegio: "", cursoId: "", nivel: "4° Medio", letra: "", fecha: hoyIso(), archivos: {}, clv: {}, corriendo: null };
+    return est.subir;
+  }
+  const cursosDelColegio = (colegio) => ordenarCursos(est.cursos.filter((c) => !c.disperso && colegio && normColegio(c.colegio) === normColegio(colegio)));
+
+  function htmlVistaSubir() {
+    const st = subirEstado();
+    const pruebas = pruebasConClavijero();
+    const suyos = cursosDelColegio(st.colegio);
+    const curso = st.cursoId && st.cursoId !== "nuevo" ? est.cursos.find((c) => c.id === st.cursoId) : null;
+    const ocupado = !!(est.lectura || st.corriendo);
+    const des = ocupado ? "disabled" : "";
+    const nArchivos = Object.values(st.archivos).reduce((n, a) => n + a.length, 0);
+    const cursoListo = curso || (st.cursoId === "nuevo" && st.colegio.trim() && st.nivel);
+    let h = `<div class="tarjeta"><h2>📤 Subir los ensayos de CL y M1 de un curso</h2>
+      <p class="ayuda">Para un curso que trae <b>un PDF de Competencia Lectora y otro de Matemática</b>: los subes juntos y se corrigen de una vez, cada uno con su clavijero, en el mismo curso. Lo ya corregido del curso no se pierde: las hojas nuevas se suman.</p>
+      <h3 class="paes-sub-titulo">1. ¿Qué curso es?</h3>
+      <div class="grid-form">
+        <div><label>Colegio *</label><input type="text" data-cambio="sub-colegio" list="paes-sub-colegios" value="${esc(st.colegio)}" placeholder="Escribe o elige el colegio" autocomplete="off" ${des} /><datalist id="paes-sub-colegios">${colegiosConocidos().map((n) => `<option value="${esc(n)}"></option>`).join("")}</datalist></div>
+        <div><label>Curso *</label><select data-cambio="sub-curso" ${des} ${st.colegio.trim() ? "" : "disabled"}>
+          <option value="">${st.colegio.trim() ? "— Elige el curso —" : "— Primero escribe el colegio —"}</option>
+          ${suyos.map((c) => `<option value="${esc(c.id)}" ${st.cursoId === c.id ? "selected" : ""}>${esc(etiquetaCurso(c))} · ${esc(c.anio)}${c.estudiantes.length ? ` · ${plural(c.estudiantes.length, "estudiante", "estudiantes")}` : " · sin lista"}</option>`).join("")}
+          <option value="nuevo" ${st.cursoId === "nuevo" ? "selected" : ""}>➕ Curso nuevo…</option></select></div>
+        ${st.cursoId === "nuevo" ? `<div><label>Nivel</label><select data-cambio="sub-nivel" ${des}>${NIVELES.filter((n) => n !== NIVEL_DISPERSO).map((n) => `<option ${st.nivel === n ? "selected" : ""}>${n}</option>`).join("")}</select></div>
+        <div><label>Letra</label><input type="text" data-cambio="sub-letra" value="${esc(st.letra)}" maxlength="3" placeholder="Ej: A" ${des} /></div>` : ""}
+      </div>
+      ${curso && !curso.estudiantes.length ? `<p class="paes-nota" style="margin-top:8px;">Este curso no tiene lista: las hojas quedarán por identificar. Puedes subirla después con «📋 Subir lista del curso» en «Resultados guardados».</p>` : ""}
+      ${st.cursoId === "nuevo" ? `<p class="ayuda" style="margin-top:8px;">El curso se crea sin lista; puedes subirla después con «📋 Subir lista del curso» en «Resultados guardados».</p>` : ""}
+      <h3 class="paes-sub-titulo">2. El PDF de cada prueba</h3>`;
+    if (!pruebas.length) {
+      h += `<p class="paes-nota">Aún no hay clavijeros guardados. Agrégalos primero en «🔑 Clavijeros subidos».</p></div>`;
+      return h;
+    }
+    h += `<div class="paes-sub-pruebas">${pruebas
+      .map((p) => {
+        const archivos = st.archivos[p.clave] || [];
+        const clvs = est.clavijeros.filter((k) => clavePrueba(k) === p.clave);
+        const elegido = st.clv[p.clave] || p.clavijero.id;
+        const yaTiene = curso ? ensayosDelCurso(curso.id).find((e) => clavePrueba(e) === p.clave && e.clavijeroId === elegido && hojasDelEnsayo(e.id).some(vigente)) : null;
+        return `<div class="paes-sub-prueba ${p.clase}${archivos.length ? " con-archivo" : ""}">
+          <div class="paes-sub-cab"><span class="paes-sub-sigla">${esc(p.sigla)}</span><b>${esc(p.nombre)}</b></div>
+          <label>Clavijero</label><select data-cambio="sub-clv" data-prueba="${esc(p.clave)}" ${des}>${clvs.map((k) => `<option value="${esc(k.id)}" ${k.id === elegido ? "selected" : ""}>🔑 ${esc(k.nombre)}</option>`).join("")}</select>
+          <input type="file" data-archivo="sub-pdf" data-prueba="${esc(p.clave)}" accept=".pdf,image/*" multiple style="display:none;" />
+          ${archivos.length ? `<ul class="paes-sub-archivos">${archivos.map((a) => `<li>📄 ${esc(a.name)}</li>`).join("")}</ul>` : `<p class="ayuda" style="margin:6px 0;">Sin PDF todavía.</p>`}
+          <div class="acciones-form" style="margin-top:4px;"><button type="button" class="${archivos.length ? "secundario " : ""}chico" data-accion="sub-elegir" data-prueba="${esc(p.clave)}" ${des}>📄 ${archivos.length ? "Cambiar el PDF" : `Elegir el PDF de ${esc(p.sigla)}`}…</button>${archivos.length ? `<button type="button" class="secundario chico" data-accion="sub-quitar" data-prueba="${esc(p.clave)}" ${des}>✕ Quitar</button>` : ""}</div>
+          ${yaTiene ? `<small class="paes-sub-ya">Este curso ya tiene ${esc(p.sigla)} con este clavijero (${plural(hojasDelEnsayo(yaTiene.id).filter(vigente).length, "hoja", "hojas")}): las hojas nuevas se suman ahí.</small>` : ""}
+        </div>`;
+      })
+      .join("")}</div>
+      <div class="grid-form" style="margin-top:12px;"><div><label>Fecha de aplicación</label><input type="date" data-cambio="sub-fecha" value="${esc(st.fecha)}" ${des} /></div></div>
+      <h3 class="paes-sub-titulo">3. Corregir</h3>
+      ${st.corriendo ? `<p class="ayuda"><b>Corrigiendo ${esc(st.corriendo.sigla)} (${st.corriendo.n} de ${st.corriendo.de})…</b></p>` : ""}
+      <div id="paes-progreso">${htmlProgreso()}</div>
+      <div class="acciones-form"><button type="button" data-accion="sub-corregir" ${!ocupado && cursoListo && nArchivos ? "" : "disabled"}>✓ Corregir ${nArchivos ? plural(nArchivos, "PDF", "PDF") : "los PDF"} ahora →</button>
+        <small>${!cursoListo ? "Primero elige el colegio y el curso." : !nArchivos ? "Elige al menos un PDF." : "Al terminar se abre la revisión del curso, con botones para pasar de CL a M1."}</small></div>
+    </div>`;
+    return h;
+  }
+
+  async function corregirSubida() {
+    const st = subirEstado();
+    if (est.lectura || st.corriendo) return;
+    const colegioEscrito = st.colegio.replace(/\s+/g, " ").trim();
+    if (!colegioEscrito) return toast("Escribe el colegio.");
+    let c = st.cursoId && st.cursoId !== "nuevo" ? est.cursos.find((x) => x.id === st.cursoId) : null;
+    if (!c) {
+      if (st.cursoId !== "nuevo") return toast("Elige el curso.");
+      const letra = (st.letra || "").replace(/\s+/g, "").toUpperCase();
+      const anio = new Date().getFullYear();
+      const conocido = est.cursos.find((x) => normColegio(x.colegio) === normColegio(colegioEscrito));
+      const colegio = conocido ? conocido.colegio : colegioEscrito;
+      c = est.cursos.find((x) => !x.disperso && normColegio(x.colegio) === normColegio(colegio) && x.nivel === st.nivel && (x.letra || "").toUpperCase() === letra && String(x.anio) === String(anio));
+      if (!c) {
+        c = { id: PaesDB.nuevoId("c"), colegio, nivel: st.nivel, letra, anio, estudiantes: [], creado: new Date().toISOString() };
+        est.cursos.push(c);
+        await guardar("cursos", c);
+      }
+      st.cursoId = c.id;
+    }
+    const tareas = pruebasConClavijero()
+      .map((p) => ({ p, archivos: st.archivos[p.clave] || [], k: est.clavijeros.find((k) => k.id === (st.clv[p.clave] || p.clavijero.id)) || p.clavijero }))
+      .filter((t) => t.archivos.length);
+    if (!tareas.length) return toast("Elige al menos un PDF.");
+    const hechos = [];
+    let primero = null;
+    for (let n = 0; n < tareas.length; n++) {
+      const t = tareas[n];
+      let e = ensayosDelCurso(c.id).find((x) => x.clavijeroId === t.k.id);
+      if (!e) e = await crearEnsayoCon(c, { prueba: t.k.prueba, pruebaNombre: t.k.pruebaNombre, fecha: st.fecha || "", clavijero: t.k });
+      if (!primero) primero = e;
+      st.corriendo = { sigla: t.p.sigla, n: n + 1, de: tareas.length };
+      Object.assign(est, { enBlanco: false, cursoId: c.id, ensayoId: e.id, resumenLectura: null, tanda: [], vista: "subir" });
+      pintar();
+      await subirHojas(t.archivos);
+      const r = est.resumenLectura || { leidas: 0, pendientes: 0, avisos: [] };
+      hechos.push(`${t.p.sigla}: ${plural(r.leidas || 0, "hoja leída", "hojas leídas")}${r.pendientes ? ` (${r.pendientes} por revisar)` : ""}`);
+      (r.avisos || []).forEach((a) => toast(`${t.p.sigla}: ${a}`));
+      if ((r.avisos || []).some((a) => /Detuviste|interrumpió/.test(a))) break;
+    }
+    est.subir = { colegio: c.colegio, cursoId: "", nivel: st.nivel, letra: "", fecha: st.fecha, archivos: {}, clv: st.clv, corriendo: null };
+    Object.assign(est, { cursoId: c.id, ensayoId: primero.id, vista: "curso", paso: "revision", soloPorRevisar: false, resumenLectura: null, formCurso: null, formEnsayo: false });
+    pintar();
+    global.scrollTo({ top: 0 });
+    toast(`${nombreCurso(c)} · ${hechos.join(" · ")}`);
+  }
+
   // ============================================================ INICIO: ¿qué quieres hacer?
 
   function htmlVistaInicio() {
@@ -4107,6 +4225,7 @@
     return htmlAvisoRespaldo(true) + `<div class="tarjeta"><h2>¿Qué quieres hacer?</h2>
       <p class="ayuda">Elige una opción y la app te lleva al lugar correcto.</p>
       <div class="paes-ini">
+        ${op("subir", "📤", "Subir los ensayos de CL y M1 de un curso", "Tengo el PDF de Lenguaje y el de Matemática de un mismo curso. Los subo juntos y se corrigen de una vez.")}
         ${op("nuevo", "📝", "Corregir cursos nuevos", "Tengo un PDF por cada curso. Subo sus listas, las hojas y obtengo los resultados.")}
         ${op("editor", "✂️", "Corregir un PDF que trae varios cursos", "Escaneé varios cursos juntos. Marco qué hojas son de cada curso y la app las reparte.")}
         ${op("agregar", "➕", "Agregar otra prueba o más hojas a un curso que ya existe", "Por ejemplo, el curso ya tiene Competencia Lectora y ahora traigo M1.")}
@@ -5185,6 +5304,22 @@
   // cambios de formulario de las vistas nuevas; devuelve true si se hizo cargo
   function alCambiarExtras(t) {
     const d = t.dataset;
+    if (d.cambio && d.cambio.startsWith("sub-")) {
+      const st = subirEstado();
+      if (d.cambio === "sub-colegio") {
+        st.colegio = t.value;
+        const suyos = cursosDelColegio(st.colegio);
+        if (st.cursoId && st.cursoId !== "nuevo" && !suyos.some((c) => c.id === st.cursoId)) st.cursoId = "";
+        if (!st.cursoId && st.colegio.trim() && !suyos.length) st.cursoId = "nuevo";
+      }
+      if (d.cambio === "sub-curso") st.cursoId = t.value;
+      if (d.cambio === "sub-nivel") st.nivel = t.value;
+      if (d.cambio === "sub-letra") st.letra = t.value.toUpperCase();
+      if (d.cambio === "sub-fecha") st.fecha = t.value;
+      if (d.cambio === "sub-clv") st.clv[d.prueba] = t.value;
+      pintar();
+      return true;
+    }
     if (d.cambio === "ed-colegio") {
       fijarColegioEditor(t.value);
       pintar();
@@ -5399,6 +5534,21 @@
           const caja = raiz.querySelector("#paes-agregar-prueba");
           if (caja) caja.scrollIntoView({ block: "center" });
         }
+        break;
+      case "sub-elegir": {
+        const input = raiz.querySelector(`input[data-archivo="sub-pdf"][data-prueba="${CSS.escape(b.dataset.prueba)}"]`);
+        if (input) {
+          input.value = "";
+          input.click();
+        }
+        break;
+      }
+      case "sub-quitar":
+        delete subirEstado().archivos[b.dataset.prueba];
+        pintar();
+        break;
+      case "sub-corregir":
+        corregirSubida();
         break;
       case "ap-cerrar":
         est.agregarPrueba = null;
@@ -5857,6 +6007,7 @@
         if (ir === "nuevo") Object.assign(est, enBlanco);
         else if (ir === "disperso") Object.assign(est, enBlanco, { formDisperso: true });
         else if (ir === "editor") est.vista = "editor";
+        else if (ir === "subir") est.vista = "subir";
         else if (ir === "seguir") est.vista = "curso";
         else est.vista = "resultados";
         pintar();
@@ -6182,6 +6333,14 @@
       if (t.dataset.archivo === "editor-pdf") {
         cargarEditor(archivos);
         t.value = "";
+      }
+      if (t.dataset.archivo === "sub-pdf") {
+        const validos = archivos.filter((a) => /\.pdf$/i.test(a.name) || /^image\//.test(a.type) || /\.(jpe?g|png|webp|bmp|gif)$/i.test(a.name));
+        if (!validos.length) toast("Esos archivos no son PDF ni imágenes.");
+        else subirEstado().archivos[t.dataset.prueba] = validos;
+        t.value = "";
+        pintar();
+        return;
       }
       if (t.dataset.archivo === "res-pdf" && est.otroClv) {
         const validos = archivos.filter((a) => /\.pdf$/i.test(a.name) || /^image\//.test(a.type) || /\.(jpe?g|png|webp|bmp|gif)$/i.test(a.name));

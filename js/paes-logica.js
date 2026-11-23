@@ -439,6 +439,30 @@
     return "invalido";
   }
 
+  // Cuántos dígitos del RUT marcado hay que revisar (para pintarlo naranjo o rojo):
+  // columnas sin marca o con dos marcas, dígitos que faltan (un RUT tiene al menos 8 con el
+  // dígito verificador) y, si todo se leyó, 1 cuando el dígito verificador no calza. Si la hoja
+  // ya tiene un estudiante, también cuenta en cuántos dígitos su RUT es distinto del marcado
+  // (0 si coinciden; la K no se puede marcar en la hoja, así que un RUT con K calza sin ella).
+  function digitosDudososDelRut(idLeido, rutEstudiante) {
+    let id = String(idLeido || "").replace(/^[0?]+(?=\d{8,9}$)/, "").replace(/^0+/, "");
+    const r = String(rutEstudiante || "").replace(/[^0-9kK]/g, "").toUpperCase().replace(/^0+/, "");
+    if (r && (r === id || (r.endsWith("K") && id === r.slice(0, -1)))) return 0;
+    if (!id) return 9;
+    let n = (id.match(/\?/g) || []).length + Math.max(0, 8 - id.length);
+    if (!n && id.length > 9) n = id.length - 9;
+    if (!n) {
+      const e = estadoDelId(id);
+      if (e === "invalido" || e === "sin-dv") n = 1;
+    }
+    if (r) {
+      let dif = Math.abs(r.length - id.length);
+      for (let i = 0; i < Math.min(r.length, id.length); i++) if (r[i] !== id[i]) dif++;
+      n = Math.max(n, dif);
+    }
+    return n;
+  }
+
   // Busca a quién corresponde una hoja según el ID leído.
   //   estudiantes: los del curso [{ id, rut, ... }]
   //   otros: estudiantes de otros cursos cargados [{ id, rut, cursoId, ... }]
@@ -799,6 +823,7 @@
     puntajeDe,
     distanciaId,
     estadoDelId,
+    digitosDudososDelRut,
     vincularHoja,
     respuestaVigente,
     corregirHoja,

@@ -794,3 +794,21 @@ details.paes-colegio > .paes-res-curso { margin-left: 16px; margin-right: 16px; 
 .paes-ap-op { border: 1px solid var(--paes-borde, #e0dcea); border-radius: 10px; padding: 10px 12px; background: white; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 .paes-ap-op small { color: #5a536b; line-height: 1.35; }
 .paes-ap-cursos { display: flex; flex-wrap: wrap; gap: 6px; }
+/* RUT marcado con dígitos por revisar: naranjo (1) o rojo (2 o más), translúcido para leerlo */
+.paes-chip.naranjo { background: #fde7cf; color: #8a4b00; border: 1px solid #f2b26a; }
+.paes-chip.rojo { border: 1px solid #e8a39b; }
+#modulo-paes code.paes-id.paes-id-naranjo { background: rgba(242, 140, 40, 0.28); box-shadow: 0 0 0 2px #f28c28; border-radius: 5px; }
+#modulo-paes code.paes-id.paes-id-rojo { background: rgba(192, 57, 43, 0.20); box-shadow: 0 0 0 2px #c0392b; border-radius: 5px; }
+/* pestaña «Subir CL y M1» */
+.paes-sub-titulo { font-size: 15px; margin: 16px 0 8px; color: var(--paes-oscuro, #2e2547); }
+.paes-sub-pruebas { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.paes-sub-prueba { border: 2px dashed #b9b4c7; border-radius: 12px; padding: 12px 14px; background: #fbfaff; display: flex; flex-direction: column; gap: 4px; }
+.paes-sub-prueba.cl { border-color: var(--paes-cl); background: var(--paes-cl-fondo); }
+.paes-sub-prueba.m1 { border-color: var(--paes-m1); background: var(--paes-m1-fondo); }
+.paes-sub-prueba.con-archivo { border-style: solid; }
+.paes-sub-cab { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.paes-sub-sigla { font-weight: 800; color: white; background: #5b4a86; border-radius: 8px; padding: 4px 10px; }
+.paes-sub-prueba.cl .paes-sub-sigla { background: var(--paes-cl); }
+.paes-sub-prueba.m1 .paes-sub-sigla { background: var(--paes-m1); }
+.paes-sub-archivos { margin: 6px 0; padding-left: 18px; font-size: 13px; }
+.paes-sub-ya { color: #4a4460; }

@@ -556,6 +556,17 @@ El trabajo va en cinco pasos:
      Junto al clavijero de cada prueba hay un botón "📄 Informe CL" (rojo) o
      "📄 Informe M1" (azul) que descarga de inmediato el informe PDF de resultados
      de esa prueba, sin abrir el curso.
+   - Pestaña "📤 Subir CL y M1" (también en Inicio): para un curso que trae un PDF
+     de Competencia Lectora y otro de Matemática. 1) Escribe el colegio y elige el
+     curso (o "➕ Curso nuevo…" con su nivel y letra). 2) Elige el PDF de cada
+     prueba; cada una trae su clavijero ya elegido (se puede cambiar). 3) "Corregir
+     ahora": se corrigen seguidos en el mismo curso y al final se abre su revisión,
+     con botones para pasar de CL a M1. Lo ya corregido del curso no se pierde.
+   - RUT marcado con dígitos por revisar: en la revisión, el RUT se pinta naranjo
+     si hay 1 dígito por revisar y rojo si hay 2 o más (columnas sin marca o con
+     dos marcas, dígitos que faltan, dígito verificador que no calza o, si la hoja
+     ya tiene estudiante, dígitos distintos a su RUT). Así no se pasa por alto un
+     RUT incompleto, sobre todo en cursos sin lista.
    - "➕ Agregar ensayos M1" (o CL): aparece en cada colegio y en cada curso al que
      le falta una prueba que tiene clavijero guardado (por ejemplo, subiste solo
      Lenguaje y falta Matemática). Pregunta cómo viene el escaneo:
