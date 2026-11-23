@@ -538,6 +538,31 @@
       return /Informe CL/.test(b.textContent) && color !== "rgba(0, 0, 0, 0)" && color !== "rgb(255, 255, 255)" && !!d && /Informe Ensayo PAES/.test(d.nombre) && /\.pdf$/.test(d.nombre) && erroresApp.length === antes;
     });
 
+    await prueba("En la revisión de todos los cursos aparece «Traspasar todas las E a D» (arriba y en la franja del curso) y funciona", async () => {
+      const antes = erroresApp.length;
+      const h = E.hojas.find((x) => x.estado !== "ilegible" && !x.excluida && !x.repetidaDe && E.ensayos.some((e) => e.id === x.ensayoId && (e.alternativas || 4) < 5));
+      if (!h) return false;
+      if (!h.ediciones) h.ediciones = { respuestas: {} };
+      const previo = h.ediciones.respuestas[2];
+      h.ediciones.respuestas[2] = "E";
+      await clic('[data-vista="revision"]');
+      if (!q('[data-accion="rev-todas"]')) return false;
+      await clic('[data-accion="rev-todas"]');
+      const arriba = q('[data-accion="e-a-d-todos"]');
+      const ok1 = !!arriba && /(marcó|marcaron) E/.test(arriba.textContent);
+      // la franja solo lo muestra si esa hoja está en la página (por revisar)
+      const enFranja = qa(".paes-rev-banner [data-accion='e-a-d']").length;
+      await clic('[data-accion="e-a-d-todos"]');
+      await confirmar();
+      await espera(300);
+      const ok2 = h.ediciones.respuestas[2] === "D" && !q('[data-accion="e-a-d-todos"]');
+      if (previo === undefined) delete h.ediciones.respuestas[2];
+      else h.ediciones.respuestas[2] = previo;
+      await win.PaesDB.poner("hojas", h);
+      await clic('[data-accion="rev-resumen"]');
+      return ok1 && ok2 && enFranja >= 0 && erroresApp.length === antes;
+    });
+
     titulo("Errores");
     await prueba("La app no registró errores durante el recorrido", () => {
       if (erroresApp.length) throw new Error(erroresApp.slice(0, 3).join(" | "));

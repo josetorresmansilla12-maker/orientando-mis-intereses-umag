@@ -2558,6 +2558,15 @@
       : `<button type="button" class="secundario chico" data-accion="e-a-d" title="Para los estudiantes que marcaron E queriendo marcar D">🔁 Traspasar todas las E a D</button>`;
   }
 
+  // ensayos de 4 alternativas (en ellos la E es un error de marcado)
+  const ensayosDeCuatro = () => est.ensayos.filter((x) => (x.alternativas || 4) < 5 && est.cursos.some((c) => c.id === x.cursoId));
+
+  // botón de arriba de la pestaña Revisión: todas las E a D de todos los cursos (solo si hay)
+  function botonEaDTodos() {
+    const n = ensayosDeCuatro().reduce((a, x) => a + new Set(respuestasEnE(x).map((r) => r.h.id)).size, 0);
+    return n ? `<button type="button" class="secundario chico paes-btn-naranjo" data-accion="e-a-d-todos" title="Estudiantes que marcaron E, una alternativa que estos ensayos no usan: probablemente querían marcar D">🔁 Traspasar todas las E a D (todos los cursos) · ${plural(n, "estudiante marcó E", "estudiantes marcaron E")}</button>` : "";
+  }
+
   // respuestas marcadas en E en las hojas que cuentan del ensayo: [{ h, n }]
   function respuestasEnE(e) {
     const cambios = [];
@@ -2571,18 +2580,21 @@
   }
 
   // cambia por D todas las respuestas marcadas en E del ensayo (con confirmación)
-  function traspasarEaD() {
-    const e = ensayoActual();
-    if (!e) return;
-    const cambios = respuestasEnE(e);
+  // todos: en todos los ensayos de 4 alternativas de todos los cursos (botón de arriba en
+  // la pestaña Revisión); si no, solo en el ensayo actual
+  function traspasarEaD(todos) {
+    const e = todos ? null : ensayoActual();
+    if (!todos && !e) return;
+    const cambios = todos ? ensayosDeCuatro().reduce((a, x) => a.concat(respuestasEnE(x)), []) : respuestasEnE(e);
     if (!cambios.length) {
-      toast("En este ensayo no hay respuestas marcadas en E.");
+      toast(todos ? "No hay respuestas marcadas en E." : "En este ensayo no hay respuestas marcadas en E.");
       return;
     }
     const tocadas = Array.from(new Set(cambios.map((x) => x.h)));
+    const nEnsayos = new Set(tocadas.map((h) => h.ensayoId)).size;
     confirmar({
       titulo: "Traspasar todas las E a D",
-      texto: `Se van a cambiar por D ${plural(cambios.length, "respuesta marcada", "respuestas marcadas")} en E, en ${plural(tocadas.length, "hoja", "hojas")} de este ensayo.${e.alternativas === 5 ? " Ojo: este ensayo tiene 5 alternativas, así que la E es una respuesta posible." : ""} Las dobles marcas no se tocan. El cambio queda en el historial y se puede revertir con «Deshacer el último cambio».`,
+      texto: `Se van a cambiar por D ${plural(cambios.length, "respuesta marcada", "respuestas marcadas")} en E, en ${plural(tocadas.length, "hoja", "hojas")} ${todos ? `de ${plural(nEnsayos, "ensayo", "ensayos")} (todos los cursos)` : "de este ensayo"}.${e && e.alternativas === 5 ? " Ojo: este ensayo tiene 5 alternativas, así que la E es una respuesta posible." : ""} Las dobles marcas no se tocan. El cambio queda en el historial y se puede revertir con «Deshacer el último cambio».`,
       textoBoton: "Traspasar las E a D",
       onConfirmar: async () => {
         const lote = [];
@@ -4016,7 +4028,7 @@
     if (est.revTodas && total) return htmlRevisionEnOrden();
     let h = `<div class="tarjeta"><h2>🔎 Revisión</h2>
       <p class="ayuda">${total ? `Faltan por revisar <b>${plural(total, "hoja", "hojas")}</b>. Están agrupadas por colegio, curso y prueba; «Revisar» abre la hoja con su imagen para corregirla. Una hoja sale de esta lista cuando la marcas como revisada o se resuelve su aviso.` : "No hay hojas pendientes: todo lo corregido está revisado. ✔"}</p>
-      ${total ? `<div class="acciones-form" style="margin-top:0;"><button type="button" data-accion="rev-todas">📋 Revisarlas todas en orden (todos los cursos en una página)</button></div>` : ""}</div>`;
+      ${total ? `<div class="acciones-form" style="margin-top:0;"><button type="button" data-accion="rev-todas">📋 Revisarlas todas en orden (todos los cursos en una página)</button>${botonEaDTodos()}</div>` : ""}</div>`;
     if (!total) return h;
     porColegio().forEach((g) => {
       const cursos = g.cursos.filter((c) => pendientesDelCurso(c));
@@ -4060,7 +4072,7 @@
     let h = `<div class="tarjeta paes-rev-todas-cab"><h2>🔎 Revisión en orden · todos los cursos</h2>
       <p class="ayuda">Faltan <b>${plural(total, "hoja", "hojas")}</b> por revisar, separadas por colegio, curso y prueba. Revísalas de arriba hacia abajo: cada hoja sale de la página cuando la marcas como revisada o se resuelve su aviso.</p>
       <div class="acciones-form" style="margin-top:0;"><button type="button" class="secundario chico" data-accion="rev-resumen">← Volver al resumen</button>
-      <button type="button" class="secundario chico" data-accion="deshacer" ${diario.hechas.length && diario.hechas[diario.hechas.length - 1].reversible ? "" : "disabled"}>↩ Deshacer el último cambio</button></div></div>`;
+      <button type="button" class="secundario chico" data-accion="deshacer" ${diario.hechas.length && diario.hechas[diario.hechas.length - 1].reversible ? "" : "disabled"}>↩ Deshacer el último cambio</button>${botonEaDTodos()}</div></div>`;
     porColegio().forEach((g) => {
       const cursos = g.cursos.filter((c) => pendientesDelCurso(c));
       if (!cursos.length) return;
@@ -4074,6 +4086,7 @@
               <span class="paes-rev-banner-sigla">${esc(siglaPrueba(e))}</span>
               <div class="paes-rev-banner-txt"><b>🏫 ${esc(c.colegio)} · ${esc(etiquetaCurso(c))}</b> <small>${esc(c.anio || "")}</small><br>${esc(nombrePrueba(e))}${clv ? ` · clavijero «${esc(clv.nombre)}»` : ""}</div>
               <span class="paes-pendientes quieto">⚠ ${plural(r.mostradas, "hoja por revisar", "hojas por revisar")}</span>
+              ${(e.alternativas || 4) < 5 && respuestasEnE(e).length ? botonEaD(e) : ""}
               <button type="button" class="secundario chico" data-accion="rev-ensayo" data-curso="${esc(c.id)}" data-ensayo="${esc(e.id)}" title="Abre este ensayo en «Trabajar un curso», con sus resultados y su historial">Abrir en el curso →</button>
             </div>
             ${r.html}
@@ -5596,6 +5609,9 @@
         if (elegido && elegido.value) moverHoja(id, elegido.value, { conEstudiante: true });
         break;
       }
+      case "e-a-d-todos":
+        traspasarEaD(true);
+        break;
       case "e-a-d":
         traspasarEaD();
         break;

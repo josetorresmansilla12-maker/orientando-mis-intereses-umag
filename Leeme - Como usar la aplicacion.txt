@@ -586,6 +586,9 @@ El trabajo va en cinco pasos:
      respuestas marcadas en E del ensayo, con confirmación. Se puede deshacer.
      Si en el ensayo (de 4 alternativas) hay estudiantes que marcaron E, el botón
      se pone naranjo y dice cuántos son.
+     En la pestaña "🔎 Revisión" (resumen y "Revisarlas todas en orden") aparece
+     arriba "Traspasar todas las E a D (todos los cursos)" cuando hay estudiantes que
+     marcaron E, y en la franja de cada curso y prueba que los tenga.
    - "Agregar clavijero" está solo en "Clavijeros subidos": ahí se sube un
      clavijero nuevo.
    - Varias pruebas en un mismo curso (CL, M1...): cada prueba tiene sus propias

@@ -774,3 +774,4 @@ details.paes-colegio > .paes-res-curso { margin-left: 16px; margin-right: 16px; 
 #modulo-paes button.secundario.paes-res-informe.m1 { background: var(--paes-m1); border-color: var(--paes-m1); }
 #modulo-paes button.secundario.paes-res-informe:hover { filter: brightness(0.92); }
 #modulo-paes button.secundario.paes-res-informe.otra { background: #5b4a86; border-color: #5b4a86; }
+#modulo-paes .paes-rev-banner button.secundario.paes-btn-naranjo { background: #f28c28; color: white; border-color: white; }
