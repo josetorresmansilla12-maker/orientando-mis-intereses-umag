@@ -3074,10 +3074,11 @@
     const colegios = [...new Set(cursos.map((c) => c.colegio))];
     return [cursos.length === 1 ? textoArchivo(etiquetaCurso(cursos[0])) : "", textoArchivo(colegios.length === 1 ? colegios[0] : "Varios colegios"), textoArchivo(tipo)].filter(Boolean).join(" ");
   }
-  // "4to A Colegio Alfa Informe Ensayo PAES Competencia Lectora Forma A 2026-04-10"
+  // "4to C CL Liceo Experimental Informe Ensayo PAES": curso, prueba (CL o M1), colegio y tipo, sin fecha
   function nombreArchivoEnsayo(c, e, tipo) {
-    const detalle = [nombrePrueba(e), e.forma ? "Forma " + e.forma : "", e.fecha || ""].filter(Boolean).join(" ");
-    return inicioArchivo([c], `${tipo} ${detalle}`);
+    const lista = [{ curso: c.nivel, letra: c.letra, colegio: c.colegio }];
+    if (typeof cursosParaNombre === "function") return [cursosParaNombre(lista), limpiarParaNombreArchivo(siglaPrueba(e)), colegioParaNombre(lista), limpiarParaNombreArchivo(tipo)].filter(Boolean).join(" ");
+    return [textoArchivo(etiquetaCurso(c)), textoArchivo(siglaPrueba(e)), textoArchivo(c.colegio), textoArchivo(tipo)].filter(Boolean).join(" ");
   }
 
   function datosDeInforme(c, e, conNombres) {

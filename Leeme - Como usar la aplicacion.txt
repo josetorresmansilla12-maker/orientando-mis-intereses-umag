@@ -161,8 +161,8 @@ Paso 2: las pestañas
      45), ofrece ir a la pestaña "Corrección". Se puede deshacer con "↩ Deshacer".
    - Nombres de carpetas y archivos:
      * En toda la aplicación (Kuder, 8° básico y Ensayos PAES) los archivos parten
-       igual: CURSO, COLEGIO y QUÉ ES. Por ejemplo "4to A Colegio Alfa Informe
-       Ensayo PAES…", "2do C Colegio Alfa Informe Grupal Kuder.pdf" o "1ero 2do
+       igual: CURSO, COLEGIO y QUÉ ES (en Ensayos PAES, la prueba va después del
+       curso). Por ejemplo "4to A CL Colegio Alfa Informe Ensayo PAES.pdf", "2do C Colegio Alfa Informe Grupal Kuder.pdf" o "1ero 2do
        Colegio Alfa Informe Global Kuder (5 cursos).pdf". Así, en la carpeta de
        descargas, basta escribir el nombre del colegio (o "4to") para filtrar.
        El curso va como 1ero, 2do, 3ero, 4to u 8vo, más la letra.
@@ -526,8 +526,9 @@ El trabajo va en cinco pasos:
      * "📦 Descargar informes": abre una ventana para marcar colegios y cursos
        (con "Seleccionar todos" y "Desmarcar todos") y descarga un solo ZIP con el
        informe PDF de cada prueba de cada curso marcado. Cada PDF se llama, por
-       ejemplo, "4to A Colegio Alfa Informe Ensayo PAES Competencia Lectora Forma
-       A 2026-04-10.pdf".
+       ejemplo, "4to A CL Colegio Alfa Informe Ensayo PAES.pdf" (curso, prueba,
+       colegio y tipo, sin fecha; el Excel es "4to A M1 Colegio Alfa Resultados
+       Ensayo PAES.xlsx").
      * "🗑 Eliminar todos los datos": borra todos los cursos, listas, ensayos y
        hojas de los Ensayos PAES de este computador (pide escribir ELIMINAR; los
        clavijeros se conservan salvo que marques la casilla). No se puede deshacer.

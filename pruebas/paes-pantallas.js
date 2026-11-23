@@ -236,7 +236,7 @@
       await clic('[data-paso="resultados"]');
       return hayHojas && /Promedio/.test(texto()) && !/Logro promedio/.test(texto()) && erroresApp.length === antes;
     });
-    await prueba("Los informes PDF, Word y Excel del ensayo se descargan con el nombre «curso colegio tipo»", async () => {
+    await prueba("Los informes PDF, Word y Excel del ensayo se descargan con el nombre «curso prueba colegio tipo», sin fecha", async () => {
       win.__descargas = [];
       await clic('[data-vista="resultados"]');
       for (const f of ["pdf", "word", "excel"]) {
@@ -246,7 +246,7 @@
         await clic('[data-vista="resultados"]');
       }
       const n = win.__descargas.map((d) => d.nombre);
-      return n.length === 3 && n.every((x) => /^4to A Colegio de Prueba Automatica (Informe|Resultados) Ensayo PAES/.test(x)) && /\.pdf$/.test(n[0]) && /\.docx$/.test(n[1]) && /\.xlsx$/.test(n[2]);
+      return n.length === 3 && n.every((x) => /^4to A (CL|M1) Colegio de Prueba Automatica (Informe|Resultados) Ensayo PAES\.(pdf|docx|xlsx)$/.test(x)) && /\.pdf$/.test(n[0]) && /\.docx$/.test(n[1]) && /\.xlsx$/.test(n[2]);
     });
 
     titulo("Resultados guardados");
@@ -409,7 +409,7 @@
       await hasta(() => win.__descargas.length === 1, 90000);
       const zip = await win.JSZip.loadAsync(await (await win.fetch(win.__descargas[0].href)).blob());
       const nombres = Object.keys(zip.files);
-      return nombres.length === 3 && nombres.every((n) => /Informe Ensayo PAES .*\.pdf$/.test(n));
+      return nombres.length === 3 && nombres.every((n) => /^\S+ \S* ?(CL|M1) .* Informe Ensayo PAES\.pdf$/.test(n));
     });
     let respaldo = null;
     await prueba("«Exportar respaldo» entrega un ZIP con datos, listas, clavijeros e informes por prueba y clavijero", async () => {
