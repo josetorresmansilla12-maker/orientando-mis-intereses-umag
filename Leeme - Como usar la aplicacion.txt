@@ -557,6 +557,13 @@ El trabajo va en cinco pasos:
      Junto al clavijero de cada prueba hay un botón "📄 Informe CL" (rojo) o
      "📄 Informe M1" (azul) que descarga de inmediato el informe PDF de resultados
      de esa prueba, sin abrir el curso.
+   - "👤 Revisar alumnos sin identificar (N)" (pestaña "🔎 Revisión"): reúne todas
+     las hojas que cuentan pero no tienen estudiante (en el informe salen "sin
+     identificar"), separadas por colegio, curso y prueba. En cada una buscas al
+     estudiante por nombre o RUT, lo eliges de la lista o lo agregas con su nombre
+     y RUT. Cuando un ensayo queda con todos identificados, su franja se pone verde
+     y aparece "📄 Descargar el informe actualizado": lo descargas y reemplazas el
+     antiguo. "Listo, ocultar" quita esa franja de la página.
    - Eliminar un ensayo: en "Resultados guardados", dentro de cada curso, cada
      prueba tiene "🗑 Eliminar ensayo". Borra solo ese ensayo de ese curso (su clave,
      su tabla y sus hojas leídas); el curso, su lista y sus otras pruebas no se

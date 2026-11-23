@@ -818,3 +818,10 @@ details.paes-colegio > .paes-res-curso { margin-left: 16px; margin-right: 16px; 
 /* «Eliminar ensayo» en Resultados guardados */
 #modulo-paes button.secundario.paes-btn-borrar { color: #b3261e; border-color: #e3a19b; }
 #modulo-paes button.secundario.paes-btn-borrar:hover { background: #fdecea; }
+/* Revisión: alumnos sin identificar */
+#modulo-paes button.secundario.paes-btn-sinid { background: #fff3d6; color: #7a5200; border: 2px solid #e0a526; font-weight: 700; }
+.paes-rev-banner.listo { background: #2e7d32; }
+.paes-sinid-listo { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 10px; padding: 12px 14px; color: #1b5e20; font-weight: 600; margin-bottom: 10px; }
+#modulo-paes .paes-sinid-listo button.paes-res-informe { color: white; }
+#modulo-paes .paes-sinid-listo button.paes-res-informe.cl { background: var(--paes-cl); border-color: var(--paes-cl); }
+#modulo-paes .paes-sinid-listo button.paes-res-informe.m1 { background: var(--paes-m1); border-color: var(--paes-m1); }

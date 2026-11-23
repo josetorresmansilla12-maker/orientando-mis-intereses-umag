@@ -649,6 +649,40 @@
       return !E.ensayos.some((e) => e.id === ensayoId) && !E.hojas.some((h) => h.ensayoId === ensayoId) && E.cursos.some((c) => c.id === cursoId) && E.ensayos.filter((e) => e.cursoId === cursoId).length === otros && E.vista === "resultados" && erroresApp.length === antes;
     });
 
+    await prueba("«Revisar alumnos sin identificar»: al identificar al último de un ensayo, ofrece descargar su informe actualizado", async () => {
+      const antes = erroresApp.length;
+      const h = E.hojas.find((x) => x.estado !== "ilegible" && !x.excluida && !x.repetidaDe && x.estudianteId && E.ensayos.some((e) => e.id === x.ensayoId));
+      if (!h) return false;
+      const quien = h.estudianteId;
+      // la hoja queda sin estudiante (como las que salen «sin identificar» en el informe)
+      h.estudianteId = null;
+      h.asignacion = null;
+      await win.PaesDB.poner("hojas", h);
+      await clic('[data-vista="revision"]');
+      const boton = q('[data-accion="rev-sin-id"]');
+      if (!boton) return false;
+      await clic(boton);
+      const sec = q(`#paes-revsec-${win.CSS.escape(h.ensayoId)}`);
+      const conTarjeta = !!sec && !!sec.querySelector(`#paes-hoja-${win.CSS.escape(h.id)}`);
+      // se identifica con el selector de la tarjeta
+      const sel = sec.querySelector(`select[data-asignar="${h.id}"]`);
+      sel.value = quien;
+      sel.dispatchEvent(new win.Event("change", { bubbles: true }));
+      for (let i = 0; i < 20 && !h.estudianteId; i++) await espera(150);
+      await espera(200);
+      const sec2 = q(`#paes-revsec-${win.CSS.escape(h.ensayoId)}`);
+      const descargar = sec2 && sec2.querySelector('[data-accion="res-informe-prueba"]');
+      const n0 = win.__descargas.length;
+      if (descargar) {
+        await clic(descargar);
+        await confirmar();
+        for (let i = 0; i < 40 && win.__descargas.length === n0; i++) await espera(250);
+      }
+      const d = win.__descargas[win.__descargas.length - 1];
+      await clic('[data-accion="rev-resumen"]');
+      return conTarjeta && h.estudianteId === quien && !!descargar && win.__descargas.length > n0 && /Informe Ensayo PAES\.pdf$/.test(d.nombre) && !E.revSinId && erroresApp.length === antes;
+    });
+
     titulo("Errores");
     await prueba("La app no registró errores durante el recorrido", () => {
       if (erroresApp.length) throw new Error(erroresApp.slice(0, 3).join(" | "));

@@ -50,7 +50,9 @@
     subir: null, // pestaña «Subir CL y M1»: { colegio, cursoId, nivel, letra, fecha, archivos: {prueba: [File]}, clv: {prueba: id}, corriendo }
     agregarPrueba: null, // Resultados guardados: { colegio, prueba } con el cuadro «Agregar ensayos X» abierto
     pdfPrueba: null, // «Agregar ensayos PDF»: prueba cuyo clavijero queda marcado de entrada
-    revTodas: false, // Revisión: todas las hojas pendientes de todos los cursos en una página
+    revTodas: false,
+    revSinId: false, // Revisión: hojas sin estudiante identificado, de todos los cursos
+    sinIdEnsayos: new Set(), // ensayos que tenían hojas sin identificar (para ofrecer su informe actualizado) // Revisión: todas las hojas pendientes de todos los cursos en una página
     visorSinMarcas: false, // visor: imagen sin los círculos de la app ("Ocultar marcas")
     colegiosAbiertos: new Set(), // Resultados guardados: colegios desplegados
     cursosAbiertos: new Set(), // y cursos desplegados (se conservan al volver a pintar)
@@ -2361,7 +2363,8 @@
 
   // tarjetas de las hojas de un ensayo (las del paso «Revisión» de un curso y las de la
   // revisión de todos los cursos en una página). soloPendientes: solo las por revisar.
-  function htmlHojasRevision(c, e, soloPendientes) {
+  // filtro (opcional): solo las hojas que cumplen (por ejemplo, las sin identificar)
+  function htmlHojasRevision(c, e, soloPendientes, filtro) {
     const hojas = hojasDelEnsayo(e.id);
     const adv = advertenciasDelEnsayo(e);
     const porId = new Map(c.estudiantes.map((x) => [x.id, x]));
@@ -2386,6 +2389,7 @@
       const avisos = adv.get(x.id) || [];
       const estado = estadoDeHoja(x, avisos);
       if (soloPendientes && estado !== "revisar" && estado !== "ilegible") return;
+      if (filtro && !filtro(x)) return;
       mostradas++;
       const alumno = x.estudianteId ? porId.get(x.estudianteId) : null;
       let puntaje = "";
@@ -4104,12 +4108,58 @@
   // ============================================================ REVISIÓN: todo lo pendiente
   // Todos los cursos con las hojas que faltan por revisar, y qué tiene cada una.
 
+  // hojas que cuentan pero aún no tienen estudiante: en el informe salen «sin identificar»
+  const sinIdentificar = (x) => vigente(x) && !x.estudianteId;
+  const totalSinIdentificar = () => est.hojas.filter((x) => sinIdentificar(x) && est.ensayos.some((e) => e.id === x.ensayoId)).length;
+  function botonSinIdentificar() {
+    const n = totalSinIdentificar();
+    return n || est.sinIdEnsayos.size ? `<button type="button" class="secundario paes-btn-sinid" data-accion="rev-sin-id">👤 Revisar alumnos sin identificar${n ? ` (${n})` : " ✔"}</button>` : "";
+  }
+
+  // Alumnos sin identificar: todas las hojas sin estudiante, por colegio, curso y prueba. Cuando
+  // un ensayo queda sin ninguna, su franja se pone verde y ofrece su informe actualizado.
+  function htmlRevisionSinIdentificar() {
+    const n = totalSinIdentificar();
+    let h = `<div class="tarjeta paes-rev-todas-cab"><h2>👤 Alumnos sin identificar</h2>
+      <p class="ayuda">${n ? `Hay <b>${plural(n, "hoja", "hojas")}</b> sin estudiante: en el informe salen como «sin identificar». Para cada una, búscalo por nombre o RUT, elígelo de la lista o agrégalo con su nombre y RUT si no está. Cuando un ensayo queda con todos identificados, su franja se pone verde y puedes descargar su informe actualizado (reemplaza el antiguo).` : "No quedan hojas sin identificar. ✔ Descarga abajo los informes actualizados de los ensayos que corregiste."}</p>
+      <div class="acciones-form" style="margin-top:0;"><button type="button" class="secundario chico" data-accion="rev-resumen">← Volver a Revisión</button>
+      <button type="button" class="secundario chico" data-accion="deshacer" ${diario.hechas.length && diario.hechas[diario.hechas.length - 1].reversible ? "" : "disabled"}>↩ Deshacer el último cambio</button></div></div>`;
+    let secciones = 0;
+    porColegio().forEach((g) => {
+      g.cursos.forEach((c) => {
+        ordenPruebas(ensayosDelCurso(c.id)).forEach((e) => {
+          const quedan = hojasDelEnsayo(e.id).filter(sinIdentificar);
+          if (quedan.length) est.sinIdEnsayos.add(e.id);
+          if (!quedan.length && !est.sinIdEnsayos.has(e.id)) return;
+          secciones++;
+          const clv = clavijeroDe(e);
+          const listo = !quedan.length;
+          h += `<section class="paes-rev-seccion" id="paes-revsec-${esc(e.id)}" data-ctx-curso="${esc(c.id)}" data-ctx-ensayo="${esc(e.id)}">
+            <div class="paes-rev-banner ${listo ? "listo" : clasePrueba(e)}">
+              <span class="paes-rev-banner-sigla">${esc(siglaPrueba(e))}</span>
+              <div class="paes-rev-banner-txt"><b>🏫 ${esc(c.colegio)} · ${esc(etiquetaCurso(c))}</b> <small>${esc(c.anio || "")}</small><br>${esc(nombrePrueba(e))}${clv ? ` · clavijero «${esc(clv.nombre)}»` : ""}</div>
+              ${listo ? `<span class="paes-chip verde">✔ todos identificados</span>` : `<span class="paes-pendientes quieto">👤 ${plural(quedan.length, "sin identificar", "sin identificar")}</span>`}
+            </div>
+            ${listo
+              ? `<div class="paes-sinid-listo">✔ Se identificaron todos los estudiantes de este ensayo. ¿Quieres descargar el informe actualizado?
+                  <button type="button" class="chico paes-res-informe ${clasePrueba(e)}" data-accion="res-informe-prueba" data-curso="${esc(c.id)}" data-ensayo="${esc(e.id)}" ${est.generando ? "disabled" : ""}>📄 Descargar el informe actualizado de ${esc(siglaPrueba(e))}</button>
+                  <button type="button" class="secundario chico" data-accion="sinid-listo" data-ensayo="${esc(e.id)}" title="Quitar esta franja de la página">Listo, ocultar</button></div>`
+              : htmlHojasRevision(c, e, false, sinIdentificar).html}
+          </section>`;
+        });
+      });
+    });
+    if (!secciones) h += `<div class="tarjeta"><p class="ayuda" style="margin:0;">No hay estudiantes sin identificar. 🎉</p></div>`;
+    return h;
+  }
+
   function htmlVistaRevision() {
     const total = pendientesTotales();
+    if (est.revSinId) return htmlRevisionSinIdentificar();
     if (est.revTodas && total) return htmlRevisionEnOrden();
     let h = `<div class="tarjeta"><h2>🔎 Revisión</h2>
       <p class="ayuda">${total ? `Faltan por revisar <b>${plural(total, "hoja", "hojas")}</b>. Están agrupadas por colegio, curso y prueba; «Revisar» abre la hoja con su imagen para corregirla. Una hoja sale de esta lista cuando la marcas como revisada o se resuelve su aviso.` : "No hay hojas pendientes: todo lo corregido está revisado. ✔"}</p>
-      ${total ? `<div class="acciones-form" style="margin-top:0;"><button type="button" data-accion="rev-todas">📋 Revisarlas todas en orden (todos los cursos en una página)</button>${botonEaDTodos()}</div>` : ""}</div>`;
+      ${total || botonSinIdentificar() ? `<div class="acciones-form" style="margin-top:0;">${total ? `<button type="button" data-accion="rev-todas">📋 Revisarlas todas en orden (todos los cursos en una página)</button>` : ""}${botonSinIdentificar()}${total ? botonEaDTodos() : ""}</div>` : ""}</div>`;
     if (!total) return h;
     porColegio().forEach((g) => {
       const cursos = g.cursos.filter((c) => pendientesDelCurso(c));
@@ -4153,7 +4203,7 @@
     let h = `<div class="tarjeta paes-rev-todas-cab"><h2>🔎 Revisión en orden · todos los cursos</h2>
       <p class="ayuda">Faltan <b>${plural(total, "hoja", "hojas")}</b> por revisar, separadas por colegio, curso y prueba. Revísalas de arriba hacia abajo: cada hoja sale de la página cuando la marcas como revisada o se resuelve su aviso.</p>
       <div class="acciones-form" style="margin-top:0;"><button type="button" class="secundario chico" data-accion="rev-resumen">← Volver al resumen</button>
-      <button type="button" class="secundario chico" data-accion="deshacer" ${diario.hechas.length && diario.hechas[diario.hechas.length - 1].reversible ? "" : "disabled"}>↩ Deshacer el último cambio</button>${botonEaDTodos()}</div></div>`;
+      <button type="button" class="secundario chico" data-accion="deshacer" ${diario.hechas.length && diario.hechas[diario.hechas.length - 1].reversible ? "" : "disabled"}>↩ Deshacer el último cambio</button>${botonEaDTodos()}${botonSinIdentificar()}</div></div>`;
     porColegio().forEach((g) => {
       const cursos = g.cursos.filter((c) => pendientesDelCurso(c));
       if (!cursos.length) return;
@@ -6014,8 +6064,18 @@
           } else global.scrollTo({ top: 0 });
         }
         break;
+      case "rev-sin-id":
+        Object.assign(est, { revSinId: true, revTodas: false, vista: "revision" });
+        pintar();
+        global.scrollTo({ top: 0 });
+        break;
+      case "sinid-listo":
+        est.sinIdEnsayos.delete(b.dataset.ensayo);
+        pintar();
+        break;
       case "rev-resumen":
         est.revTodas = false;
+        est.revSinId = false;
         pintar();
         global.scrollTo({ top: 0 });
         break;
