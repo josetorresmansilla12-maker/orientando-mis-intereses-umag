@@ -541,6 +541,12 @@ El trabajo va en cinco pasos:
      un cuadro naranjo "⚠ N hojas por revisar". La pestaña "🔎 Revisión" reúne
      todas las hojas pendientes de todos los cursos (por colegio, curso y prueba),
      con el estudiante y qué hay que revisar; "Revisar" abre la hoja con su imagen.
+     "📋 Revisarlas todas en orden" (arriba, o en cada prueba) muestra en UNA página
+     todas las hojas pendientes de todos los cursos, separadas por colegio, curso y
+     prueba, cada grupo con su franja de color (rojo CL, azul M1) que queda fija
+     arriba al bajar. Cada hoja tiene los mismos botones que en el curso (RUT,
+     buscador, ver y corregir, marcar como revisada...). "← Volver al resumen"
+     regresa a la lista; "Abrir en el curso" abre ese ensayo en "Trabajar un curso".
    - "Resultados guardados": cada colegio es una barra plegable (cerrada al entrar; la
      app recuerda cuáles abriste). Arriba hay un buscador ("Experimental", "3 A") y
      "Abrir todos" / "Cerrar todos". Cada curso muestra el nombre de su clavijero por

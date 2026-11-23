@@ -47,6 +47,7 @@
     deshacer: [], // cambios de la revisión que se pueden deshacer (por sesión)
     sinNombres: false, // informe sin nombres (uso interno)
     generando: false, // se está creando un informe
+    revTodas: false, // Revisión: todas las hojas pendientes de todos los cursos en una página
     visorSinMarcas: false, // visor: imagen sin los círculos de la app ("Ocultar marcas")
     colegiosAbiertos: new Set(), // Resultados guardados: colegios desplegados
     cursosAbiertos: new Set(), // y cursos desplegados (se conservan al volver a pintar)
@@ -2278,15 +2279,11 @@
     return `<code class="paes-id">${esc(texto)}</code> ${chip || ""}`;
   }
 
-  function htmlPasoRevision() {
-    const c = cursoActual();
-    const e = ensayoActual();
+  // tarjetas de las hojas de un ensayo (las del paso «Revisión» de un curso y las de la
+  // revisión de todos los cursos en una página). soloPendientes: solo las por revisar.
+  function htmlHojasRevision(c, e, soloPendientes) {
     const hojas = hojasDelEnsayo(e.id);
-    if (!hojas.length) {
-      return `<div class="tarjeta"><h2>Revisión</h2><p class="ayuda">Aún no hay hojas en este ensayo.</p><div class="acciones-form"><button type="button" data-paso="hojas">← Subir las hojas</button></div></div>`;
-    }
     const adv = advertenciasDelEnsayo(e);
-    const cuenta = contarEstados(e);
     const porId = new Map(c.estudiantes.map((x) => [x.id, x]));
     const conHoja = new Map();
     hojas.filter(vigente).forEach((x) => x.estudianteId && conHoja.set(x.estudianteId, (conHoja.get(x.estudianteId) || 0) + 1));
@@ -2303,33 +2300,12 @@
     const conHojaVisible = new Map();
     conHojaLocal.forEach((n, id) => conHojaVisible.set(visible(id), n));
     const otros = otrosEstudiantes(c.id);
-    let h = htmlFichaEnsayo(c, e, "revision") + `<div class="tarjeta">
-      <h2>Revisión de las hojas</h2>
-      <p class="ayuda">La app ya leyó, vinculó y corrigió. Aquí decides solo lo que quedó en duda: a quién corresponde una hoja, si se cuenta o no. Lo pendiente está en amarillo; cuando lo resuelvas, márcalo como revisado.</p>
-      <div class="paes-cuenta">
-        <span class="paes-chip">${plural(cuenta.total, "hoja", "hojas")}</span>
-        <span class="paes-chip verde">${cuenta.ok} ${cuenta.ok === 1 ? "lista" : "listas"}</span>
-        ${cuenta.revisar ? `<span class="paes-chip amarillo">${cuenta.revisar} por revisar</span>` : ""}
-        ${cuenta.ilegible ? `<span class="paes-chip rojo">${plural(cuenta.ilegible, "ilegible", "ilegibles")}</span>` : ""}
-        ${cuenta.repetida ? `<span class="paes-chip gris">${plural(cuenta.repetida, "repetida", "repetidas")}</span>` : ""}
-        ${cuenta.excluida ? `<span class="paes-chip gris">${plural(cuenta.excluida, "excluida", "excluidas")}</span>` : ""}
-        <label class="paes-filtro"><input type="checkbox" data-cambio="solo-revisar" ${est.soloPorRevisar ? "checked" : ""} /> Solo por revisar</label>
-      </div>
-      <div class="acciones-form" style="margin-top:12px;">
-        <button type="button" class="secundario chico" data-accion="deshacer" ${diario.hechas.length && diario.hechas[diario.hechas.length - 1].reversible ? "" : "disabled"}>↩ Deshacer el último cambio</button>
-        <button type="button" class="secundario chico" data-accion="historial">🕓 Historial de cambios</button>
-        ${botonEaD(e)}
-        <button type="button" class="${est.verSinHoja ? "" : "secundario "}chico" data-accion="ver-sin-hoja">👥 ${c.disperso ? "Estudiantes del colegio sin hoja, por curso" : "Estudiantes que aún no tienen hoja"} (${opcionesEstudiantes.filter((s) => !conHojaVisible.get(s.id)).length})</button>
-      </div>
-      ${c.disperso ? `<p class="paes-nota" style="margin-top:10px;">Grupo disperso de ${esc(c.colegio)}: no tiene lista propia. ${poolDisperso(c).length ? "Busca a cada estudiante entre los cursos del colegio; si no aparece, agrégalo con su nombre y RUT." : "Este colegio no tiene cursos con lista: agrega a cada estudiante con su nombre y RUT."}</p>` : ""}
-      ${est.verSinHoja ? htmlSinHoja(grupos.map((g) => ({ titulo: g.titulo, estudiantes: g.estudiantes.filter((s) => !conHojaVisible.get(s.id)) }))) : ""}
-      ${c.disperso ? "" : otrosDelColegio(c).length ? `<p class="paes-nota" style="margin-top:10px;">El buscador de cada hoja busca en ${esc(etiquetaCurso(c))} y también en los otros cursos de ${esc(c.colegio)} (${esc(otrosDelColegio(c).map(etiquetaCurso).join(", "))}). Si eliges a alguien de otro curso, la hoja se pasa a ese curso.</p>` : ""}
-    </div>`;
     let mostradas = 0;
+    let h = "";
     hojas.forEach((x, i) => {
       const avisos = adv.get(x.id) || [];
       const estado = estadoDeHoja(x, avisos);
-      if (est.soloPorRevisar && estado !== "revisar" && estado !== "ilegible") return;
+      if (soloPendientes && estado !== "revisar" && estado !== "ilegible") return;
       mostradas++;
       const alumno = x.estudianteId ? porId.get(x.estudianteId) : null;
       let puntaje = "";
@@ -2412,6 +2388,59 @@
       }
       h += `</div></div></div>`;
     });
+    return { html: h, mostradas };
+  }
+
+  function htmlPasoRevision() {
+    const c = cursoActual();
+    const e = ensayoActual();
+    const hojas = hojasDelEnsayo(e.id);
+    if (!hojas.length) {
+      return `<div class="tarjeta"><h2>Revisión</h2><p class="ayuda">Aún no hay hojas en este ensayo.</p><div class="acciones-form"><button type="button" data-paso="hojas">← Subir las hojas</button></div></div>`;
+    }
+    const adv = advertenciasDelEnsayo(e);
+    const cuenta = contarEstados(e);
+    const porId = new Map(c.estudiantes.map((x) => [x.id, x]));
+    const conHoja = new Map();
+    hojas.filter(vigente).forEach((x) => x.estudianteId && conHoja.set(x.estudianteId, (conHoja.get(x.estudianteId) || 0) + 1));
+    const hayClave = e.clave.some((k) => k.r);
+    const grupos = gruposParaAsignar(c);
+    const opcionesEstudiantes = grupos.reduce((a, g) => a.concat(g.estudiantes), []);
+    const porIdOpcion = new Map(opcionesEstudiantes.map((x) => [x.id, x]));
+    // en un curso disperso, la pantalla usa el id del estudiante en su curso de origen
+    const visible = (idDelCurso) => {
+      const propio = porId.get(idDelCurso);
+      return propio && propio.origenId && porIdOpcion.has(propio.origenId) ? propio.origenId : idDelCurso;
+    };
+    const conHojaLocal = conHoja;
+    const conHojaVisible = new Map();
+    conHojaLocal.forEach((n, id) => conHojaVisible.set(visible(id), n));
+    const otros = otrosEstudiantes(c.id);
+    let h = htmlFichaEnsayo(c, e, "revision") + `<div class="tarjeta">
+      <h2>Revisión de las hojas</h2>
+      <p class="ayuda">La app ya leyó, vinculó y corrigió. Aquí decides solo lo que quedó en duda: a quién corresponde una hoja, si se cuenta o no. Lo pendiente está en amarillo; cuando lo resuelvas, márcalo como revisado.</p>
+      <div class="paes-cuenta">
+        <span class="paes-chip">${plural(cuenta.total, "hoja", "hojas")}</span>
+        <span class="paes-chip verde">${cuenta.ok} ${cuenta.ok === 1 ? "lista" : "listas"}</span>
+        ${cuenta.revisar ? `<span class="paes-chip amarillo">${cuenta.revisar} por revisar</span>` : ""}
+        ${cuenta.ilegible ? `<span class="paes-chip rojo">${plural(cuenta.ilegible, "ilegible", "ilegibles")}</span>` : ""}
+        ${cuenta.repetida ? `<span class="paes-chip gris">${plural(cuenta.repetida, "repetida", "repetidas")}</span>` : ""}
+        ${cuenta.excluida ? `<span class="paes-chip gris">${plural(cuenta.excluida, "excluida", "excluidas")}</span>` : ""}
+        <label class="paes-filtro"><input type="checkbox" data-cambio="solo-revisar" ${est.soloPorRevisar ? "checked" : ""} /> Solo por revisar</label>
+      </div>
+      <div class="acciones-form" style="margin-top:12px;">
+        <button type="button" class="secundario chico" data-accion="deshacer" ${diario.hechas.length && diario.hechas[diario.hechas.length - 1].reversible ? "" : "disabled"}>↩ Deshacer el último cambio</button>
+        <button type="button" class="secundario chico" data-accion="historial">🕓 Historial de cambios</button>
+        ${botonEaD(e)}
+        <button type="button" class="${est.verSinHoja ? "" : "secundario "}chico" data-accion="ver-sin-hoja">👥 ${c.disperso ? "Estudiantes del colegio sin hoja, por curso" : "Estudiantes que aún no tienen hoja"} (${opcionesEstudiantes.filter((s) => !conHojaVisible.get(s.id)).length})</button>
+      </div>
+      ${c.disperso ? `<p class="paes-nota" style="margin-top:10px;">Grupo disperso de ${esc(c.colegio)}: no tiene lista propia. ${poolDisperso(c).length ? "Busca a cada estudiante entre los cursos del colegio; si no aparece, agrégalo con su nombre y RUT." : "Este colegio no tiene cursos con lista: agrega a cada estudiante con su nombre y RUT."}</p>` : ""}
+      ${est.verSinHoja ? htmlSinHoja(grupos.map((g) => ({ titulo: g.titulo, estudiantes: g.estudiantes.filter((s) => !conHojaVisible.get(s.id)) }))) : ""}
+      ${c.disperso ? "" : otrosDelColegio(c).length ? `<p class="paes-nota" style="margin-top:10px;">El buscador de cada hoja busca en ${esc(etiquetaCurso(c))} y también en los otros cursos de ${esc(c.colegio)} (${esc(otrosDelColegio(c).map(etiquetaCurso).join(", "))}). Si eliges a alguien de otro curso, la hoja se pasa a ese curso.</p>` : ""}
+    </div>`;
+    const tarjetas = htmlHojasRevision(c, e, est.soloPorRevisar);
+    const mostradas = tarjetas.mostradas;
+    h += tarjetas.html;
     if (!mostradas) h += `<div class="tarjeta"><p class="ayuda" style="margin:0;">No queda nada por revisar. 🎉</p></div>`;
     h += `<div class="paes-siguiente"><button type="button" data-paso="resultados">Seguir: resultados →</button></div>`;
     return h;
@@ -3983,8 +4012,10 @@
 
   function htmlVistaRevision() {
     const total = pendientesTotales();
+    if (est.revTodas && total) return htmlRevisionEnOrden();
     let h = `<div class="tarjeta"><h2>🔎 Revisión</h2>
-      <p class="ayuda" style="margin-bottom:0;">${total ? `Faltan por revisar <b>${plural(total, "hoja", "hojas")}</b>. Están agrupadas por colegio, curso y prueba; «Revisar» abre la hoja con su imagen para corregirla. Una hoja sale de esta lista cuando la marcas como revisada o se resuelve su aviso.` : "No hay hojas pendientes: todo lo corregido está revisado. ✔"}</p></div>`;
+      <p class="ayuda">${total ? `Faltan por revisar <b>${plural(total, "hoja", "hojas")}</b>. Están agrupadas por colegio, curso y prueba; «Revisar» abre la hoja con su imagen para corregirla. Una hoja sale de esta lista cuando la marcas como revisada o se resuelve su aviso.` : "No hay hojas pendientes: todo lo corregido está revisado. ✔"}</p>
+      ${total ? `<div class="acciones-form" style="margin-top:0;"><button type="button" data-accion="rev-todas">📋 Revisarlas todas en orden (todos los cursos en una página)</button></div>` : ""}</div>`;
     if (!total) return h;
     porColegio().forEach((g) => {
       const cursos = g.cursos.filter((c) => pendientesDelCurso(c));
@@ -3998,7 +4029,7 @@
           const pend = todas.filter((x) => ["revisar", "ilegible"].includes(estadoDeHoja(x, adv.get(x.id) || [])));
           if (!pend.length) return;
           h += `<div class="paes-rev-ensayo ${clasePrueba(e)}"><div class="paes-rev-cab"><span class="paes-pill ${clasePrueba(e)}"><b>${esc(siglaPrueba(e))}</b>${esc(nombrePrueba(e))}</span> <small>${plural(pend.length, "hoja por revisar", "hojas por revisar")} de ${todas.length}</small>
-            <button type="button" class="secundario chico" data-accion="rev-ensayo" data-curso="${esc(c.id)}" data-ensayo="${esc(e.id)}">Revisarlas todas en orden →</button></div>
+            <button type="button" class="secundario chico" data-accion="rev-todas" data-ensayo="${esc(e.id)}">Revisarlas todas en orden →</button></div>
             <div class="paes-tabla-scroll"><table class="paes-tabla"><thead><tr><th>Hoja</th><th>Estudiante</th><th>Qué hay que revisar</th><th></th></tr></thead><tbody>
             ${pend
               .map((x) => {
@@ -4015,6 +4046,39 @@
         h += `</div>`;
       });
       h += `</div>`;
+    });
+    return h;
+  }
+
+  // Revisión de todo lo pendiente en una sola página: por colegio, curso y prueba, cada
+  // grupo con su franja de título y las mismas tarjetas del paso «Revisión» del curso.
+  // Cada grupo lleva data-ctx-curso / data-ctx-ensayo: al usar una tarjeta, la app toma
+  // ese curso y ensayo como los actuales (así funcionan igual que en el curso).
+  function htmlRevisionEnOrden() {
+    const total = pendientesTotales();
+    let h = `<div class="tarjeta paes-rev-todas-cab"><h2>🔎 Revisión en orden · todos los cursos</h2>
+      <p class="ayuda">Faltan <b>${plural(total, "hoja", "hojas")}</b> por revisar, separadas por colegio, curso y prueba. Revísalas de arriba hacia abajo: cada hoja sale de la página cuando la marcas como revisada o se resuelve su aviso.</p>
+      <div class="acciones-form" style="margin-top:0;"><button type="button" class="secundario chico" data-accion="rev-resumen">← Volver al resumen</button>
+      <button type="button" class="secundario chico" data-accion="deshacer" ${diario.hechas.length && diario.hechas[diario.hechas.length - 1].reversible ? "" : "disabled"}>↩ Deshacer el último cambio</button></div></div>`;
+    porColegio().forEach((g) => {
+      const cursos = g.cursos.filter((c) => pendientesDelCurso(c));
+      if (!cursos.length) return;
+      cursos.forEach((c) => {
+        ordenPruebas(ensayosDelCurso(c.id)).forEach((e) => {
+          const r = htmlHojasRevision(c, e, true);
+          if (!r.mostradas) return;
+          const clv = clavijeroDe(e);
+          h += `<section class="paes-rev-seccion" id="paes-revsec-${esc(e.id)}" data-ctx-curso="${esc(c.id)}" data-ctx-ensayo="${esc(e.id)}">
+            <div class="paes-rev-banner ${clasePrueba(e)}">
+              <span class="paes-rev-banner-sigla">${esc(siglaPrueba(e))}</span>
+              <div class="paes-rev-banner-txt"><b>🏫 ${esc(c.colegio)} · ${esc(etiquetaCurso(c))}</b> <small>${esc(c.anio || "")}</small><br>${esc(nombrePrueba(e))}${clv ? ` · clavijero «${esc(clv.nombre)}»` : ""}</div>
+              <span class="paes-pendientes quieto">⚠ ${plural(r.mostradas, "hoja por revisar", "hojas por revisar")}</span>
+              <button type="button" class="secundario chico" data-accion="rev-ensayo" data-curso="${esc(c.id)}" data-ensayo="${esc(e.id)}" title="Abre este ensayo en «Trabajar un curso», con sus resultados y su historial">Abrir en el curso →</button>
+            </div>
+            ${r.html}
+          </section>`;
+        });
+      });
     });
     return h;
   }
@@ -5188,6 +5252,15 @@
 
   // ============================================================ EVENTOS
 
+  // en la revisión de todos los cursos, cada tarjeta trae su curso y ensayo: al usarla,
+  // pasan a ser los actuales (las acciones de las tarjetas trabajan sobre ellos)
+  function tomarContextoDeTarjeta(el) {
+    const ctx = el && el.closest ? el.closest("[data-ctx-ensayo]") : null;
+    if (!ctx) return;
+    est.cursoId = ctx.dataset.ctxCurso;
+    est.ensayoId = ctx.dataset.ctxEnsayo;
+  }
+
   function alClic(ev) {
     if (ev.target.id === "paes-visor") {
       cerrarVisor();
@@ -5212,6 +5285,7 @@
     }
     const b = ev.target.closest("[data-accion]");
     if (!b || b.disabled) return;
+    tomarContextoDeTarjeta(b);
     if (!/^accion-/.test(b.dataset.accion)) abrirAccion(tituloDeBoton(b));
     const id = b.dataset.id;
     const elegirArchivo = (tipo) => {
@@ -5580,6 +5654,23 @@
           global.scrollBy(0, -12);
         }
         break;
+      case "rev-todas":
+        est.revTodas = true;
+        est.vista = "revision";
+        pintar();
+        {
+          const sec = b.dataset.ensayo ? raiz.querySelector(`#paes-revsec-${CSS.escape(b.dataset.ensayo)}`) : null;
+          if (sec) {
+            sec.scrollIntoView({ block: "start" });
+            global.scrollBy(0, -12);
+          } else global.scrollTo({ top: 0 });
+        }
+        break;
+      case "rev-resumen":
+        est.revTodas = false;
+        pintar();
+        global.scrollTo({ top: 0 });
+        break;
       case "rev-ensayo":
       case "rev-hoja":
         Object.assign(est, { enBlanco: false, cursoId: b.dataset.curso, ensayoId: b.dataset.ensayo, vista: "curso", paso: "revision", soloPorRevisar: true, formCurso: null, formEnsayo: false });
@@ -5945,6 +6036,7 @@
 
   function alCambiar(ev) {
     const t = ev.target;
+    tomarContextoDeTarjeta(t);
     abrirAccion(tituloDeCambio(t));
     // ---- archivos
     if (t.dataset.archivo) {
@@ -6117,6 +6209,7 @@
 
   function alEscribir(ev) {
     const t = ev.target;
+    tomarContextoDeTarjeta(t);
     if (t.dataset.resBuscar) {
       filtrarResultados(t.value);
       return;

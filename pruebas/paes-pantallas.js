@@ -504,6 +504,25 @@
       return normal && naranjo && erroresApp.length === antes;
     });
 
+    await prueba("«Revisarlas todas en orden» muestra en una página las hojas pendientes de cada curso y prueba, con su franja", async () => {
+      const antes = erroresApp.length;
+      await clic('[data-vista="revision"]');
+      if (!q('[data-accion="rev-todas"]')) return E.vista === "revision"; // no hay pendientes: nada que mostrar
+      await clic('[data-accion="rev-todas"]');
+      const secciones = qa(".paes-rev-seccion");
+      const ok1 = E.revTodas && secciones.length > 0 && secciones.every((s) => s.querySelector(".paes-rev-banner") && s.querySelector(".paes-hoja"));
+      // usar una tarjeta toma su curso y ensayo como los actuales
+      const sec = secciones[secciones.length - 1];
+      const ver = sec.querySelector('[data-accion="ver-hoja"]');
+      await clic(ver);
+      await espera(300);
+      const ok2 = E.ensayoId === sec.dataset.ctxEnsayo && E.cursoId === sec.dataset.ctxCurso && !!q("#paes-visor .paes-visor-caja");
+      await clic('#paes-visor [data-accion="cerrar-visor"]');
+      const sigue = E.vista === "revision" && qa(".paes-rev-seccion").length === secciones.length;
+      await clic('[data-accion="rev-resumen"]');
+      return ok1 && ok2 && sigue && !E.revTodas && erroresApp.length === antes;
+    });
+
     titulo("Errores");
     await prueba("La app no registró errores durante el recorrido", () => {
       if (erroresApp.length) throw new Error(erroresApp.slice(0, 3).join(" | "));
