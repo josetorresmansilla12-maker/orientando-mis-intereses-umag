@@ -152,7 +152,11 @@
 
   // a quién se le puede asignar una hoja del curso, por grupos (un curso normal tiene un solo grupo, sin título)
   function gruposParaAsignar(c) {
-    if (!c.disperso) return [{ titulo: "", estudiantes: estudiantesOrdenados(c) }];
+    if (!c.disperso) {
+      // lista hecha con varias listas juntas: un subtítulo por cada una (por ejemplo, «3° Medio A»)
+      if (!c.estudiantes.some((x) => x.grupo)) return [{ titulo: "", estudiantes: estudiantesOrdenados(c) }];
+      return subgruposDeLista(c).map((g) => ({ titulo: g.titulo, estudiantes: g.estudiantes }));
+    }
     const pool = poolDisperso(c);
     const dePool = new Set(pool.map((x) => x.id));
     const porGrupo = new Map();
@@ -164,6 +168,26 @@
     const propios = c.estudiantes.filter((x) => !x.origenId || !dePool.has(x.origenId));
     if (propios.length) grupos.push({ titulo: "Agregados a mano", estudiantes: estudiantesOrdenados({ estudiantes: propios }) });
     return grupos;
+  }
+
+  // subgrupos de una lista formada con varias listas: [{ titulo, estudiantes }] en orden
+  function subgruposDeLista(c) {
+    const porGrupo = new Map();
+    c.estudiantes.forEach((x) => {
+      const g = x.grupo || "Otros de la lista";
+      if (!porGrupo.has(g)) porGrupo.set(g, []);
+      porGrupo.get(g).push(x);
+    });
+    return Array.from(porGrupo.entries())
+      .sort((a, b) => (a[0] === "Otros de la lista") - (b[0] === "Otros de la lista") || a[0].localeCompare(b[0], "es", { numeric: true }))
+      .map(([titulo, estudiantes]) => ({ titulo, estudiantes: estudiantesOrdenados({ estudiantes }) }));
+  }
+
+  // «3RO D GABRIELA MISTRAL» o «3° medio D» → «3° Medio D»; si no se reconoce, queda tal cual
+  function etiquetaSubgrupo(texto) {
+    const t = String(texto || "").replace(/\.[a-z0-9]+$/i, "").replace(/[_-]+/g, " ").trim();
+    const m = t.match(/(?:^|\s)([1-4])\s*(?:°|º|ro|ero|er|do|to)?\s*(?:medio|m)?\s+([a-h])(?=\s|$)/i);
+    return m ? `${m[1]}° Medio ${m[2].toUpperCase()}` : t;
   }
 
   // En un curso disperso se elige a un estudiante de otro curso del colegio: se copia a la
@@ -1253,8 +1277,8 @@
       <h2 style="font-size:16px;">Lista oficial del curso</h2>
       <p class="ayuda">${lista.length ? "Con esta lista se vinculan las hojas por RUT. Puedes corregir un nombre o un RUT, agregar a alguien o cargar otro archivo: al cargarlo eliges si se suma a esta lista o la reemplaza, y si es la oficial. Si la lista es de otro curso, usa «Ingresar nuevo curso»." : "Sube el Excel de la lista (.xls, .xlsx o .csv) con el nombre completo y el RUT de cada estudiante. Vas a ver una vista previa para corregir antes de confirmar."}</p>
       <div class="acciones-form" style="margin-top:0;">
-        <input type="file" data-archivo="lista" accept=".xls,.xlsx,.csv" style="display:none;" />
-        <button type="button" data-accion="elegir-lista">📤 ${lista.length ? "Cargar otra lista (sumar o reemplazar)…" : "Subir la lista del curso…"}</button>
+        <input type="file" data-archivo="lista" accept=".xls,.xlsx,.csv" multiple style="display:none;" />
+        <button type="button" data-accion="elegir-lista" title="Puedes elegir varias listas a la vez: se juntan en este curso y cada una queda como un subgrupo (por ejemplo, 3° Medio A, 3° Medio B)">📤 ${lista.length ? "Cargar otra lista (sumar o reemplazar)…" : "Subir la lista del curso (una o varias)…"}</button>
         <button type="button" class="secundario" data-accion="agregar-estudiante">➕ Agregar estudiante a mano</button>
       </div>`;
     const avisos = [];
@@ -1263,7 +1287,14 @@
     h += htmlAvisos(avisos, "amarillo");
     if (lista.length || est.editEst === "nuevo") {
       h += `<div class="paes-tabla-scroll"><table class="paes-tabla"><thead><tr><th>N°</th><th>Nombres</th><th>Apellidos</th><th>RUT</th><th></th><th></th></tr></thead><tbody>`;
-      lista.forEach((e, i) => {
+      const conGrupos = c.estudiantes.some((x) => x.grupo);
+      const ordenada = conGrupos ? subgruposDeLista(c).reduce((a, g) => a.concat(g.estudiantes), []) : lista;
+      let grupoAnterior = null;
+      ordenada.forEach((e, i) => {
+        if (conGrupos && (e.grupo || "Otros de la lista") !== grupoAnterior) {
+          grupoAnterior = e.grupo || "Otros de la lista";
+          h += `<tr class="paes-subgrupo"><td colspan="6">${esc(grupoAnterior)} <small>(${c.estudiantes.filter((x) => (x.grupo || "Otros de la lista") === grupoAnterior).length})</small></td></tr>`;
+        }
         if (est.editEst === e.id) h += htmlFilaEdicion(e, i + 1);
         else {
           h += `<tr><td class="num">${i + 1}</td><td>${esc(e.nombres)}</td><td>${esc(e.apellidos)}</td><td class="rut">${esc(L.formatearRutPaes(e.rut))}</td><td>${insigniaRut(e.rut)}${e.fueraDeLista ? ` <span class="paes-chip amarillo" title="Tiene una hoja, pero no viene en la lista que reemplazó a la anterior">fuera de la lista</span>` : ""}</td>
@@ -1294,6 +1325,7 @@
       <h2 style="font-size:16px;">Vista previa de la lista · ${esc(p.archivo)}</h2>
       <p class="ayuda">Revisa que los nombres y los RUT hayan quedado bien. Puedes corregir cualquier celda o quitar una fila. Nada se guarda hasta que confirmes.</p>
       ${htmlAvisos(p.avisos, "amarillo")}`;
+    if (p.grupos) h += `<p class="paes-nota">Se juntan <b>${plural(p.grupos.length, "lista", "listas")}</b> en este curso: ${p.grupos.map(esc).join(" · ")}. Cada estudiante queda en su subgrupo, que sale como subtítulo al elegir a quién corresponde una hoja.</p>`;
     if (p.cursos && p.cursos.length > 1) {
       h += `<div class="paes-ctx-campo" style="margin-bottom:10px;"><label>Curso del archivo que quieres cargar</label>
         <select data-cambio="previa-curso"><option value="">Todos (${p.estudiantes.length})</option>${p.cursos.map((k) => `<option value="${esc(k)}" ${k === p.cursoElegido ? "selected" : ""}>${esc(k)} (${p.estudiantes.filter((e) => e.curso === k).length})</option>`).join("")}</select></div>`;
@@ -1314,9 +1346,9 @@
         ${c.estudiantes.length ? `<label><input type="radio" name="paes-previa-modo" data-previa-op="modo" value="sumar" ${p.modo !== "reemplazar" ? "checked" : ""} /> <b>Sumar</b> a la lista actual <small>(mismo RUT se actualiza, los nuevos se agregan, nadie se quita)</small></label>
         <label><input type="radio" name="paes-previa-modo" data-previa-op="modo" value="reemplazar" ${p.modo === "reemplazar" ? "checked" : ""} /> <b>Reemplazar</b> la lista actual por esta <small>(quien no venga aquí sale del curso y queda en la papelera; si tiene una hoja, se conserva marcado «fuera de la lista»)</small></label>` : ""}
       </div>
-      <div class="paes-tabla-scroll"><table class="paes-tabla"><thead><tr><th>N°</th><th>Nombres</th><th>Apellidos</th><th>RUT</th><th></th><th>Como venía en el archivo</th><th></th></tr></thead><tbody>`;
+      <div class="paes-tabla-scroll"><table class="paes-tabla"><thead><tr><th>N°</th>${p.grupos ? "<th>Subgrupo</th>" : ""}<th>Nombres</th><th>Apellidos</th><th>RUT</th><th></th><th>Como venía en el archivo</th><th></th></tr></thead><tbody>`;
     filas.forEach((e, i) => {
-      h += `<tr class="${!e.nombreSeguro && e.nombreRaro ? "paes-fila-duda" : ""}"><td class="num">${i + 1}</td>
+      h += `<tr class="${!e.nombreSeguro && e.nombreRaro ? "paes-fila-duda" : ""}"><td class="num">${i + 1}</td>${p.grupos ? `<td><span class="paes-chip gris">${esc(e.grupo || "")}</span></td>` : ""}
         <td><input type="text" data-previa="nombres" data-i="${e.i}" value="${esc(e.nombres)}" /></td>
         <td><input type="text" data-previa="apellidos" data-i="${e.i}" value="${esc(e.apellidos)}" /></td>
         <td><input type="text" data-previa="rut" data-i="${e.i}" value="${esc(e.rut)}" /></td>
@@ -1380,6 +1412,42 @@
     }
   }
 
+  // Varias listas para un mismo curso (casos especiales): se juntan en una sola vista previa
+  // y cada estudiante guarda su subgrupo (la lista de donde viene), que después sale como
+  // subtítulo al elegir a quién corresponde una hoja.
+  async function leerVariasListas(archivos) {
+    const estudiantes = [];
+    const avisos = [];
+    const resumen = [];
+    for (const archivo of archivos) {
+      try {
+        const hojas = (await hojasDeArchivo(archivo)).map((h) => ({ h, r: L.leerListaCurso(h.filas) })).filter((x) => x.r.estudiantes.length);
+        if (!hojas.length) {
+          avisos.push(`«${archivo.name}»: no se encontraron estudiantes.`);
+          continue;
+        }
+        hojas.forEach(({ h, r }) => {
+          const base = etiquetaSubgrupo(r.cursos && r.cursos.length === 1 ? r.cursos[0] : hojas.length > 1 ? `${archivo.name.replace(/\.[^.]+$/, "")} ${h.nombre}` : archivo.name);
+          let n = 0;
+          r.estudiantes.forEach((e) => {
+            const grupo = e.curso && (!r.cursos || r.cursos.length > 1) ? etiquetaSubgrupo(e.curso) : base;
+            estudiantes.push({ i: estudiantes.length, nombres: e.nombres, apellidos: e.apellidos, rut: L.formatearRutPaes(e.rut), curso: e.curso, grupo, nombreOriginal: e.nombreOriginal, nombreSeguro: e.nombreSeguro, nombreRaro: e.nombreRaro });
+            n++;
+          });
+          resumen.push(`${base} (${n})`);
+          r.avisos.forEach((a) => avisos.push(`${base}: ${a}`));
+        });
+      } catch (err) {
+        console.error(err);
+        avisos.push(`«${archivo.name}» no se pudo leer. ¿Es un Excel (.xls, .xlsx) o un CSV?`);
+      }
+    }
+    if (!estudiantes.length) return toast(avisos[0] || "No se encontraron estudiantes en los archivos.");
+    est.previa = { archivo: `${archivos.length} listas juntas`, avisos, cursos: [], cursoElegido: "", oficial: true, modo: "sumar", grupos: resumen, estudiantes };
+    est.editEst = null;
+    pintar();
+  }
+
   // Guarda una lista en un curso, con las mismas reglas en toda la app: se calza por RUT,
   // «sumar» agrega y actualiza, «reemplazar» saca a quien no viene (salvo que tenga hoja).
   async function aplicarListaACurso(c, filasCrudas, p) {
@@ -1399,11 +1467,13 @@
       if (existente) {
         existente.nombres = String(f.nombres || "").trim();
         existente.apellidos = String(f.apellidos || "").trim();
+        if (f.grupo) existente.grupo = f.grupo;
         delete existente.fueraDeLista;
         deLaLista.add(existente.id);
         actualizados++;
       } else {
         const nuevo = { id: PaesDB.nuevoId("e"), rut, nombres: String(f.nombres || "").trim(), apellidos: String(f.apellidos || "").trim() };
+        if (f.grupo) nuevo.grupo = f.grupo;
         c.estudiantes.push(nuevo);
         deLaLista.add(nuevo.id);
         nuevos++;
@@ -1730,11 +1800,12 @@
 
   function eliminarEnsayo() {
     const e = ensayoActual();
+    const c = cursoActual();
     if (!e) return;
     const n = hojasDelEnsayo(e.id).length;
     confirmar({
       titulo: "Eliminar el ensayo",
-      texto: `Se va a eliminar el ensayo «${etiquetaEnsayo(e)}» con su clave, su tabla y ${plural(n, "hoja leída", "hojas leídas")} (incluidas sus imágenes). Esto no se puede deshacer.`,
+      texto: `Se va a eliminar el ensayo «${etiquetaEnsayo(e)}»${c ? ` de ${nombreCurso(c)}` : ""} con su clave, su tabla y ${plural(n, "hoja leída", "hojas leídas")} (incluidas sus imágenes). El curso, su lista y sus otras pruebas no se tocan. Esto no se puede deshacer.`,
       textoBoton: "Eliminar el ensayo",
       onConfirmar: async () => {
         await PaesDB.borrarEnsayo(e.id);
@@ -4619,7 +4690,8 @@
           const hojas = hojasDelEnsayo(e.id);
           if (!hojas.some(vigente)) {
             h += `<div class="paes-res-fila"><div><b>${esc(nombrePrueba(e))}</b><small>${esc(etiquetaEnsayo(e))} · aún sin hojas leídas</small></div>
-              <div class="paes-cabecera-acciones"><button type="button" class="secundario chico" data-accion="res-ver" data-curso="${esc(c.id)}" data-ensayo="${esc(e.id)}" data-ir="hojas">Subir sus hojas →</button></div></div>`;
+              <div class="paes-cabecera-acciones"><button type="button" class="secundario chico" data-accion="res-ver" data-curso="${esc(c.id)}" data-ensayo="${esc(e.id)}" data-ir="hojas">Subir sus hojas →</button>
+              <button type="button" class="secundario chico paes-btn-borrar" data-accion="res-eliminar-ensayo" data-curso="${esc(c.id)}" data-ensayo="${esc(e.id)}" title="Elimina solo este ensayo de este curso (no el curso ni sus otras pruebas)">🗑 Eliminar ensayo</button></div></div>`;
             return;
           }
           const st = L.resultadosEnsayo(e, hojas, cursoParaResultados(c, [e]).estudiantes).estadisticas;
@@ -4632,6 +4704,7 @@
               <button type="button" class="secundario chico" data-accion="res-informe" data-formato="pdf" ${attrs} ${est.generando ? "disabled" : ""}>📄 PDF</button>
               <button type="button" class="secundario chico" data-accion="res-informe" data-formato="word" ${attrs} ${est.generando ? "disabled" : ""}>📝 Word</button>
               <button type="button" class="secundario chico" data-accion="res-informe" data-formato="excel" ${attrs}>⬇ Excel</button>
+              <button type="button" class="secundario chico paes-btn-borrar" data-accion="res-eliminar-ensayo" ${attrs} title="Elimina solo este ensayo de este curso (no el curso ni sus otras pruebas)">🗑 Eliminar ensayo</button>
             </div></div>`;
         });
         if (est.resMezcla) h += htmlCombinada(c, true);
@@ -5703,6 +5776,11 @@
       case "eliminar-ensayo":
         eliminarEnsayo();
         break;
+      case "res-eliminar-ensayo":
+        ev.preventDefault();
+        Object.assign(est, { cursoId: b.dataset.curso, ensayoId: b.dataset.ensayo, enBlanco: false });
+        eliminarEnsayo();
+        break;
       case "elegir-clave":
         elegirArchivo("clave");
         break;
@@ -6320,7 +6398,11 @@
     if (t.dataset.archivo) {
       const archivos = Array.from(t.files || []);
       if (!archivos.length) return;
-      if (t.dataset.archivo === "lista") leerArchivoLista(archivos[0]);
+      if (t.dataset.archivo === "lista") {
+        if (archivos.length > 1) leerVariasListas(archivos);
+        else leerArchivoLista(archivos[0]);
+        t.value = "";
+      }
       if (t.dataset.archivo === "listas") leerListasNuevas(archivos);
       if (t.dataset.archivo === "disperso") crearDisperso(archivos);
       if (t.dataset.archivo === "respaldo") {

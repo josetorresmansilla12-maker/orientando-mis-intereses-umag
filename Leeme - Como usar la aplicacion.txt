@@ -557,6 +557,17 @@ El trabajo va en cinco pasos:
      Junto al clavijero de cada prueba hay un botón "📄 Informe CL" (rojo) o
      "📄 Informe M1" (azul) que descarga de inmediato el informe PDF de resultados
      de esa prueba, sin abrir el curso.
+   - Eliminar un ensayo: en "Resultados guardados", dentro de cada curso, cada
+     prueba tiene "🗑 Eliminar ensayo". Borra solo ese ensayo de ese curso (su clave,
+     su tabla y sus hojas leídas); el curso, su lista y sus otras pruebas no se
+     tocan. Pide confirmación y no se puede deshacer.
+   - Varias listas en un mismo curso (casos especiales, por ejemplo un grupo con
+     estudiantes de 4 cursos): en la lista del curso, "📤 Subir la lista del curso
+     (una o varias)" deja elegir varios archivos a la vez. Se juntan en una sola
+     lista y cada estudiante queda en su subgrupo (sale del curso que trae el
+     archivo o de su nombre, por ejemplo "3RO A ..." → "3° Medio A"). La lista del
+     curso y el selector de estudiante de cada hoja muestran un subtítulo por
+     subgrupo.
    - Pestaña "📤 Subir CL y M1" (también en Inicio): para un curso que trae un PDF
      de Competencia Lectora y otro de Matemática. 1) Escribe el colegio y elige el
      curso (o "➕ Curso nuevo…" con su nivel y letra). 2) Elige el PDF de cada

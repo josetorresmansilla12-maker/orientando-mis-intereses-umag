@@ -812,3 +812,9 @@ details.paes-colegio > .paes-res-curso { margin-left: 16px; margin-right: 16px; 
 .paes-sub-prueba.m1 .paes-sub-sigla { background: var(--paes-m1); }
 .paes-sub-archivos { margin: 6px 0; padding-left: 18px; font-size: 13px; }
 .paes-sub-ya { color: #4a4460; }
+/* lista hecha con varias listas: subtítulo de cada subgrupo */
+.paes-tabla tr.paes-subgrupo td { background: #efeaf8; color: var(--paes-oscuro, #2e2547); font-weight: 800; padding-top: 8px; }
+.paes-tabla tr.paes-subgrupo td small { font-weight: 400; }
+/* «Eliminar ensayo» en Resultados guardados */
+#modulo-paes button.secundario.paes-btn-borrar { color: #b3261e; border-color: #e3a19b; }
+#modulo-paes button.secundario.paes-btn-borrar:hover { background: #fdecea; }

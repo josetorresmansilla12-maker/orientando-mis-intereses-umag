@@ -619,6 +619,36 @@
         L.digitosDudososDelRut("23?95?9", "") >= 2 && L.digitosDudososDelRut("231953928", "23095392-9") >= 2 && L.digitosDudososDelRut("", "") >= 2;
     });
 
+    await prueba("Se pueden subir varias listas a un curso: se juntan y cada una queda como subgrupo con su subtítulo", async () => {
+      const antes = erroresApp.length;
+      const c = E.cursos.find((x) => x.letra === "C");
+      if (!c) return false;
+      await clic('[data-vista="resultados"]');
+      await clic('[data-accion="res-abrir-todos"]');
+      await clic(`[data-accion="res-lista"][data-curso="${c.id}"]`);
+      await subir('[data-archivo="lista"]', [listaXlsx("3RO A LISTA.xlsx", RUTS.slice(0, 2)), listaXlsx("3RO B LISTA.xlsx", RUTS.slice(2, 4))]);
+      await espera(400);
+      const previa = E.previa && E.previa.grupos && E.previa.grupos.length === 2 && E.previa.estudiantes.length === 4;
+      await clic('[data-accion="confirmar-lista"]');
+      await espera(300);
+      const grupos = new Set(c.estudiantes.filter((x) => x.grupo).map((x) => x.grupo));
+      const subtitulos = qa("tr.paes-subgrupo").map((tr) => tr.textContent);
+      return previa && grupos.has("3° Medio A") && grupos.has("3° Medio B") && subtitulos.some((t) => /3° Medio A/.test(t)) && subtitulos.some((t) => /3° Medio B/.test(t)) && erroresApp.length === antes;
+    });
+    await prueba("En Resultados guardados se puede eliminar un solo ensayo de un curso, sin tocar el curso ni sus otras pruebas", async () => {
+      const antes = erroresApp.length;
+      await clic('[data-vista="resultados"]');
+      await clic('[data-accion="res-abrir-todos"]');
+      const b = q('[data-accion="res-eliminar-ensayo"]');
+      if (!b) return false;
+      const cursoId = b.dataset.curso, ensayoId = b.dataset.ensayo;
+      const otros = E.ensayos.filter((e) => e.cursoId === cursoId && e.id !== ensayoId).length;
+      await clic(b);
+      await confirmar();
+      await espera(300);
+      return !E.ensayos.some((e) => e.id === ensayoId) && !E.hojas.some((h) => h.ensayoId === ensayoId) && E.cursos.some((c) => c.id === cursoId) && E.ensayos.filter((e) => e.cursoId === cursoId).length === otros && E.vista === "resultados" && erroresApp.length === antes;
+    });
+
     titulo("Errores");
     await prueba("La app no registró errores durante el recorrido", () => {
       if (erroresApp.length) throw new Error(erroresApp.slice(0, 3).join(" | "));
