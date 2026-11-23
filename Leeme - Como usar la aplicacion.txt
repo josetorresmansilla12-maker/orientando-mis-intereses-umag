@@ -575,6 +575,8 @@ El trabajo va en cinco pasos:
      estudiante que tenga asignado, al curso que elijas.
    - "Traspasar todas las E a D" (arriba de la revisión): cambia por D todas las
      respuestas marcadas en E del ensayo, con confirmación. Se puede deshacer.
+     Si en el ensayo (de 4 alternativas) hay estudiantes que marcaron E, el botón
+     se pone naranjo y dice cuántos son.
    - "Agregar clavijero" está solo en "Clavijeros subidos": ahí se sube un
      clavijero nuevo.
    - Varias pruebas en un mismo curso (CL, M1...): cada prueba tiene sus propias
@@ -624,6 +626,10 @@ El trabajo va en cinco pasos:
    - "Ver y corregir respuestas" abre la hoja con lo leído encima: verde es
      correcta, rojo incorrecta, azul la correcta que faltó y naranja doble marca.
      Pulsa una burbuja o una letra para corregir; el puntaje cambia al instante.
+     Si la hoja está mal escaneada y los círculos estorban, "○ Ocultar marcas"
+     deja la imagen limpia: mira cada marca y elige la letra a la derecha ("–" si
+     la dejó en blanco). "◉ Mostrar marcas" los vuelve a poner. Queda así para las
+     demás hojas hasta que lo vuelvas a pulsar.
    - Lo que leyó la app nunca se borra. Cada cambio se puede deshacer y queda en
      el "Historial de cambios", con el valor anterior.
    - Una hoja que no se pudo leer se puede volver a escanear o ingresar a mano.

@@ -47,6 +47,7 @@
     deshacer: [], // cambios de la revisión que se pueden deshacer (por sesión)
     sinNombres: false, // informe sin nombres (uso interno)
     generando: false, // se está creando un informe
+    visorSinMarcas: false, // visor: imagen sin los círculos de la app ("Ocultar marcas")
     colegiosAbiertos: new Set(), // Resultados guardados: colegios desplegados
     cursosAbiertos: new Set(), // y cursos desplegados (se conservan al volver a pintar)
     nuevoClvEn: null, // curso donde se está agregando otro clavijero
@@ -2317,7 +2318,7 @@
       <div class="acciones-form" style="margin-top:12px;">
         <button type="button" class="secundario chico" data-accion="deshacer" ${diario.hechas.length && diario.hechas[diario.hechas.length - 1].reversible ? "" : "disabled"}>↩ Deshacer el último cambio</button>
         <button type="button" class="secundario chico" data-accion="historial">🕓 Historial de cambios</button>
-        <button type="button" class="secundario chico" data-accion="e-a-d" title="Para los estudiantes que marcaron E queriendo marcar D">🔁 Traspasar todas las E a D</button>
+        ${botonEaD(e)}
         <button type="button" class="${est.verSinHoja ? "" : "secundario "}chico" data-accion="ver-sin-hoja">👥 ${c.disperso ? "Estudiantes del colegio sin hoja, por curso" : "Estudiantes que aún no tienen hoja"} (${opcionesEstudiantes.filter((s) => !conHojaVisible.get(s.id)).length})</button>
       </div>
       ${c.disperso ? `<p class="paes-nota" style="margin-top:10px;">Grupo disperso de ${esc(c.colegio)}: no tiene lista propia. ${poolDisperso(c).length ? "Busca a cada estudiante entre los cursos del colegio; si no aparece, agrégalo con su nombre y RUT." : "Este colegio no tiene cursos con lista: agrega a cada estudiante con su nombre y RUT."}</p>` : ""}
@@ -2519,10 +2520,17 @@
     toast(`Hoja pasada a ${nombreCurso(destinoCurso)}${h.estudianteId ? "" : " (allá queda sin identificar)"}${nota}`);
   }
 
-  // cambia por D todas las respuestas marcadas en E del ensayo (con confirmación)
-  function traspasarEaD() {
-    const e = ensayoActual();
-    if (!e) return;
+  // «Traspasar todas las E a D»: se pone naranjo y dice cuántos estudiantes marcaron E
+  // cuando el ensayo usa 4 alternativas (ahí la E es un error de marcado)
+  function botonEaD(e) {
+    const conE = e && (e.alternativas || 4) < 5 ? new Set(respuestasEnE(e).map((x) => x.h.id)).size : 0;
+    return conE
+      ? `<button type="button" class="secundario chico paes-btn-naranjo" data-accion="e-a-d" title="Hay estudiantes que marcaron E, una alternativa que este ensayo no usa: probablemente querían marcar D">🔁 Traspasar todas las E a D · ${plural(conE, "estudiante marcó E", "estudiantes marcaron E")}</button>`
+      : `<button type="button" class="secundario chico" data-accion="e-a-d" title="Para los estudiantes que marcaron E queriendo marcar D">🔁 Traspasar todas las E a D</button>`;
+  }
+
+  // respuestas marcadas en E en las hojas que cuentan del ensayo: [{ h, n }]
+  function respuestasEnE(e) {
     const cambios = [];
     hojasDelEnsayo(e.id).filter(vigente).forEach((h) => {
       e.clave.forEach((k) => {
@@ -2530,6 +2538,14 @@
         if (r.estado === "ok" && r.letras === "E") cambios.push({ h, n: k.n });
       });
     });
+    return cambios;
+  }
+
+  // cambia por D todas las respuestas marcadas en E del ensayo (con confirmación)
+  function traspasarEaD() {
+    const e = ensayoActual();
+    if (!e) return;
+    const cambios = respuestasEnE(e);
     if (!cambios.length) {
       toast("En este ensayo no hay respuestas marcadas en E.");
       return;
@@ -2681,6 +2697,11 @@
     const editadas = Object.keys((h.ediciones && h.ediciones.respuestas) || {}).length;
     const legible = h.estado !== "ilegible";
     const avisos = (advertenciasDelEnsayo(e).get(h.id) || []).filter((a) => a.preguntas);
+    // "Ocultar marcas": deja la imagen limpia (sin los círculos de la app) para leer las
+    // marcas a ojo e ingresar las respuestas con las letras de la derecha; vale para
+    // todas las hojas hasta que se vuelvan a mostrar
+    const conCapa = legible && !h.manual;
+    const sinMarcas = conCapa && est.visorSinMarcas;
     const lista = hojasDelEnsayo(e.id);
     const pos = lista.findIndex((x) => x.id === h.id);
     visor.innerHTML = `<div class="modal-caja paes-visor-caja">
@@ -2691,14 +2712,15 @@
           <button type="button" class="secundario chico" data-accion="visor-ir" data-id="${pos > 0 ? esc(lista[pos - 1].id) : ""}" ${pos > 0 ? "" : "disabled"}>← Anterior</button>
           <button type="button" class="secundario chico" data-accion="visor-ir" data-id="${pos < lista.length - 1 ? esc(lista[pos + 1].id) : ""}" ${pos < lista.length - 1 ? "" : "disabled"}>Siguiente →</button>
           <button type="button" class="secundario chico" data-accion="deshacer" ${diario.hechas.length && diario.hechas[diario.hechas.length - 1].reversible ? "" : "disabled"}>↩ Deshacer</button>
+          ${conCapa && url ? `<button type="button" class="secundario chico${sinMarcas ? " activo" : ""}" data-accion="visor-marcas" title="${sinMarcas ? "Vuelve a mostrar los círculos de la app sobre la imagen" : "Quita los círculos de la app para ver la hoja limpia e ingresar las respuestas a mano con las letras de la derecha"}">${sinMarcas ? "◉ Mostrar marcas" : "○ Ocultar marcas"}</button>` : ""}
           ${legible || !url ? "" : `<button type="button" class="secundario chico" data-accion="visor-girar" title="Gira la imagen para leerla; no cambia nada de la hoja">⟳ Girar imagen</button>`}
           <button type="button" class="chico" data-accion="cerrar-visor">Cerrar ✕</button>
         </div>
       </div>
-      ${legible ? `<div class="paes-leyenda"><span><i style="background:${COLOR_MARCA.correcta}"></i>Correcta</span><span><i style="background:${COLOR_MARCA.incorrecta}"></i>Incorrecta</span><span><i style="background:${COLOR_MARCA.falto}"></i>La correcta que faltó</span><span><i style="background:${COLOR_MARCA.doble}"></i>Doble marca</span><span class="paes-leyenda-nota">Pulsa una burbuja o una letra para corregir. Lo que leyó la app se conserva${editadas ? ` · <b>${plural(editadas, "respuesta editada", "respuestas editadas")}</b>` : ""}.</span></div>` : `<p class="paes-nota" style="margin:0 0 10px;">La app no pudo leer esta hoja. Puedes volver a escanearla o <button type="button" class="chico" data-accion="ingresar-a-mano" data-id="${esc(h.id)}">✍ ingresar sus respuestas a mano</button></p>`}
+      ${legible ? `<div class="paes-leyenda"><span><i style="background:${COLOR_MARCA.correcta}"></i>Correcta</span><span><i style="background:${COLOR_MARCA.incorrecta}"></i>Incorrecta</span><span><i style="background:${COLOR_MARCA.falto}"></i>La correcta que faltó</span><span><i style="background:${COLOR_MARCA.doble}"></i>Doble marca</span><span class="paes-leyenda-nota">${sinMarcas ? "<b>Marcas ocultas:</b> mira la hoja e ingresa cada respuesta con las letras de la derecha (pulsa «–» si la dejó en blanco)." : "Pulsa una burbuja o una letra para corregir."} Lo que leyó la app se conserva${editadas ? ` · <b>${plural(editadas, "respuesta editada", "respuestas editadas")}</b>` : ""}.</span></div>` : `<p class="paes-nota" style="margin:0 0 10px;">La app no pudo leer esta hoja. Puedes volver a escanearla o <button type="button" class="chico" data-accion="ingresar-a-mano" data-id="${esc(h.id)}">✍ ingresar sus respuestas a mano</button></p>`}
       ${avisos.length ? `<ul class="paes-advertencias">${avisos.map((a) => `<li>${esc(a.detalle)}</li>`).join("")}</ul>` : ""}
       <div class="paes-visor-cuerpo">
-        <div class="paes-visor-imagen">${url ? `<img src="${url}" alt="Hoja de respuestas escaneada" data-giro="${legible ? 0 : (est.visorGiro && est.visorGiro.id === h.id ? est.visorGiro.g : 0)}" />${legible && !h.manual ? svgDeHoja(h, e) : ""}` : `<p class="ayuda">La imagen de esta hoja ya no está guardada.</p>`}</div>
+        <div class="paes-visor-imagen">${url ? `<img src="${url}" alt="Hoja de respuestas escaneada" data-giro="${legible ? 0 : (est.visorGiro && est.visorGiro.id === h.id ? est.visorGiro.g : 0)}" />${conCapa && !sinMarcas ? svgDeHoja(h, e) : ""}` : `<p class="ayuda">La imagen de esta hoja ya no está guardada.</p>`}</div>
         <div class="paes-pregs">${legible ? htmlPreguntas(h, e) : ""}</div>
       </div>
     </div>`;
@@ -5647,6 +5669,10 @@
         if (entrada) entrada.click();
         break;
       }
+      case "visor-marcas":
+        est.visorSinMarcas = !est.visorSinMarcas;
+        pintarVisor();
+        break;
       case "visor-girar": {
         const g = est.visorGiro && est.visorGiro.id === est.visor ? est.visorGiro.g : 0;
         est.visorGiro = { id: est.visor, g: (g + 90) % 360 };

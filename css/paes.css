@@ -751,3 +751,8 @@ details.paes-colegio > .paes-res-curso { margin-left: 16px; margin-right: 16px; 
 /* recordatorio de respaldo */
 .paes-aviso-respaldo { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #fff6d6; border: 2px solid #ecd27a; color: #5c4300; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; font-size: 13.5px; font-weight: 600; }
 .paes-aviso-respaldo span { flex: 1 1 300px; }
+/* visor: botón «Ocultar marcas» encendido */
+#modulo-paes .paes-visor-botones button.secundario.activo { background: #fff3d6; border-color: #e0a526; color: #7a5200; }
+/* revisión: «Traspasar todas las E a D» en naranjo cuando hay estudiantes que marcaron E */
+#modulo-paes button.secundario.paes-btn-naranjo { background: #f28c28; color: white; border-color: #c96a10; font-weight: 700; }
+#modulo-paes button.secundario.paes-btn-naranjo:hover { background: #e07812; }

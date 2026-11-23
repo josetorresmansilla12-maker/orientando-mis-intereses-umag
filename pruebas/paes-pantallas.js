@@ -469,6 +469,41 @@
       return E.paso === "revision" && qa("#paes-panel img").length > 0 && erroresApp.length === antes;
     });
 
+    await prueba("En el visor, «Ocultar marcas» quita los círculos de la imagen y «Mostrar marcas» los vuelve a poner", async () => {
+      const antes = erroresApp.length;
+      const boton = q('[data-accion="ver-hoja"]');
+      if (!boton) return false;
+      await clic('[data-accion="ver-hoja"]');
+      await espera(400);
+      const conCirculos = qa("#paes-visor .paes-capa circle").length > 0;
+      await clic('#paes-visor [data-accion="visor-marcas"]');
+      await espera(300);
+      const ocultas = qa("#paes-visor .paes-capa").length === 0 && qa("#paes-visor .paes-alt").length > 0 && /Marcas ocultas/.test(q("#paes-visor").textContent);
+      await clic('#paes-visor [data-accion="visor-marcas"]');
+      await espera(300);
+      const devuelta = qa("#paes-visor .paes-capa circle").length > 0;
+      await clic('#paes-visor [data-accion="cerrar-visor"]');
+      return conCirculos && ocultas && devuelta && erroresApp.length === antes;
+    });
+
+    await prueba("«Traspasar todas las E a D» se pone naranjo y dice cuántos estudiantes marcaron E", async () => {
+      const antes = erroresApp.length;
+      const e = E.ensayos.find((x) => x.id === E.ensayoId);
+      const h = E.hojas.find((x) => x.ensayoId === e.id && x.estado !== "ilegible" && x.estado !== "excluida" && !x.repetidaDe);
+      if (!h) return false;
+      const normal = q('[data-accion="e-a-d"]') && !q('[data-accion="e-a-d"]').classList.contains("paes-btn-naranjo");
+      if (!h.ediciones) h.ediciones = { respuestas: {} };
+      const previo = h.ediciones.respuestas[1];
+      h.ediciones.respuestas[1] = "E";
+      await clic('[data-paso="revision"]');
+      const b = q('[data-accion="e-a-d"]');
+      const naranjo = !!b && b.classList.contains("paes-btn-naranjo") && /1 estudiante marcó E/.test(b.textContent);
+      if (previo === undefined) delete h.ediciones.respuestas[1];
+      else h.ediciones.respuestas[1] = previo;
+      await clic('[data-paso="revision"]');
+      return normal && naranjo && erroresApp.length === antes;
+    });
+
     titulo("Errores");
     await prueba("La app no registró errores durante el recorrido", () => {
       if (erroresApp.length) throw new Error(erroresApp.slice(0, 3).join(" | "));
