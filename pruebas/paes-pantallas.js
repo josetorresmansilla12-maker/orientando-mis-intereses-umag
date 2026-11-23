@@ -563,6 +563,31 @@
       return ok1 && ok2 && enFranja >= 0 && erroresApp.length === antes;
     });
 
+    await prueba("«➕ Agregar ensayos» ofrece el Editor de PDF o un PDF por curso, con el clavijero de esa prueba ya elegido", async () => {
+      const antes = erroresApp.length;
+      await clic('[data-vista="resultados"]');
+      await clic('[data-accion="res-abrir-todos"]');
+      const btn = q('.paes-ap-barra [data-accion="ap-abrir"]');
+      if (!btn) return false;
+      const prueba = btn.dataset.prueba;
+      await clic(btn);
+      const cuadro = !!q("#paes-agregar-prueba") && !!q('[data-accion="ap-editor"]') && qa('[data-accion="ap-curso"]').length > 0;
+      // un PDF por curso: se abre «Agregar ensayos PDF» de ese curso con el clavijero de la prueba marcado
+      const cursoId = q('[data-accion="ap-curso"]').dataset.curso;
+      await clic('[data-accion="ap-curso"]');
+      const k = E.clavijeros.filter((x) => x.prueba === prueba).pop();
+      const porCurso = E.otroClv === cursoId && E.pdfPrueba === prueba && !!q("#paes-otro-clv");
+      await clic(`[data-accion="res-agregar-pdf"][data-curso=""]`);
+      // Editor de PDF: con el colegio, sus cursos y el clavijero ya puestos
+      await clic('.paes-ap-barra [data-accion="ap-abrir"]');
+      await clic('[data-accion="ap-editor"]');
+      await confirmar();
+      const ed = E.editor;
+      const enEditor = E.vista === "editor" && !!ed && ed.colegio === cursoA().colegio && ed.cursos.length >= 2 && !!k && ed.clavijeroId === k.id;
+      await clic('[data-vista="resultados"]');
+      return cuadro && porCurso && enEditor && erroresApp.length === antes;
+    });
+
     titulo("Errores");
     await prueba("La app no registró errores durante el recorrido", () => {
       if (erroresApp.length) throw new Error(erroresApp.slice(0, 3).join(" | "));

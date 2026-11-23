@@ -47,6 +47,8 @@
     deshacer: [], // cambios de la revisión que se pueden deshacer (por sesión)
     sinNombres: false, // informe sin nombres (uso interno)
     generando: false, // se está creando un informe
+    agregarPrueba: null, // Resultados guardados: { colegio, prueba } con el cuadro «Agregar ensayos X» abierto
+    pdfPrueba: null, // «Agregar ensayos PDF»: prueba cuyo clavijero queda marcado de entrada
     revTodas: false, // Revisión: todas las hojas pendientes de todos los cursos en una página
     visorSinMarcas: false, // visor: imagen sin los círculos de la app ("Ocultar marcas")
     colegiosAbiertos: new Set(), // Resultados guardados: colegios desplegados
@@ -4479,6 +4481,7 @@
         <summary class="paes-colegio-cab"><span class="paes-colegio-nombre">🏫 ${esc(g.colegio)}</span>
           <span class="paes-colegio-datos">${plural(g.cursos.length, "curso", "cursos")} · ${plural(nEnsayos, "ensayo", "ensayos")}</span>
           ${pendColegio ? `<span class="paes-pendientes quieto">⚠ ${plural(pendColegio, "hoja por revisar", "hojas por revisar")}</span>` : `<span class="paes-colegio-ok">✔ sin pendientes</span>`}</summary>`;
+      h += htmlBarraAgregarPrueba(g);
       g.cursos.forEach((c) => {
         const ensayos = ensayosDelCurso(c.id);
         const conHojas = ensayos.filter((e) => hojasDelEnsayo(e.id).some(vigente));
@@ -4538,12 +4541,49 @@
       .join("")}${htmlBotonesInformeDelCurso(c, ensayos, repetidas)}</span>`;
   }
 
+  // ---- «➕ Agregar ensayos M1» (Resultados guardados): otra prueba para cursos ya guardados
+  const clavePrueba = (x) => (x.prueba === "OTRA" ? "OTRA:" + (x.pruebaNombre || "") : x.prueba);
+  // pruebas que tienen clavijero guardado: { clave, sigla, nombre, clase, clavijero (el más reciente) }
+  function pruebasConClavijero() {
+    const mapa = new Map();
+    est.clavijeros.forEach((k) => mapa.set(clavePrueba(k), { clave: clavePrueba(k), sigla: siglaPrueba(k), nombre: nombrePrueba(k), clase: clasePrueba(k), clavijero: k }));
+    return Array.from(mapa.values()).sort((a, b) => a.sigla.localeCompare(b.sigla));
+  }
+  // de esas, las que le faltan a alguno de los cursos (sin un ensayo de esa prueba con hojas)
+  function pruebasQueFaltan(cursos) {
+    return pruebasConClavijero().filter((p) => cursos.some((c) => !c.disperso && !ensayosDelCurso(c.id).some((e) => clavePrueba(e) === p.clave && hojasDelEnsayo(e.id).some(vigente))));
+  }
+  function htmlBarraAgregarPrueba(g) {
+    const faltan = pruebasQueFaltan(g.cursos);
+    const abierto = est.agregarPrueba && est.agregarPrueba.colegio === g.colegio ? pruebasConClavijero().find((p) => p.clave === est.agregarPrueba.prueba) : null;
+    if (!faltan.length && !abierto) return "";
+    let h = `<div class="paes-ap-barra">${faltan.map((p) => `<button type="button" class="secundario chico paes-ap-btn ${p.clase}${abierto && abierto.clave === p.clave ? " activo" : ""}" data-accion="ap-abrir" data-colegio="${esc(g.colegio)}" data-prueba="${esc(p.clave)}">➕ Agregar ensayos ${esc(p.sigla)} <small>(${esc(p.nombre)})</small></button>`).join("")}<small>a los cursos de este colegio que aún no la tienen</small></div>`;
+    if (abierto) {
+      const sinElla = g.cursos.filter((c) => !c.disperso && !ensayosDelCurso(c.id).some((e) => clavePrueba(e) === abierto.clave && hojasDelEnsayo(e.id).some(vigente)));
+      const cursos = sinElla.length ? sinElla : g.cursos.filter((c) => !c.disperso);
+      h += `<div class="paes-ap-cuadro ${abierto.clase}" id="paes-agregar-prueba">
+        <div class="paes-ap-titulo"><span class="paes-pill ${abierto.clase}"><b>${esc(abierto.sigla)}</b>${esc(abierto.nombre)}</span> <b>Agregar ensayos a ${esc(g.colegio)}</b> <small>· clavijero «${esc(abierto.clavijero.nombre)}»</small>
+          <button type="button" class="secundario chico" data-accion="ap-cerrar">Cancelar</button></div>
+        <p class="ayuda" style="margin:6px 0 10px;">¿Cómo viene el escaneo?</p>
+        <div class="paes-ap-opciones">
+          <div class="paes-ap-op"><b>📚 Un PDF con varios cursos juntos</b>
+            <small>Se abre el Editor de PDF con este colegio, sus cursos y el clavijero ya elegidos. Solo marcas qué hojas son de cada curso y presionas «Finalizar».</small>
+            <button type="button" class="chico" data-accion="ap-editor" data-colegio="${esc(g.colegio)}" data-prueba="${esc(abierto.clave)}" ${est.lectura ? "disabled" : ""}>✂️ Elegir el PDF y abrir el Editor →</button></div>
+          <div class="paes-ap-op"><b>📄 Un PDF por curso</b>
+            <small>Elige el curso y su PDF; se corrige con el clavijero de ${esc(abierto.sigla)} con la lista que el curso ya tiene.</small>
+            <div class="paes-ap-cursos">${cursos.map((c) => `<button type="button" class="secundario chico" data-accion="ap-curso" data-curso="${esc(c.id)}" data-prueba="${esc(abierto.clave)}" ${est.lectura ? "disabled" : ""}>📄 ${esc(etiquetaCurso(c))}</button>`).join("")}</div></div>
+        </div></div>`;
+    }
+    return h;
+  }
+
   // «📄 Informe CL», «📄 Informe M1»...: descarga el informe PDF de cada prueba con hojas,
   // cada botón con el color de su prueba (con la fecha si la prueba se repite en el curso)
   function htmlBotonesInformeDelCurso(c, ensayos, repetidas) {
     const con = ensayos.filter((e) => hojasDelEnsayo(e.id).some(vigente));
-    if (!con.length) return "";
-    return `<span class="paes-res-informes">${con
+    const agregar = c.disperso ? "" : pruebasQueFaltan([c]).map((p) => `<button type="button" class="secundario chico paes-ap-btn ${p.clase}" data-accion="ap-abrir" data-colegio="${esc(c.colegio)}" data-prueba="${esc(p.clave)}" title="Agregar a este curso los ensayos de ${esc(p.nombre)}">➕ ${esc(p.sigla)}</button>`).join("");
+    if (!con.length && !agregar) return "";
+    return `<span class="paes-res-informes">${agregar}${con
       .map((e) => {
         const fecha = repetidas.has(e.prueba) && e.fecha ? ` (${esc(PaesExcel.fechaCorta(e.fecha))})` : "";
         return `<button type="button" class="secundario chico paes-res-informe ${clasePrueba(e)}" data-accion="res-informe-prueba" data-curso="${esc(c.id)}" data-ensayo="${esc(e.id)}" title="Descarga el informe PDF de resultados de ${esc(nombrePrueba(e))} de ${esc(etiquetaCurso(c))}" ${est.generando ? "disabled" : ""}>📄 Informe ${esc(siglaPrueba(e))}${fecha}</button>`;
@@ -4675,6 +4715,12 @@
       ${cuerpo || `<p class="ayuda" style="margin:0;">Aún no se ha aplicado ningún ensayo.</p>`}</div>`;
   }
 
+  // clavijero marcado de entrada: el de la prueba pedida con «➕ Agregar ensayos X», o el primero
+  function clavijeroInicialPdf(orden) {
+    const p = est.pdfPrueba ? pruebasConClavijero().find((x) => x.clave === est.pdfPrueba) : null;
+    return p ? p.clavijero.id : orden[0] && orden[0].id;
+  }
+
   // «Agregar ensayos PDF»: primero se eligen los PDF y después el clavijero que les corresponde
   function htmlAgregarPdf(c) {
     const p = est.pdfPendientes && est.pdfPendientes.cursoId === c.id ? est.pdfPendientes : null;
@@ -4695,7 +4741,7 @@
     return `<div class="paes-agregar-manual" id="paes-otro-clv"><b>📄 Agregar ensayos PDF · ${esc(nombreCurso(c))}</b>
       <p class="ayuda" style="margin:6px 0 0;">${plural(p.archivos.length, "archivo elegido", "archivos elegidos")}:</p>${lista}
       <p class="ayuda" style="margin:6px 0;">Paso 2 de 2: elige el clavijero que corresponde a estos PDF. Se usa la lista del curso y lo ya corregido no cambia.</p>
-      <div class="paes-checks paes-clv-opciones">${est.clavijeros.slice().sort((a, b) => a.prueba.localeCompare(b.prueba) || a.nombre.localeCompare(b.nombre, "es")).map((k, i) => `<label><input type="radio" name="paes-pdf-clv" value="${esc(k.id)}" ${i === 0 ? "checked" : ""} /> <span class="paes-pill ${clasePrueba(k)}"><b>${esc(siglaPrueba(k))}</b>${esc(k.nombre)}</span>${aplicados.has(k.id) ? `<span class="paes-chip verde">✔ ya aplicado a este curso · ${plural(aplicados.get(k.id), "hoja", "hojas")}: los PDF se suman a ese ensayo</span>` : `<span class="paes-chip gris">aún no aplicado a este curso</span>`}</label>`).join("")}</div>
+      <div class="paes-checks paes-clv-opciones">${est.clavijeros.slice().sort((a, b) => a.prueba.localeCompare(b.prueba) || a.nombre.localeCompare(b.nombre, "es")).map((k, i, orden) => `<label><input type="radio" name="paes-pdf-clv" value="${esc(k.id)}" ${k.id === clavijeroInicialPdf(orden) ? "checked" : ""} /> <span class="paes-pill ${clasePrueba(k)}"><b>${esc(siglaPrueba(k))}</b>${esc(k.nombre)}</span>${aplicados.has(k.id) ? `<span class="paes-chip verde">✔ ya aplicado a este curso · ${plural(aplicados.get(k.id), "hoja", "hojas")}: los PDF se suman a ese ensayo</span>` : `<span class="paes-chip gris">aún no aplicado a este curso</span>`}</label>`).join("")}</div>
       <div class="grid-form" style="margin-top:8px;"><div><label>Fecha de aplicación</label><input type="date" id="paes-otro-clv-fecha" value="${hoyIso()}" /></div></div>
       ${entrada}<div class="acciones-form"><button type="button" class="chico" data-accion="res-corregir-pdf" data-curso="${esc(c.id)}" ${est.lectura ? "disabled" : ""}>Corregir estos PDF con ese clavijero →</button>
         <button type="button" class="secundario chico" data-accion="res-elegir-pdf">Cambiar los PDF…</button>${cancelar}</div></div>`;
@@ -4714,7 +4760,7 @@
     }
     let e = ensayosDelCurso(c.id).find((x) => x.clavijeroId === k.id);
     if (!e) e = await crearEnsayoCon(c, { prueba: k.prueba, pruebaNombre: k.pruebaNombre, fecha: raiz.querySelector("#paes-otro-clv-fecha").value || "", clavijero: k });
-    Object.assign(est, { otroClv: null, pdfPendientes: null, enBlanco: false, cursoId: c.id, ensayoId: e.id, vista: "curso", paso: "hojas", formCurso: null, formEnsayo: false, resumenLectura: null, otraPrueba: false, moverArchivo: null });
+    Object.assign(est, { otroClv: null, pdfPendientes: null, pdfPrueba: null, enBlanco: false, cursoId: c.id, ensayoId: e.id, vista: "curso", paso: "hojas", formCurso: null, formEnsayo: false, resumenLectura: null, otraPrueba: false, moverArchivo: null });
     if (!est.tanda.includes(c.id)) est.tanda = [];
     pintar();
     global.scrollTo({ top: 0 });
@@ -5344,9 +5390,52 @@
         }
         elegirArchivo("disperso");
         break;
+      case "ap-abrir":
+        ev.preventDefault(); // que el clic no abra ni cierre el curso
+        est.agregarPrueba = est.agregarPrueba && est.agregarPrueba.colegio === b.dataset.colegio && est.agregarPrueba.prueba === b.dataset.prueba ? null : { colegio: b.dataset.colegio, prueba: b.dataset.prueba };
+        if (est.agregarPrueba) est.colegiosAbiertos.add(b.dataset.colegio);
+        pintar();
+        {
+          const caja = raiz.querySelector("#paes-agregar-prueba");
+          if (caja) caja.scrollIntoView({ block: "center" });
+        }
+        break;
+      case "ap-cerrar":
+        est.agregarPrueba = null;
+        pintar();
+        break;
+      case "ap-curso": {
+        const cursoId = b.dataset.curso;
+        Object.assign(est, { agregarPrueba: null, pdfPrueba: b.dataset.prueba, otroClv: cursoId, pdfPendientes: null, cursoId, enBlanco: false, fusionarEn: null });
+        est.cursosAbiertos.add(cursoId);
+        pintar();
+        const caja = raiz.querySelector("#paes-otro-clv");
+        if (caja) caja.scrollIntoView({ block: "center" });
+        elegirArchivo("res-pdf");
+        break;
+      }
+      case "ap-editor": {
+        const p = pruebasConClavijero().find((x) => x.clave === b.dataset.prueba);
+        const colegio = b.dataset.colegio;
+        const abrir = () => {
+          soltarVistasEd();
+          est.editor = editorVacio();
+          fijarColegioEditor(colegio);
+          if (p) est.editor.clavijeroId = p.clavijero.id;
+          Object.assign(est, { agregarPrueba: null, vista: "editor" });
+          pintar();
+          global.scrollTo({ top: 0 });
+          elegirArchivo("editor-pdf");
+        };
+        if (est.editor && est.editor.hojas.length) {
+          confirmar({ titulo: "El Editor de PDF tiene hojas cargadas", texto: `El editor tiene ${plural(est.editor.hojas.length, "hoja cargada", "hojas cargadas")} de otro trabajo. Si sigues, se quitan del editor (lo ya corregido no cambia).`, textoBoton: "Sí, empezar de nuevo", onConfirmar: abrir });
+        } else abrir();
+        break;
+      }
       case "res-agregar-pdf":
         est.otroClv = b.dataset.curso || null;
         est.pdfPendientes = null;
+        est.pdfPrueba = null;
         if (est.otroClv) Object.assign(est, { cursoId: est.otroClv, enBlanco: false, fusionarEn: null });
         pintar();
         if (est.otroClv) {

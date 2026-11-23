@@ -556,6 +556,14 @@ El trabajo va en cinco pasos:
      Junto al clavijero de cada prueba hay un botón "📄 Informe CL" (rojo) o
      "📄 Informe M1" (azul) que descarga de inmediato el informe PDF de resultados
      de esa prueba, sin abrir el curso.
+   - "➕ Agregar ensayos M1" (o CL): aparece en cada colegio y en cada curso al que
+     le falta una prueba que tiene clavijero guardado (por ejemplo, subiste solo
+     Lenguaje y falta Matemática). Pregunta cómo viene el escaneo:
+     * "Un PDF con varios cursos juntos": abre el Editor de PDF con el colegio, sus
+       cursos y el clavijero de esa prueba ya elegidos; solo marcas las hojas de
+       cada curso y presionas "Finalizar".
+     * "Un PDF por curso": eliges el curso y su PDF, y se corrige con el clavijero
+       de esa prueba (ya marcado) y la lista que el curso ya tiene.
    - Revisión: "Revisar" (en la pestaña Revisión) lleva a la revisión de ese curso,
      filtrada en lo pendiente y con la hoja resaltada. Arriba hay una ficha con el
      colegio, el curso, la prueba, el clavijero, la fecha, la lista y los archivos, y

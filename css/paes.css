@@ -775,3 +775,22 @@ details.paes-colegio > .paes-res-curso { margin-left: 16px; margin-right: 16px; 
 #modulo-paes button.secundario.paes-res-informe:hover { filter: brightness(0.92); }
 #modulo-paes button.secundario.paes-res-informe.otra { background: #5b4a86; border-color: #5b4a86; }
 #modulo-paes .paes-rev-banner button.secundario.paes-btn-naranjo { background: #f28c28; color: white; border-color: white; }
+/* Resultados guardados: «➕ Agregar ensayos M1» y su cuadro (Editor de PDF o un PDF por curso) */
+.paes-ap-barra { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0 4px; }
+.paes-ap-barra > small { color: var(--paes-suave, #6b6480); }
+#modulo-paes button.secundario.paes-ap-btn { font-weight: 700; background: white; }
+#modulo-paes button.secundario.paes-ap-btn.cl { color: var(--paes-cl); border: 2px dashed var(--paes-cl); }
+#modulo-paes button.secundario.paes-ap-btn.m1 { color: var(--paes-m1); border: 2px dashed var(--paes-m1); }
+#modulo-paes button.secundario.paes-ap-btn.otra { color: #5b4a86; border: 2px dashed #5b4a86; }
+#modulo-paes button.secundario.paes-ap-btn.activo.cl { background: var(--paes-cl-fondo); }
+#modulo-paes button.secundario.paes-ap-btn.activo.m1 { background: var(--paes-m1-fondo); }
+#modulo-paes button.secundario.paes-ap-btn small { font-weight: 400; }
+.paes-ap-cuadro { border: 2px solid #b9b4c7; border-radius: 12px; padding: 12px 14px; margin: 8px 0 12px; background: #fbfaff; }
+.paes-ap-cuadro.cl { border-color: var(--paes-cl); } .paes-ap-cuadro.m1 { border-color: var(--paes-m1); }
+.paes-ap-titulo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.paes-ap-titulo button { margin-left: auto; }
+.paes-ap-opciones { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 720px) { .paes-ap-opciones { grid-template-columns: 1fr; } }
+.paes-ap-op { border: 1px solid var(--paes-borde, #e0dcea); border-radius: 10px; padding: 10px 12px; background: white; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.paes-ap-op small { color: #5a536b; line-height: 1.35; }
+.paes-ap-cursos { display: flex; flex-wrap: wrap; gap: 6px; }
