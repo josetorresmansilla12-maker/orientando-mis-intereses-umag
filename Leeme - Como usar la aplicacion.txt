@@ -564,6 +564,10 @@ El trabajo va en cinco pasos:
      y RUT. Cuando un ensayo queda con todos identificados, su franja se pone verde
      y aparece "📄 Descargar el informe actualizado": lo descargas y reemplazas el
      antiguo. "Listo, ocultar" quita esa franja de la página.
+     Además, al descargar cualquier informe (PDF, Word, Excel o el ZIP de informes)
+     que tenga estudiantes sin identificar, la app avisa cuántos son y de qué curso,
+     y pregunta: "👤 Ir a revisarlos" (abre esa página en ese ensayo) o "Descargar
+     igual".
    - Eliminar un ensayo: en "Resultados guardados", dentro de cada curso, cada
      prueba tiene "🗑 Eliminar ensayo". Borra solo ese ensayo de ese curso (su clave,
      su tabla y sus hojas leídas); el curso, su lista y sus otras pruebas no se

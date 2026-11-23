@@ -3172,10 +3172,36 @@
 
   // informe para el colegio, en PDF o Word, con el estilo de los informes de Kuder
   // c y e: el curso y el ensayo (por omisión, los actuales)
-  async function descargarInforme(formato, cursoDado, ensayoDado) {
+  // Antes de descargar un informe: si tiene hojas sin estudiante (salen «sin identificar»),
+  // avisa y ofrece ir a revisarlas o descargar igual. pares: [{ c, e }]
+  function avisarSinIdentificar(pares, seguir) {
+    const con = pares.map(({ c, e }) => ({ c, e, n: hojasDelEnsayo(e.id).filter(sinIdentificar).length })).filter((x) => x.n);
+    if (!con.length) return seguir();
+    const total = con.reduce((a, x) => a + x.n, 0);
+    const lista = con.slice(0, 6).map((x) => `<li>${esc(nombreCurso(x.c))} · ${esc(siglaPrueba(x.e))}: ${plural(x.n, "estudiante sin identificar", "estudiantes sin identificar")}</li>`).join("") + (con.length > 6 ? `<li>y ${con.length - 6} ensayos más…</li>` : "");
+    const ir = () => {
+      con.forEach((x) => est.sinIdEnsayos.add(x.e.id));
+      Object.assign(est, { vista: "revision", revSinId: true, revTodas: false, cfgInformes: null });
+      pintar();
+      const sec = raiz.querySelector(`#paes-revsec-${CSS.escape(con[0].e.id)}`);
+      if (sec) {
+        sec.scrollIntoView({ block: "start" });
+        global.scrollBy(0, -12);
+      } else global.scrollTo({ top: 0 });
+    };
+    const titulo = "⚠ Hay estudiantes sin identificar";
+    const texto = `${pares.length === 1 ? "Este informe tiene" : "Estos informes tienen"} <b>${plural(total, "hoja sin estudiante", "hojas sin estudiante")}</b>: en el informe ${total === 1 ? "sale" : "salen"} como «sin identificar».<ul style="margin:8px 0 0;">${lista}</ul>`;
+    if (typeof elegirOpcion === "function") {
+      elegirOpcion({ titulo, texto, opciones: [{ texto: "Descargar igual", clase: "secundario", accion: seguir }, { texto: "👤 Ir a revisarlos", accion: ir }] });
+    } else if (global.confirm(`${titulo}. ¿Descargar igual?`)) seguir();
+    else ir();
+  }
+
+  async function descargarInforme(formato, cursoDado, ensayoDado, yaAvisado) {
     const c = cursoDado || cursoActual();
     const e = ensayoDado || ensayoActual();
     if (!c || !e || est.generando) return;
+    if (!yaAvisado) return avisarSinIdentificar([{ c, e }], () => descargarInforme(formato, c, e, true));
     const datos = datosDeInforme(c, e);
     const empezar = async () => {
       est.generando = true;
@@ -3247,14 +3273,16 @@
       est.generando = false;
       pintar();
     };
-    if (pendientes) {
-      confirmar({
-        titulo: "Hay advertencias pendientes",
-        texto: `En los cursos marcados quedan ${plural(pendientes, "hoja con advertencias sin revisar", "hojas con advertencias sin revisar")}. Puedes crear los informes igual, pero los resultados podrían cambiar cuando las revises.`,
-        textoBoton: "Crear los informes igual",
-        onConfirmar: empezar,
-      });
-    } else empezar();
+    avisarSinIdentificar(pares, () => {
+      if (pendientes) {
+        confirmar({
+          titulo: "Hay advertencias pendientes",
+          texto: `En los cursos marcados quedan ${plural(pendientes, "hoja con advertencias sin revisar", "hojas con advertencias sin revisar")}. Puedes crear los informes igual, pero los resultados podrían cambiar cuando las revises.`,
+          textoBoton: "Crear los informes igual",
+          onConfirmar: empezar,
+        });
+      } else empezar();
+    });
   }
 
   // ============================================================ EDITOR DE PDF
@@ -4083,10 +4111,11 @@
       <small>Te lleva a las hojas escaneadas de ese ensayo, para corregir respuestas, RUT o a quién pertenece cada hoja.</small></div>`;
   }
 
-  async function descargarExcel() {
+  async function descargarExcel(yaAvisado) {
     const c = cursoActual();
     const e = ensayoActual();
     if (!c || !e) return;
+    if (yaAvisado !== true) return avisarSinIdentificar([{ c, e }], () => descargarExcel(true));
     try {
       const blob = await PaesExcel.excelDeEnsayo({ ensayo: e, curso: cursoParaResultados(c, [e]), hojas: hojasDelEnsayo(e.id), nombrePrueba: nombrePrueba(e), etiquetaCurso: etiquetaCurso(c), advertencias: advertenciasDelEnsayo(e) });
       descargar(blob, `${nombreArchivoEnsayo(c, e, "Resultados Ensayo PAES")}.xlsx`);

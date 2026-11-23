@@ -94,14 +94,28 @@
     entrada.dispatchEvent(new win.Event("change", { bubbles: true }));
     await espera(300);
   };
+  // aviso de estudiantes sin identificar (ventana de opciones): «Descargar igual»
+  const descargarIgual = async () => {
+    const m = doc.getElementById("modal-opciones");
+    if (m && win.getComputedStyle(m).display !== "none") {
+      const b = Array.from(m.querySelectorAll("button")).find((x) => /Descargar igual/.test(x.textContent));
+      if (b) {
+        b.click();
+        await espera(300);
+        return true;
+      }
+    }
+    return false;
+  };
   const confirmar = async () => {
+    const habia = await descargarIgual();
     const m = doc.getElementById("modal-confirmacion");
     if (m && win.getComputedStyle(m).display !== "none") {
       doc.getElementById("modal-btn-confirmar").click();
       await espera(300);
       return true;
     }
-    return false;
+    return habia;
   };
   const texto = () => R.textContent.replace(/\s+/g, " ");
 
@@ -681,6 +695,29 @@
       const d = win.__descargas[win.__descargas.length - 1];
       await clic('[data-accion="rev-resumen"]');
       return conTarjeta && h.estudianteId === quien && !!descargar && win.__descargas.length > n0 && /Informe Ensayo PAES\.pdf$/.test(d.nombre) && !E.revSinId && erroresApp.length === antes;
+    });
+
+    await prueba("Al descargar un informe con estudiantes sin identificar, avisa y ofrece ir a revisarlos", async () => {
+      const antes = erroresApp.length;
+      const h = E.hojas.find((x) => x.estado !== "ilegible" && !x.excluida && !x.repetidaDe && x.estudianteId && E.ensayos.some((e) => e.id === x.ensayoId));
+      if (!h) return false;
+      const quien = h.estudianteId;
+      h.estudianteId = null;
+      await clic('[data-vista="resultados"]');
+      await clic('[data-accion="res-abrir-todos"]');
+      const b = q(`[data-accion="res-informe-prueba"][data-ensayo="${h.ensayoId}"]`);
+      if (!b) return false;
+      const n0 = win.__descargas.length;
+      await clic(b);
+      const m = doc.getElementById("modal-opciones");
+      const aviso = win.getComputedStyle(m).display !== "none" && /sin identificar/.test(m.textContent);
+      const ir = Array.from(m.querySelectorAll("button")).find((x) => /Ir a revisarlos/.test(x.textContent));
+      ir.click();
+      await espera(400);
+      const enRevision = E.vista === "revision" && E.revSinId && !!q(`#paes-revsec-${win.CSS.escape(h.ensayoId)}`) && win.__descargas.length === n0;
+      h.estudianteId = quien;
+      await clic('[data-accion="rev-resumen"]');
+      return aviso && enRevision && erroresApp.length === antes;
     });
 
     titulo("Errores");
