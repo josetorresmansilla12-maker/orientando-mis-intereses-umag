@@ -1108,7 +1108,7 @@
       const invalidos = t.estudiantes.filter((e) => e.rut && !L.leerRut(e.rut).valido).length;
       const detalle = [plural(t.estudiantes.length, "estudiante", "estudiantes")];
       if (sinRut) detalle.push(`${sinRut} sin RUT`);
-      if (invalidos) detalle.push(`${invalidos} con RUT inválido`);
+      if (invalidos) detalle.push(`${invalidos} con dígito verificador que no calza`);
       if (t.repetidos) detalle.push(`${plural(t.repetidos, "repetido omitido", "repetidos omitidos")}`);
       const origen = t.origenCursoId ? est.cursos.find((k) => k.id === t.origenCursoId) : null;
       h += `<div class="paes-lista-nueva${problemas.has(t.uid) ? " con-problema" : ""}">
@@ -1238,7 +1238,7 @@
   function insigniaRut(rutTexto) {
     const r = L.leerRut(rutTexto);
     if (r.vacio) return `<span class="paes-chip gris">sin RUT</span>`;
-    if (!r.valido) return `<span class="paes-chip amarillo" title="El dígito verificador no corresponde a ese RUT">⚠ RUT inválido</span>`;
+    if (!r.valido) return `<span class="paes-chip amarillo" title="El dígito verificador no corresponde a ese RUT: revisa si está bien escrito">⚠ dígito verificador no calza</span>`;
     return `<span class="paes-chip verde">✓</span>`;
   }
 
@@ -2272,7 +2272,7 @@
     const chip = {
       valido: `<span class="paes-chip verde">válido</span>`,
       "sin-dv": `<span class="paes-chip gris">sin dígito verificador</span>`,
-      invalido: `<span class="paes-chip amarillo">no es un RUT válido</span>`,
+      invalido: `<span class="paes-chip amarillo">dígito verificador no calza</span>`,
       incompleto: `<span class="paes-chip amarillo">incompleto</span>`,
       ambiguo: `<span class="paes-chip amarillo">«?» = columna con dos marcas o sin marca</span>`,
     }[estado];
