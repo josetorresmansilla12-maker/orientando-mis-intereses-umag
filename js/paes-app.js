@@ -272,6 +272,7 @@
     "comparar-soltar": "Quitar el estudiante a una hoja",
     "comparar-suya": "Elegir cuál de dos hojas es del estudiante",
     "hoja-a-prueba": "Pasar una hoja a otra prueba",
+    "comparar-esta-mandar": "Dejar una hoja y pasar la otra a otra prueba",
     asignar: "Asignar estudiante a una hoja",
     sugerencia: "Asignar estudiante a una hoja",
     "mover-hoja": "Pasar hoja a otro curso",
@@ -2154,8 +2155,10 @@
 
   // pasa UNA hoja a otra prueba del mismo curso: valor «e:<ensayo>» o «k:<clavijero>» (crea el
   // ensayo si el curso aún no tiene esa prueba). Se puede deshacer.
-  async function pasarHojaAPrueba(hojaId, valor) {
-    const h = est.hojas.find((x) => x.id === hojaId);
+  async function pasarHojaAPrueba(hojaIds, valor) {
+    const ids = [].concat(hojaIds);
+    const lista = ids.map((k) => est.hojas.find((x) => x.id === k)).filter(Boolean);
+    const h = lista[0];
     const e = h ? est.ensayos.find((x) => x.id === h.ensayoId) : null;
     const c = e ? est.cursos.find((x) => x.id === e.cursoId) : null;
     if (!h || !e || !c || !valor || est.lectura) return;
@@ -2166,21 +2169,24 @@
     }
     if (!d || d.id === e.id) return;
     const pares = [];
-    h.ensayoId = d.id;
-    h.repetidaDe = null;
-    pares.push(["hojas", h]);
-    const img = await PaesDB.obtener("imagenes", h.id);
-    if (img) pares.push(["imagenes", Object.assign(img, { ensayoId: d.id })]);
-    est.hojas.filter((x) => x.ensayoId === e.id && x.repetidaDe === h.id).forEach((x) => {
+    const movidas = new Set(lista.map((x) => x.id));
+    for (const x of lista) {
+      x.ensayoId = d.id;
+      x.repetidaDe = null;
+      pares.push(["hojas", x]);
+      const img = await PaesDB.obtener("imagenes", x.id);
+      if (img) pares.push(["imagenes", Object.assign(img, { ensayoId: d.id })]);
+    }
+    est.hojas.filter((x) => x.ensayoId === e.id && movidas.has(x.repetidaDe)).forEach((x) => {
       x.repetidaDe = null;
       pares.push(["hojas", x]);
     });
     await PaesDB.ponerVarios(pares);
-    auditar(e.id, h.id, "hoja pasada a otra prueba", nombrePrueba(e), nombrePrueba(d));
+    lista.forEach((x) => auditar(e.id, x.id, "hoja pasada a otra prueba", nombrePrueba(e), nombrePrueba(d)));
     est.comparar = null;
     pintar();
     const kd = clavijeroDe(d);
-    toast(`La hoja pasó a ${nombrePrueba(d)}${kd ? ` y se corrige con «${kd.nombre}»` : ""} · puedes deshacerlo con «↩ Deshacer»`);
+    toast(`${lista.length === 1 ? "La hoja pasó" : `${lista.length} hojas pasaron`} a ${nombrePrueba(d)}${kd ? ` y se corrige${lista.length === 1 ? "" : "n"} con «${kd.nombre}»` : ""} · puedes deshacerlo con «↩ Deshacer»`);
   }
 
   // pasa las hojas de un archivo a otra prueba del mismo curso («e:<ensayo>» o «k:<clavijero>»)
@@ -2453,7 +2459,7 @@
     return `<div class="paes-comparar">
       <div class="paes-comparar-cab"><b>⚖️ Hojas de ${esc(alumno ? L.nombreCompletoPaes(alumno) : "este estudiante")} en este ensayo</b>
         <span class="paes-chip ${misma ? "naranjo" : "gris"}">${suyas.length === 2 ? `Respuestas iguales en ${minIgual} de ${preguntas.length}` : `Respuestas iguales en al menos ${minIgual} de ${preguntas.length}`}</span></div>
-      <p class="ayuda" style="margin:4px 0 10px;">${misma ? "Las respuestas son casi idénticas: <b>es la misma hoja subida dos veces</b>. «Conservar esta» deja una y <b>elimina la otra</b> (es una copia)." : `Las respuestas son distintas: <b>son hojas de dos estudiantes</b>. Mira el nombre escrito a mano y pulsa «Esta es la suya» en la de ${esc(alumno ? L.nombreCompletoPaes(alumno) : "este estudiante")}: <b>la otra no se elimina</b>, queda sin identificar para asignarla a quien corresponda.`} Si una hoja es de otra prueba, usa «↔ Pasar esta hoja a…». Todo se puede deshacer con «↩ Deshacer».</p>
+      <p class="ayuda" style="margin:4px 0 10px;">${misma ? "Las respuestas son casi idénticas: <b>es la misma hoja subida dos veces</b>. «Conservar esta» deja una y <b>elimina la otra</b> (es una copia)." : `Las respuestas son distintas: <b>son hojas de dos estudiantes</b>. Mira el nombre escrito a mano y pulsa «Esta es la suya» en la de ${esc(alumno ? L.nombreCompletoPaes(alumno) : "este estudiante")}: <b>la otra no se elimina</b>, queda en este mismo ensayo sin estudiante (la encuentras en Revisión → «👤 Revisar alumnos sin identificar»).`} Si las dos son del mismo estudiante pero una es de otra prueba (mira «Quiz»), usa «✓ Esta es ${esc(siglaPrueba(e))} · mandar la otra a…»: la otra pasa a esa prueba con el mismo estudiante. Todo se puede deshacer con «↩ Deshacer».</p>
       <div class="paes-comparar-grilla">${suyas
         .map((y) => {
           const cor = vigente(y) && hayClave ? L.corregirHoja(y, e.clave) : null;
@@ -2471,6 +2477,7 @@
             </ul>
             ${otra ? `<p class="paes-comparar-otra">⚠ Parece de <b>${esc(nombrePruebaDe(otra.clavijero))}</b>: calza un ${numero(otra.ajuste * 100)} % con su clave y un ${numero(otra.propio * 100)} % con la de ${esc(siglaPrueba(e))}.</p>` : ""}
             ${botonesMandarAPrueba(y, e, otra)}
+            ${botonesEstaYLaOtra(y, e, otras(y))}
             <div class="acciones-form" style="margin-top:6px;">
               ${misma
                 ? `<button type="button" class="chico" data-accion="comparar-conservar" data-id="${esc(y.id)}" data-otras="${esc(otras(y))}" title="Deja esta hoja y elimina la otra, que es una copia">✓ Conservar esta (eliminar la copia)</button>`
@@ -2494,6 +2501,23 @@
         const destino = destinoEnsayo ? `e:${destinoEnsayo.id}` : `k:${p.clavijero.id}`;
         const sugerida = otra && clavePrueba(otra.clavijero) === p.clave;
         return `<button type="button" class="secundario chico paes-mandar ${p.clase}${sugerida ? " sugerida" : ""}" data-accion="hoja-a-prueba" data-id="${esc(y.id)}" data-destino="${esc(destino)}" title="Pasa esta hoja a ${esc(p.nombre)} de ${esc(nombreCurso(c))} y la corrige con su clave">↔ Mandar a ${esc(p.sigla)}</button>`;
+      })
+      .join("");
+    return botones ? `<div class="acciones-form paes-mandar-fila">${botones}</div>` : "";
+  }
+
+  // «✓ Esta es M1 · mandar la otra a CL»: esta hoja queda en este ensayo y las otras del mismo
+  // estudiante pasan a la otra prueba (con su estudiante, corregidas con esa clave)
+  function botonesEstaYLaOtra(y, e, otrasIds) {
+    const c = est.cursos.find((x) => x.id === e.cursoId);
+    if (!c || !otrasIds) return "";
+    const n = otrasIds.split(",").length;
+    const botones = pruebasConClavijero()
+      .filter((p) => p.clave !== clavePrueba(e))
+      .map((p) => {
+        const destinoEnsayo = ensayosDelCurso(c.id).find((x) => clavePrueba(x) === p.clave);
+        const destino = destinoEnsayo ? `e:${destinoEnsayo.id}` : `k:${p.clavijero.id}`;
+        return `<button type="button" class="secundario chico paes-esta-otra ${clasePrueba(e)}" data-accion="comparar-esta-mandar" data-id="${esc(y.id)}" data-otras="${esc(otrasIds)}" data-destino="${esc(destino)}" title="Esta hoja se queda en ${esc(nombrePrueba(e))}; ${n === 1 ? "la otra pasa" : "las otras pasan"} a ${esc(p.nombre)}, con el mismo estudiante">✓ Esta es ${esc(siglaPrueba(e))} · mandar ${n === 1 ? "la otra" : "las otras"} a <b class="paes-sigla-${p.clase}">${esc(p.sigla)}</b></button>`;
       })
       .join("");
     return botones ? `<div class="acciones-form paes-mandar-fila">${botones}</div>` : "";
@@ -6028,6 +6052,9 @@
         break;
       case "hoja-a-prueba":
         pasarHojaAPrueba(id, b.dataset.destino);
+        break;
+      case "comparar-esta-mandar":
+        pasarHojaAPrueba((b.dataset.otras || "").split(",").filter(Boolean), b.dataset.destino);
         break;
       case "comparar":
         est.comparar = est.comparar === id ? null : id;

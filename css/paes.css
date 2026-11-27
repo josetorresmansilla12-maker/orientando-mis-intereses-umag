@@ -856,3 +856,12 @@ details.paes-colegio > .paes-res-curso { margin-left: 16px; margin-right: 16px; 
 #modulo-paes button.secundario.paes-mandar.otra { background: #5b4a86; border-color: #5b4a86; }
 #modulo-paes button.secundario.paes-mandar.sugerida { box-shadow: 0 0 0 3px #f28c28; }
 #modulo-paes button.secundario.paes-mandar:hover { filter: brightness(0.92); }
+/* «✓ Esta es M1 · mandar la otra a CL» */
+#modulo-paes button.secundario.paes-esta-otra { color: white; font-weight: 700; }
+#modulo-paes button.secundario.paes-esta-otra.cl { background: var(--paes-cl); border-color: var(--paes-cl); }
+#modulo-paes button.secundario.paes-esta-otra.m1 { background: var(--paes-m1); border-color: var(--paes-m1); }
+#modulo-paes button.secundario.paes-esta-otra.otra { background: #5b4a86; border-color: #5b4a86; }
+#modulo-paes button.secundario.paes-esta-otra b { background: white; border-radius: 5px; padding: 0 6px; margin-left: 2px; }
+#modulo-paes button.secundario.paes-esta-otra b.paes-sigla-cl { color: var(--paes-cl); }
+#modulo-paes button.secundario.paes-esta-otra b.paes-sigla-m1 { color: var(--paes-m1); }
+#modulo-paes button.secundario.paes-esta-otra:hover { filter: brightness(0.92); }

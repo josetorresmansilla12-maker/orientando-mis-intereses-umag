@@ -814,6 +814,36 @@
       return aviso && movida && vuelve && erroresApp.length === antes;
     });
 
+    await prueba("«✓ Esta es M1 · mandar la otra a CL» deja esta hoja en M1 y pasa la otra a CL con el mismo estudiante (se puede deshacer)", async () => {
+      const antes = erroresApp.length;
+      const ok = (h) => h.estado !== "ilegible" && !h.excluida && !h.repetidaDe && !h.eliminada && h.estudianteId;
+      const e = E.ensayos.find((x) => x.prueba === "M1" && E.hojas.filter((h) => h.ensayoId === x.id && ok(h)).length >= 2);
+      if (!e) return false;
+      const [a, b] = E.hojas.filter((h) => h.ensayoId === e.id && ok(h));
+      const deB = b.estudianteId;
+      b.estudianteId = a.estudianteId;
+      await win.PaesDB.poner("hojas", b);
+      E.cursoId = e.cursoId;
+      E.ensayoId = e.id;
+      E.soloPorRevisar = false;
+      await clic('[data-vista="curso"]');
+      await clic('[data-paso="revision"]');
+      await clic(`#paes-hoja-${win.CSS.escape(a.id)} [data-accion="comparar"]`);
+      const btn = q(`#paes-hoja-${win.CSS.escape(a.id)} .paes-comparar [data-accion="comparar-esta-mandar"][data-id="${a.id}"]`);
+      if (!btn || !/Esta es M1 · mandar (la otra|las otras) a\s*CL/.test(btn.textContent)) return false;
+      await clic(btn);
+      await espera(400);
+      const destino = E.ensayos.find((x) => x.id === E.hojas.find((h) => h.id === b.id).ensayoId);
+      const bien = a.ensayoId === e.id && !!destino && destino.prueba === "CL" && destino.cursoId === e.cursoId && E.hojas.find((h) => h.id === b.id).estudianteId === a.estudianteId;
+      doc.getElementById("paes-acciones-barra").querySelector('[data-que="deshacer"]').click();
+      for (let i = 0; i < 20 && E.hojas.find((h) => h.id === b.id).ensayoId !== e.id; i++) await espera(150);
+      const vuelve = E.hojas.find((h) => h.id === b.id).ensayoId === e.id;
+      const bb = E.hojas.find((h) => h.id === b.id);
+      bb.estudianteId = deB;
+      await win.PaesDB.poner("hojas", bb);
+      return bien && vuelve && erroresApp.length === antes;
+    });
+
     titulo("Errores");
     await prueba("La app no registró errores durante el recorrido", () => {
       if (erroresApp.length) throw new Error(erroresApp.slice(0, 3).join(" | "));
