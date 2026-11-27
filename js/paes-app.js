@@ -712,15 +712,25 @@
     const hojas = hojasDelEnsayo(ensayo.id);
     const porEstudiante = new Map();
     hojas.filter(vigente).forEach((h) => {
-      if (h.estudianteId) porEstudiante.set(h.estudianteId, (porEstudiante.get(h.estudianteId) || 0) + 1);
+      if (!h.estudianteId) return;
+      if (!porEstudiante.has(h.estudianteId)) porEstudiante.set(h.estudianteId, []);
+      porEstudiante.get(h.estudianteId).push(h);
     });
+    // la otra (u otras) hoja del mismo estudiante, para decir cuál es y por qué quedó suya
+    const comoQuedo = (x) => (x.asignacion === "exacta" ? "por su RUT exacto" : x.asignacion === "sugerida" ? "por una sugerencia confirmada" : "asignada a mano");
+    const otrasDe = (h) =>
+      (porEstudiante.get(h.estudianteId) || [])
+        .filter((x) => x !== h)
+        .map((x) => `Hoja ${hojas.indexOf(x) + 1} (${x.archivo}, pág. ${x.pagina}; RUT marcado ${x.lectura && x.lectura.id ? L.formatearRutPaes(x.lectura.id) || x.lectura.id : "en blanco"}; ${comoQuedo(x)})`)
+        .join(" y la ");
     const mapa = new Map();
     hojas.forEach((h) => {
       if (h.excluida) {
         mapa.set(h.id, []);
         return;
       }
-      mapa.set(h.id, L.advertenciasDeHoja(h, ensayo, { duplicadaDeEstudiante: vigente(h) && h.estudianteId && porEstudiante.get(h.estudianteId) > 1 }));
+      const dup = vigente(h) && h.estudianteId && (porEstudiante.get(h.estudianteId) || []).length > 1;
+      mapa.set(h.id, L.advertenciasDeHoja(h, ensayo, { duplicadaDeEstudiante: dup ? otrasDe(h) || true : false }));
     });
     return mapa;
   }

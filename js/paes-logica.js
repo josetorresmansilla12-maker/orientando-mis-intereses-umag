@@ -592,7 +592,8 @@
     }
     // si una persona ya asignó la hoja a alguien, el RUT mal marcado deja de ser un pendiente
     if (estId === "invalido" && !(hoja.estudianteId && hoja.asignacion && hoja.asignacion !== "exacta")) agregar("rut-invalido", "El dígito verificador del RUT marcado no calza.");
-    if (o.duplicadaDeEstudiante) agregar("dos-hojas", "Hay dos hojas de este estudiante en el ensayo: elige cuál conservar.");
+    if (o.duplicadaDeEstudiante)
+      agregar("dos-hojas", typeof o.duplicadaDeEstudiante === "string" ? `${o.duplicadaDeEstudiante.includes(" y la ") ? "Hay otras hojas" : "Hay otra hoja"} de este estudiante en este mismo ensayo: la ${o.duplicadaDeEstudiante}. Revisa de quién es cada una y conserva la suya.` : "Hay dos hojas de este estudiante en el ensayo: elige cuál conservar.");
     const clave = (ensayo && ensayo.clave) || [];
     const nAlt = (ensayo && ensayo.alternativas) || 4;
     let blancas = 0;
