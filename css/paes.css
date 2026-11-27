@@ -825,3 +825,8 @@ details.paes-colegio > .paes-res-curso { margin-left: 16px; margin-right: 16px; 
 #modulo-paes .paes-sinid-listo button.paes-res-informe { color: white; }
 #modulo-paes .paes-sinid-listo button.paes-res-informe.cl { background: var(--paes-cl); border-color: var(--paes-cl); }
 #modulo-paes .paes-sinid-listo button.paes-res-informe.m1 { background: var(--paes-m1); border-color: var(--paes-m1); }
+/* clave y clavijero: los números van hacia abajo (1, 2, 3… en la primera columna, luego la
+   siguiente), con tantas columnas como quepan */
+.paes-clave-grilla, .paes-clave-grilla.con-piloto { display: block; column-width: 112px; column-gap: 6px; }
+.paes-clave-grilla.con-piloto { column-width: 158px; }
+.paes-clave-grilla > .paes-clave-celda { break-inside: avoid; margin-bottom: 6px; }
