@@ -720,6 +720,36 @@
       return aviso && enRevision && erroresApp.length === antes;
     });
 
+    await prueba("«🗑 Eliminar» en los resultados quita al estudiante tras confirmar, y se puede deshacer y rehacer", async () => {
+      const antes = erroresApp.length;
+      const h = E.hojas.find((x) => x.estado !== "ilegible" && !x.excluida && !x.repetidaDe && !x.eliminada && E.ensayos.some((e) => e.id === x.ensayoId));
+      if (!h) return false;
+      const e = E.ensayos.find((x) => x.id === h.ensayoId);
+      E.cursoId = e.cursoId;
+      E.ensayoId = e.id;
+      await clic('[data-vista="curso"]');
+      await clic('[data-paso="resultados"]');
+      const b = q(`.paes-resultados [data-accion="eliminar-hoja"][data-id="${h.id}"]`);
+      if (!b) return false;
+      await clic(b);
+      const pide = win.getComputedStyle(doc.getElementById("modal-confirmacion")).display !== "none";
+      await confirmar();
+      await espera(300);
+      const fuera = h.eliminada === true && !q(`.paes-resultados [data-accion="eliminar-hoja"][data-id="${h.id}"]`);
+      const barra = () => doc.getElementById("paes-acciones-barra");
+      barra().querySelector('[data-que="deshacer"]').click();
+      for (let i = 0; i < 20 && E.hojas.find((x) => x.id === h.id).eliminada; i++) await espera(150);
+      await espera(300);
+      const vuelve = !E.hojas.find((x) => x.id === h.id).eliminada && !!q(`.paes-resultados [data-accion="eliminar-hoja"][data-id="${h.id}"]`);
+      barra().querySelector('[data-que="rehacer"]').click();
+      for (let i = 0; i < 20 && !E.hojas.find((x) => x.id === h.id).eliminada; i++) await espera(150);
+      const rehecho = !!E.hojas.find((x) => x.id === h.id).eliminada;
+      // se deja como estaba
+      barra().querySelector('[data-que="deshacer"]').click();
+      for (let i = 0; i < 20 && E.hojas.find((x) => x.id === h.id).eliminada; i++) await espera(150);
+      return pide && fuera && vuelve && rehecho && erroresApp.length === antes;
+    });
+
     titulo("Errores");
     await prueba("La app no registró errores durante el recorrido", () => {
       if (erroresApp.length) throw new Error(erroresApp.slice(0, 3).join(" | "));

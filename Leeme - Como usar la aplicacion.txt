@@ -557,6 +557,11 @@ El trabajo va en cinco pasos:
      Junto al clavijero de cada prueba hay un botón "📄 Informe CL" (rojo) o
      "📄 Informe M1" (azul) que descarga de inmediato el informe PDF de resultados
      de esa prueba, sin abrir el curso.
+   - "🗑 Eliminar" / "🗑 Eliminar estudiante" (botón rojo en la tabla de resultados
+     y en cada hoja de la revisión): quita a ese estudiante (su hoja) de los
+     resultados del ensayo y de su informe. Pregunta si estás seguro (sin escribir
+     nada) y se puede deshacer y rehacer con "↩ Deshacer" / "↪ Rehacer". El
+     estudiante sigue en la lista del curso.
    - "👤 Revisar alumnos sin identificar (N)" (pestaña "🔎 Revisión"): reúne todas
      las hojas que cuentan pero no tienen estudiante (en el informe salen "sin
      identificar"), separadas por colegio, curso y prueba. En cada una buscas al

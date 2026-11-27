@@ -126,14 +126,16 @@
   const cursoActual = () => est.cursos.find((c) => c.id === est.cursoId) || null;
   const ensayoActual = () => est.ensayos.find((e) => e.id === est.ensayoId && e.cursoId === est.cursoId) || null;
   const ensayosDelCurso = (cursoId) => est.ensayos.filter((e) => e.cursoId === cursoId).sort((a, b) => (a.creado || "").localeCompare(b.creado || ""));
+  // las hojas eliminadas con «🗑 Eliminar estudiante» quedan guardadas (para poder deshacer)
+  // pero ya no cuentan en ninguna parte
   const hojasDelEnsayo = (ensayoId) =>
-    est.hojas.filter((h) => h.ensayoId === ensayoId).sort((a, b) => (a.creada || "").localeCompare(b.creada || "") || a.archivo.localeCompare(b.archivo) || a.pagina - b.pagina);
+    est.hojas.filter((h) => h.ensayoId === ensayoId && !h.eliminada).sort((a, b) => (a.creada || "").localeCompare(b.creada || "") || a.archivo.localeCompare(b.archivo) || a.pagina - b.pagina);
   const etiquetaCurso = (c) => `${c.nivel}${c.letra ? " " + c.letra : ""}`;
   const nombrePrueba = (e) => (e.prueba !== "OTRA" && L.PRUEBAS_PAES[e.prueba] ? L.PRUEBAS_PAES[e.prueba].nombre : e.pruebaNombre || "Otra prueba");
   const etiquetaEnsayo = (e) => `${nombrePrueba(e)}${e.forma ? " · Forma " + e.forma : ""}${e.fecha ? " · " + PaesExcel.fechaCorta(e.fecha) : ""}`;
   // nombres primero y después apellidos, como los escriben los estudiantes en la hoja
   const estudiantesOrdenados = (c) => c.estudiantes.slice().sort((a, b) => L.nombreCompletoPaes(a).localeCompare(L.nombreCompletoPaes(b), "es"));
-  const vigente = (h) => h.estado !== "ilegible" && !h.excluida && !h.repetidaDe;
+  const vigente = (h) => h.estado !== "ilegible" && !h.excluida && !h.repetidaDe && !h.eliminada;
 
   // ensayos «hermanos»: el mismo ensayo creado a la vez en varios cursos, para corregirlos juntos
   const hermanos = (e) => (e && e.grupoId ? est.ensayos.filter((x) => x !== e && x.grupoId === e.grupoId) : []);
@@ -264,6 +266,7 @@
     "guardar-curso": "Guardar datos del curso",
     "guardar-ensayo": "Crear ensayo",
     "eliminar-ensayo": "Eliminar ensayo",
+    "eliminar-hoja": "Eliminar estudiante de los resultados",
     asignar: "Asignar estudiante a una hoja",
     sugerencia: "Asignar estudiante a una hoja",
     "mover-hoja": "Pasar hoja a otro curso",
@@ -2213,7 +2216,7 @@
           progreso.archivo = `${archivo.name} · página ${p} de ${abierto.paginas}`;
           pintarProgreso();
           await ceder();
-          const delEnsayo = est.hojas.filter((h) => idsGrupo.has(h.ensayoId)); // incluye los cursos que se corrigen juntos
+          const delEnsayo = est.hojas.filter((h) => idsGrupo.has(h.ensayoId) && !h.eliminada); // incluye los cursos que se corrigen juntos (no las eliminadas)
           let leida, huella;
           try {
             const pagina = await abierto.pagina(p);
@@ -2458,6 +2461,7 @@
         if (avisos.length || x.estado === "ilegible") h += `<button type="button" class="${x.revisada ? "secundario " : ""}chico" data-accion="revisada" data-id="${esc(x.id)}">${x.revisada ? "↩ Quitar «revisada»" : "✓ Marcar como revisada"}</button>`;
         if (x.estado !== "ilegible") h += `<button type="button" class="secundario chico" data-accion="excluir" data-id="${esc(x.id)}">🚫 No contar esta hoja</button>`;
       }
+      h += `<button type="button" class="chico peligro" data-accion="eliminar-hoja" data-id="${esc(x.id)}" title="Quita esta hoja (y a su estudiante) de los resultados de este ensayo">🗑 Eliminar estudiante</button>`;
       h += `</div>`;
       if (est.transferirEn === x.id) {
         const delColegio = otrosDelColegio(c).concat(est.cursos.filter((k) => k.id !== c.id && k.disperso && normColegio(k.colegio) === normColegio(c.colegio)));
@@ -2664,6 +2668,28 @@
   }
 
   // cambia por D todas las respuestas marcadas en E del ensayo (con confirmación)
+  // «🗑 Eliminar estudiante»: la hoja sale de los resultados de su ensayo. Queda marcada como
+  // eliminada (no se borra), así que se puede deshacer y rehacer con la barra de siempre.
+  function eliminarHoja(hojaId) {
+    const h = est.hojas.find((x) => x.id === hojaId);
+    if (!h) return;
+    const e = est.ensayos.find((x) => x.id === h.ensayoId);
+    const c = e ? est.cursos.find((x) => x.id === e.cursoId) : null;
+    const alumno = h.estudianteId && c ? c.estudiantes.find((s) => s.id === h.estudianteId) : null;
+    const quien = alumno ? L.nombreCompletoPaes(alumno) : `la hoja sin identificar (${h.archivo}, pág. ${h.pagina})`;
+    confirmar({
+      titulo: "¿Eliminar a este estudiante?",
+      texto: `¿Seguro que quieres eliminar a ${quien} de los resultados${e ? ` de ${nombrePrueba(e)}` : ""}${c ? ` de ${nombreCurso(c)}` : ""}? Su hoja deja de contar en este ensayo y en su informe. ${alumno ? "Sigue en la lista del curso. " : ""}Puedes deshacerlo con «↩ Deshacer».`,
+      textoBoton: "Sí, eliminar",
+      onConfirmar: async () => {
+        h.eliminada = true;
+        await guardar("hojas", h);
+        pintar();
+        toast("Estudiante eliminado de los resultados · puedes deshacerlo con «↩ Deshacer»");
+      },
+    });
+  }
+
   // todos: en todos los ensayos de 4 alternativas de todos los cursos (botón de arriba en
   // la pestaña Revisión); si no, solo en el ensayo actual
   function traspasarEaD(todos) {
@@ -3043,14 +3069,15 @@
       <p class="paes-nota">${chipTabla(e)} Ensayo de preparación tipo PAES. Puntaje <b>referencial, no oficial</b>, según la tabla de conversión de la unidad: <b>tabla de 0 a ${st.maximoTabla == null ? "—" : st.maximoTabla} correctas</b> (versión ${e.tablaVersion || 1}) · <b>${plural(st.preguntasValidas, "pregunta válida", "preguntas válidas")}</b> de ${st.preguntas} (clave versión ${e.claveVersion || 0}).</p>
     </div>`;
     h += `<div class="tarjeta"><h2 style="font-size:16px;">Tabla del curso, de mayor a menor puntaje</h2>
-      <div class="paes-tabla-scroll"><table class="paes-tabla paes-resultados"><thead><tr><th>Lugar</th><th>Estudiante</th><th>RUT</th><th>Correctas</th><th>Incorrectas</th><th>Omitidas</th><th>Logro</th><th>Puntaje</th></tr></thead><tbody>`;
+      <div class="paes-tabla-scroll"><table class="paes-tabla paes-resultados"><thead><tr><th>Lugar</th><th>Estudiante</th><th>RUT</th><th>Correctas</th><th>Incorrectas</th><th>Omitidas</th><th>Logro</th><th>Puntaje</th><th></th></tr></thead><tbody>`;
     res.filas.forEach((f) => {
       h += `<tr class="${f.estudianteId ? "" : "paes-fila-duda"}"><td class="num">${f.lugar}</td>
         <td>${f.estudianteId ? esc(f.nombre) : `<i>Sin identificar</i> <small>(${esc(f.archivo)}, pág. ${f.pagina})</small>`}</td>
         <td class="rut">${esc(L.formatearRutPaes(f.rut))}</td>
         <td class="num">${f.correctas}</td><td class="num">${f.incorrectas}${f.dobles ? ` <small title="Dobles marcas, que cuentan como incorrectas">(${f.dobles} dobles)</small>` : ""}</td><td class="num">${f.omitidas}</td>
         <td class="num">${numero(f.logro)} %</td>
-        <td class="num puntaje">${f.sinTabla ? `<span class="paes-falta">sin tabla</span>` : f.puntaje}</td></tr>`;
+        <td class="num puntaje">${f.sinTabla ? `<span class="paes-falta">sin tabla</span>` : f.puntaje}</td>
+        <td class="acciones"><button type="button" class="chico peligro" data-accion="eliminar-hoja" data-id="${esc(f.hojaId)}" title="Quita a este estudiante (su hoja) de los resultados de este ensayo">🗑 Eliminar</button></td></tr>`;
     });
     h += `</tbody></table></div></div>`;
     h += `<div class="paes-dos">
@@ -5854,6 +5881,9 @@
         break;
       case "eliminar-ensayo":
         eliminarEnsayo();
+        break;
+      case "eliminar-hoja":
+        eliminarHoja(id);
         break;
       case "res-eliminar-ensayo":
         ev.preventDefault();
