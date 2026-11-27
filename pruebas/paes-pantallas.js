@@ -750,6 +750,35 @@
       return pide && fuera && vuelve && rehecho && erroresApp.length === antes;
     });
 
+    await prueba("«⚖️ Comparar hojas» muestra las dos hojas del estudiante y «Conservar esta» elimina la otra (se puede deshacer)", async () => {
+      const antes = erroresApp.length;
+      const ok = (h) => h.estado !== "ilegible" && !h.excluida && !h.repetidaDe && !h.eliminada && h.estudianteId;
+      const e = E.ensayos.find((x) => E.hojas.filter((h) => h.ensayoId === x.id && ok(h)).length >= 2);
+      if (!e) return false;
+      const [a, b] = E.hojas.filter((h) => h.ensayoId === e.id && ok(h));
+      const deB = b.estudianteId;
+      b.estudianteId = a.estudianteId;
+      await win.PaesDB.poner("hojas", b);
+      E.cursoId = e.cursoId;
+      E.ensayoId = e.id;
+      E.soloPorRevisar = false;
+      await clic('[data-vista="curso"]');
+      await clic('[data-paso="revision"]');
+      await clic(`#paes-hoja-${win.CSS.escape(a.id)} [data-accion="comparar"]`);
+      const panel = q(`#paes-hoja-${win.CSS.escape(a.id)} .paes-comparar`);
+      const dos = !!panel && panel.querySelectorAll(".paes-comparar-hoja").length >= 2 && /Respuestas iguales en/.test(panel.textContent);
+      await clic(panel.querySelector(`[data-accion="comparar-conservar"][data-id="${a.id}"]`));
+      await espera(400);
+      const quedo = !a.eliminada && b.eliminada === true;
+      doc.getElementById("paes-acciones-barra").querySelector('[data-que="deshacer"]').click();
+      for (let i = 0; i < 20 && E.hojas.find((h) => h.id === b.id).eliminada; i++) await espera(150);
+      const deshecho = !E.hojas.find((h) => h.id === b.id).eliminada;
+      const bb = E.hojas.find((h) => h.id === b.id);
+      bb.estudianteId = deB;
+      await win.PaesDB.poner("hojas", bb);
+      return dos && quedo && deshecho && erroresApp.length === antes;
+    });
+
     titulo("Errores");
     await prueba("La app no registró errores durante el recorrido", () => {
       if (erroresApp.length) throw new Error(erroresApp.slice(0, 3).join(" | "));

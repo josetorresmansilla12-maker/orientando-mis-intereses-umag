@@ -562,6 +562,13 @@ El trabajo va en cinco pasos:
      resultados del ensayo y de su informe. Pregunta si estás seguro (sin escribir
      nada) y se puede deshacer y rehacer con "↩ Deshacer" / "↪ Rehacer". El
      estudiante sigue en la lista del curso.
+   - Dos hojas del mismo estudiante en un ensayo: el aviso dice cuál es la otra hoja
+     (archivo, página, RUT marcado y cómo quedó vinculada) y trae el botón
+     "⚖️ Comparar hojas": muestra las hojas lado a lado, con el nombre escrito a
+     mano, el RUT, el resultado y cuántas respuestas coinciden. Si coinciden casi
+     todas, es la misma hoja subida dos veces; si no, son de dos estudiantes. En
+     cada una: "✓ Conservar esta" (elimina las otras), "No es suya: quitarle el
+     estudiante" (queda sin identificar) o "👁 Ver completa". Todo se puede deshacer.
    - "👤 Revisar alumnos sin identificar (N)" (pestaña "🔎 Revisión"): reúne todas
      las hojas que cuentan pero no tienen estudiante (en el informe salen "sin
      identificar"), separadas por colegio, curso y prueba. En cada una buscas al

@@ -830,3 +830,16 @@ details.paes-colegio > .paes-res-curso { margin-left: 16px; margin-right: 16px; 
 .paes-clave-grilla, .paes-clave-grilla.con-piloto { display: block; column-width: 112px; column-gap: 6px; }
 .paes-clave-grilla.con-piloto { column-width: 158px; }
 .paes-clave-grilla > .paes-clave-celda { break-inside: avoid; margin-bottom: 6px; }
+/* «⚖️ Comparar hojas» del mismo estudiante */
+#modulo-paes button.paes-btn-comparar { background: #5b4a86; border-color: #5b4a86; color: white; }
+#modulo-paes button.paes-btn-comparar.activo { background: #3d3160; }
+.paes-comparar { border: 2px solid #5b4a86; border-radius: 12px; padding: 12px 14px; margin: 8px 0 10px; background: #f7f4fd; }
+.paes-comparar-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.paes-comparar-grilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.paes-comparar-hoja { background: white; border: 1px solid var(--paes-borde, #e0dcea); border-radius: 10px; padding: 10px; }
+.paes-comparar-hoja.esta { border: 2px solid var(--paes-m1, #1f5fa8); }
+.paes-comparar-titulo { margin-bottom: 6px; }
+.paes-comparar-datos { list-style: none; padding: 0; margin: 8px 0 0; font-size: 13px; }
+.paes-comparar-datos li { padding: 2px 0; }
+.paes-comparar-datos li span { display: inline-block; min-width: 92px; color: #6b6480; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; }
+.paes-hoja > .paes-comparar { margin: 10px 0 0; }

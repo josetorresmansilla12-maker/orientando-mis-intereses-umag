@@ -51,6 +51,7 @@
     agregarPrueba: null, // Resultados guardados: { colegio, prueba } con el cuadro «Agregar ensayos X» abierto
     pdfPrueba: null, // «Agregar ensayos PDF»: prueba cuyo clavijero queda marcado de entrada
     revTodas: false,
+    comparar: null, // revisión: hoja con el cuadro «Comparar hojas» abierto
     revSinId: false, // Revisión: hojas sin estudiante identificado, de todos los cursos
     sinIdEnsayos: new Set(), // ensayos que tenían hojas sin identificar (para ofrecer su informe actualizado) // Revisión: todas las hojas pendientes de todos los cursos en una página
     visorSinMarcas: false, // visor: imagen sin los círculos de la app ("Ocultar marcas")
@@ -267,6 +268,8 @@
     "guardar-ensayo": "Crear ensayo",
     "eliminar-ensayo": "Eliminar ensayo",
     "eliminar-hoja": "Eliminar estudiante de los resultados",
+    "comparar-conservar": "Conservar una de dos hojas del mismo estudiante",
+    "comparar-soltar": "Quitar el estudiante a una hoja",
     asignar: "Asignar estudiante a una hoja",
     sugerencia: "Asignar estudiante a una hoja",
     "mover-hoja": "Pasar hoja a otro curso",
@@ -2376,6 +2379,51 @@
 
   // tarjetas de las hojas de un ensayo (las del paso «Revisión» de un curso y las de la
   // revisión de todos los cursos en una página). soloPendientes: solo las por revisar.
+  // «⚖️ Comparar hojas»: las hojas del mismo estudiante en el ensayo, una al lado de la otra,
+  // con lo necesario para decidir: recorte del nombre, RUT marcado, cómo quedó vinculada,
+  // puntaje y cuántas respuestas coinciden (si coinciden casi todas, es la misma hoja dos veces)
+  function htmlCompararHojas(x, e, hojas, porId, hayClave) {
+    const suyas = hojas.filter((y) => vigente(y) && y.estudianteId === x.estudianteId);
+    if (suyas.length < 2) return "";
+    const alumno = porId.get(x.estudianteId);
+    const preguntas = e.clave.map((k) => k.n);
+    const resp = (y) => preguntas.map((n) => {
+      const r = L.respuestaVigente(y, n);
+      return r.estado === "ok" ? r.letras : r.estado === "doble" ? "*" : "-";
+    });
+    const base = resp(suyas[0]);
+    const iguales = suyas.slice(1).map((y) => resp(y).filter((v, i) => v === base[i]).length);
+    const minIgual = Math.min(...iguales);
+    const misma = preguntas.length && minIgual >= preguntas.length * 0.9;
+    const como = (y) => (y.asignacion === "exacta" ? "por su RUT exacto" : y.asignacion === "sugerida" ? "por una sugerencia confirmada" : "asignada a mano");
+    const otras = (y) => suyas.filter((z) => z !== y).map((z) => z.id).join(",");
+    return `<div class="paes-comparar">
+      <div class="paes-comparar-cab"><b>⚖️ Hojas de ${esc(alumno ? L.nombreCompletoPaes(alumno) : "este estudiante")} en este ensayo</b>
+        <span class="paes-chip ${misma ? "naranjo" : "gris"}">${suyas.length === 2 ? `Respuestas iguales en ${minIgual} de ${preguntas.length}` : `Respuestas iguales en al menos ${minIgual} de ${preguntas.length}`}</span></div>
+      <p class="ayuda" style="margin:4px 0 10px;">${misma ? "Las respuestas son casi idénticas: <b>es la misma hoja subida dos veces</b>. Conserva una (cualquiera) y la otra se elimina." : "Las respuestas son distintas: <b>son hojas de dos estudiantes</b>. Mira el nombre escrito a mano: conserva la de este estudiante y a la otra quítale el estudiante (queda sin identificar para asignarla a quien corresponda)."} Todo se puede deshacer con «↩ Deshacer».</p>
+      <div class="paes-comparar-grilla">${suyas
+        .map((y) => {
+          const cor = vigente(y) && hayClave ? L.corregirHoja(y, e.clave) : null;
+          const p = cor ? L.puntajeDe(cor.correctas, e.tabla) : null;
+          const rut = y.lectura && y.lectura.id ? L.formatearRutPaes(y.lectura.id) || y.lectura.id : "en blanco";
+          return `<div class="paes-comparar-hoja${y.id === x.id ? " esta" : ""}">
+            <div class="paes-comparar-titulo"><b>Hoja ${hojas.indexOf(y) + 1}</b>${y.id === x.id ? ` <span class="paes-chip azul">esta tarjeta</span>` : ""}</div>
+            <button type="button" class="paes-recorte" data-accion="ver-hoja" data-id="${esc(y.id)}" title="Ver la hoja completa"><img data-imagen="${esc(y.id)}:nombre" alt="Nombre escrito a mano en la hoja" /></button>
+            <ul class="paes-comparar-datos">
+              <li><span>Archivo</span> ${esc(y.archivo)}, pág. ${y.pagina}</li>
+              <li><span>RUT marcado</span> <code class="paes-id">${esc(rut)}</code></li>
+              <li><span>Vinculada</span> ${como(y)}</li>
+              ${cor ? `<li><span>Resultado</span> ${cor.correctas} correctas · ${p == null ? "sin tabla" : p + " puntos"}</li>` : ""}
+            </ul>
+            <div class="acciones-form" style="margin-top:6px;">
+              <button type="button" class="chico" data-accion="comparar-conservar" data-id="${esc(y.id)}" data-otras="${esc(otras(y))}">✓ Conservar esta</button>
+              <button type="button" class="secundario chico" data-accion="comparar-soltar" data-id="${esc(y.id)}" title="Le quita el estudiante a esta hoja: queda sin identificar para asignarla a quien corresponda">No es suya: quitarle el estudiante</button>
+              <button type="button" class="secundario chico" data-accion="ver-hoja" data-id="${esc(y.id)}">👁 Ver completa</button>
+            </div></div>`;
+        })
+        .join("")}</div></div>`;
+  }
+
   // filtro (opcional): solo las hojas que cumplen (por ejemplo, las sin identificar)
   function htmlHojasRevision(c, e, soloPendientes, filtro) {
     const hojas = hojasDelEnsayo(e.id);
@@ -2461,6 +2509,9 @@
         }
       }
       if (avisos.length) h += `<ul class="paes-advertencias">${avisos.map((a) => `<li>${esc(a.detalle)}</li>`).join("")}</ul>`;
+      const dosHojas = avisos.some((a) => a.tipo === "dos-hojas");
+      if (dosHojas) h += `<div class="acciones-form" style="margin:6px 0;"><button type="button" class="chico paes-btn-comparar${est.comparar === x.id ? " activo" : ""}" data-accion="comparar" data-id="${esc(x.id)}">⚖️ ${est.comparar === x.id ? "Cerrar la comparación" : "Comparar hojas"}</button></div>`;
+      const panelComparar = dosHojas && est.comparar === x.id ? htmlCompararHojas(x, e, hojas, porId, hayClave) : "";
       h += `<div class="paes-hoja-acciones">
             <button type="button" class="secundario chico" data-accion="ver-hoja" data-id="${esc(x.id)}">${x.estado === "ilegible" ? "👁 Ver la hoja" : "👁 Ver y corregir respuestas"}</button>`;
       if (x.estado === "ilegible" && !x.excluida) h += `<button type="button" class="secundario chico" data-accion="ingresar-a-mano" data-id="${esc(x.id)}">✍ Ingresar respuestas a mano</button>`;
@@ -2484,7 +2535,7 @@
               <small>Si ese curso aún no tiene este ensayo, se crea con la misma clave.</small></div>`
           : `<div class="paes-candidatos"><span>No hay otros cursos guardados. Créalo primero con «Ingresar nuevo curso».</span></div>`;
       }
-      h += `</div></div></div>`;
+      h += `</div></div>${panelComparar}</div>`;
     });
     return { html: h, mostradas };
   }
@@ -5895,6 +5946,34 @@
       case "eliminar-hoja":
         eliminarHoja(id);
         break;
+      case "comparar":
+        est.comparar = est.comparar === id ? null : id;
+        pintar();
+        break;
+      case "comparar-conservar": {
+        // las otras hojas del estudiante se eliminan (quedan guardadas: se puede deshacer)
+        const otras = (b.dataset.otras || "").split(",").map((k) => est.hojas.find((y) => y.id === k)).filter(Boolean);
+        if (!otras.length) break;
+        otras.forEach((y) => (y.eliminada = true));
+        PaesDB.ponerVarios(otras.map((y) => ["hojas", y])).then(() => {
+          est.comparar = null;
+          pintar();
+          toast(`Se conservó esa hoja; ${otras.length === 1 ? "la otra se eliminó" : `las otras ${otras.length} se eliminaron`} · puedes deshacerlo con «↩ Deshacer»`);
+        });
+        break;
+      }
+      case "comparar-soltar": {
+        const y = est.hojas.find((k) => k.id === id);
+        if (!y) break;
+        y.estudianteId = null;
+        y.asignacion = null;
+        guardar("hojas", y).then(() => {
+          est.comparar = null;
+          pintar();
+          toast("La hoja quedó sin identificar: asígnala a quien corresponda · puedes deshacerlo con «↩ Deshacer»");
+        });
+        break;
+      }
       case "res-eliminar-ensayo":
         ev.preventDefault();
         Object.assign(est, { cursoId: b.dataset.curso, ensayoId: b.dataset.ensayo, enBlanco: false });
