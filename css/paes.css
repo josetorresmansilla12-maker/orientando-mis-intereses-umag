@@ -865,3 +865,9 @@ details.paes-colegio > .paes-res-curso { margin-left: 16px; margin-right: 16px; 
 #modulo-paes button.secundario.paes-esta-otra b.paes-sigla-cl { color: var(--paes-cl); }
 #modulo-paes button.secundario.paes-esta-otra b.paes-sigla-m1 { color: var(--paes-m1); }
 #modulo-paes button.secundario.paes-esta-otra:hover { filter: brightness(0.92); }
+/* semáforo «listo para entregar» en Resultados guardados */
+.paes-semaforo { display: inline-block; border-radius: 7px; padding: 3px 10px; font-size: 13px; font-weight: 800; line-height: 1.3; vertical-align: middle; margin: 0 6px 4px 0; }
+.paes-semaforo.verde { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
+.paes-semaforo.naranjo, #modulo-paes button.secundario.paes-semaforo.naranjo { background: #fff3d6; color: #7a5200; border: 2px solid #e0a526; }
+#modulo-paes button.secundario.paes-semaforo.naranjo:hover { background: #ffe9b0; }
+.paes-aviso-otra-prueba { margin: 10px 0; }

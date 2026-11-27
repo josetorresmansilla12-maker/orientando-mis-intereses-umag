@@ -844,6 +844,75 @@
       return bien && vuelve && erroresApp.length === antes;
     });
 
+    await prueba("Al asignar a mano una hoja cuyo RUT es de otro estudiante, la app avisa y no asigna sin confirmar", async () => {
+      const antes = erroresApp.length;
+      const h = E.hojas.find((x) => x.asignacion === "exacta" && x.estudianteId && x.estado !== "ilegible" && !x.excluida && !x.repetidaDe && !x.eliminada && E.ensayos.some((e) => e.id === x.ensayoId));
+      if (!h) return false;
+      const e = E.ensayos.find((x) => x.id === h.ensayoId);
+      const c = E.cursos.find((x) => x.id === e.cursoId);
+      const otro = c.estudiantes.find((s) => s.id !== h.estudianteId && s.rut);
+      if (!otro) return false;
+      const dueno = h.estudianteId;
+      E.cursoId = c.id;
+      E.ensayoId = e.id;
+      E.soloPorRevisar = false;
+      await clic('[data-vista="curso"]');
+      await clic('[data-paso="revision"]');
+      const sel = q(`select[data-asignar="${h.id}"]`);
+      sel.value = otro.id;
+      sel.dispatchEvent(new win.Event("change", { bubbles: true }));
+      await espera(300);
+      const m = doc.getElementById("modal-opciones");
+      const aviso = win.getComputedStyle(m).display !== "none" && /Seguro que la hoja es de este estudiante/.test(m.textContent);
+      const sigue = h.estudianteId === dueno;
+      Array.from(m.querySelectorAll("button")).find((x) => /Cancelar/.test(x.textContent)).click();
+      await espera(200);
+      return aviso && sigue && h.estudianteId === dueno && erroresApp.length === antes;
+    });
+    await prueba("Las hojas de otra prueba mezcladas en un ensayo se pasan todas juntas con un botón (se puede deshacer)", async () => {
+      const antes = erroresApp.length;
+      const kCL = E.clavijeros.find((k) => k.prueba === "CL");
+      const eM1 = E.ensayos.find((e) => e.prueba === "M1" && E.hojas.some((h) => h.ensayoId === e.id && h.estado !== "ilegible" && !h.excluida && !h.repetidaDe && !h.eliminada));
+      if (!kCL || !eM1) return false;
+      const h = E.hojas.find((x) => x.ensayoId === eM1.id && x.estado !== "ilegible" && !x.excluida && !x.repetidaDe && !x.eliminada);
+      const previas = JSON.stringify(h.ediciones || null);
+      h.ediciones = { respuestas: {} };
+      kCL.clave.forEach((k) => k.r && (h.ediciones.respuestas[k.n] = k.r));
+      await win.PaesDB.poner("hojas", h);
+      E.cursoId = eM1.cursoId;
+      E.ensayoId = eM1.id;
+      await clic('[data-vista="curso"]');
+      await clic('[data-paso="revision"]');
+      const b = q('.paes-aviso-otra-prueba [data-accion="otra-prueba-todas"]');
+      if (!b || !/Pasar .* a CL/.test(b.textContent)) return false;
+      await clic(b);
+      await espera(400);
+      const movida = E.ensayos.find((x) => x.id === E.hojas.find((y) => y.id === h.id).ensayoId).prueba === "CL";
+      doc.getElementById("paes-acciones-barra").querySelector('[data-que="deshacer"]').click();
+      for (let i = 0; i < 20 && E.hojas.find((y) => y.id === h.id).ensayoId !== eM1.id; i++) await espera(150);
+      const hh = E.hojas.find((y) => y.id === h.id);
+      const vuelve = hh.ensayoId === eM1.id;
+      hh.ediciones = JSON.parse(previas);
+      await win.PaesDB.poner("hojas", hh);
+      return movida && vuelve && erroresApp.length === antes;
+    });
+    await prueba("Resultados guardados muestra el semáforo de cada curso: 🟠 con lo que falta (por ejemplo, sin identificar)", async () => {
+      const antes = erroresApp.length;
+      const h = E.hojas.find((x) => x.estudianteId && x.estado !== "ilegible" && !x.excluida && !x.repetidaDe && !x.eliminada && E.ensayos.some((e) => e.id === x.ensayoId));
+      if (!h) return false;
+      const quien = h.estudianteId;
+      const cursoId = E.ensayos.find((e) => e.id === h.ensayoId).cursoId;
+      h.estudianteId = null;
+      await clic('[data-vista="resultados"]');
+      await clic('[data-accion="res-abrir-todos"]');
+      const fila = q(`details.paes-res-curso[data-curso-id="${cursoId}"] > summary`);
+      const naranjo = !!fila && /🟠 Falta: .*sin identificar/.test(fila.textContent);
+      const hay = qa(".paes-semaforo").length > 0;
+      h.estudianteId = quien;
+      await clic('[data-vista="resultados"]');
+      return naranjo && hay && erroresApp.length === antes;
+    });
+
     titulo("Errores");
     await prueba("La app no registró errores durante el recorrido", () => {
       if (erroresApp.length) throw new Error(erroresApp.slice(0, 3).join(" | "));

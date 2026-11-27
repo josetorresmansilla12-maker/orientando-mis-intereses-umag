@@ -562,12 +562,24 @@ El trabajo va en cinco pasos:
      resultados del ensayo y de su informe. Pregunta si estás seguro (sin escribir
      nada) y se puede deshacer y rehacer con "↩ Deshacer" / "↪ Rehacer". El
      estudiante sigue en la lista del curso.
+   - Semáforo en "Resultados guardados": cada curso muestra "🟢 Listo para entregar"
+     o "🟠 Falta: …" (estudiantes sin identificar, estudiantes con 2 hojas, hojas de
+     otra prueba), además del cuadro naranjo de hojas por revisar. Cada colegio
+     dice si todos sus cursos están listos. Pulsar el 🟠 lleva a revisarlo.
+   - Al asignar a mano una hoja (selector, buscador o botones), si el RUT marcado es
+     (o se parece a un dígito) el de OTRO estudiante de la lista y no el del
+     elegido, la app avisa y pregunta: "Sí, es de …" o "Asignarla a …".
+   - Misma hoja subida dos veces aunque venga en otro archivo: si tiene el mismo
+     RUT y el 90 % o más de respuestas iguales a una ya leída, queda como repetida
+     y no se cuenta dos veces.
    - Hoja de otra prueba dentro de un PDF (por ejemplo, una hoja de CL que venía en
      el PDF de M1): la app compara cada hoja con las claves de las otras pruebas. Si
      calza mucho mejor con otra, la deja "por revisar" con el aviso "Esta hoja
      parece de Competencia Lectora…" y el botón "↔ Pasar esta hoja a CL", que la
      mueve al ensayo de CL del mismo curso (lo crea si no existe) y la corrige con
-     su clave. También aparece en "⚖️ Comparar hojas". Se puede deshacer. En
+     su clave. También aparece en "⚖️ Comparar hojas". Al terminar de leer un PDF (y
+     arriba de la revisión) un aviso junta todas las hojas de otra prueba con un
+     botón "↔ Pasar las N hojas a CL". Se puede deshacer. En
      "Archivos subidos", dos archivos con el mismo nombre se distinguen por sus
      páginas.
    - Dos hojas del mismo estudiante en un ensayo: el aviso dice cuál es la otra hoja

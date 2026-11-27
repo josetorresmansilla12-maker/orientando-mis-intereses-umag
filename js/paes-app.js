@@ -273,6 +273,7 @@
     "comparar-suya": "Elegir cuál de dos hojas es del estudiante",
     "hoja-a-prueba": "Pasar una hoja a otra prueba",
     "comparar-esta-mandar": "Dejar una hoja y pasar la otra a otra prueba",
+    "otra-prueba-todas": "Pasar a otra prueba las hojas que venían mezcladas",
     asignar: "Asignar estudiante a una hoja",
     sugerencia: "Asignar estudiante a una hoja",
     "mover-hoja": "Pasar hoja a otro curso",
@@ -2018,7 +2019,7 @@
         <span class="ayuda" style="margin:0;">o arrastra los archivos hasta aquí</span>
       </div>
       <div id="paes-progreso">${htmlProgreso()}</div>
-      ${est.lectura ? "" : htmlResumenLectura()}
+      ${est.lectura ? "" : htmlResumenLectura() + htmlAvisoOtraPrueba(e)}
     </div>`;
     // archivos subidos
     const grupos = new Map();
@@ -2328,7 +2329,13 @@
           if (leida.legible) {
             // misma hoja escaneada dos veces: mismo RUT y mismas respuestas
             const id = hoja.lectura.id;
-            const gemela = id && !id.includes("?") ? delEnsayo.find((h) => vigente(h) && h.lectura.id === id && h.lectura.resp.slice(0, nPreg) === hoja.lectura.resp.slice(0, nPreg)) : null;
+            // (aunque venga en otro archivo: basta el mismo RUT y el 90 % o más de respuestas iguales)
+            const casiIguales = (a, b) => {
+              let iguales = 0;
+              for (let i = 0; i < nPreg; i++) if ((a[i] || "-") === (b[i] || "-")) iguales++;
+              return nPreg > 0 && iguales >= nPreg * 0.9;
+            };
+            const gemela = id && !id.includes("?") ? delEnsayo.find((h) => vigente(h) && h.lectura.id === id && casiIguales(h.lectura.resp || "", hoja.lectura.resp || "")) : null;
             if (gemela) {
               hoja.repetidaDe = gemela.id;
               resumen.repetidas++;
@@ -2487,6 +2494,29 @@
             </div></div>`;
         })
         .join("")}</div></div>`;
+  }
+
+  // ¿hay hojas de este ensayo que parecen de otra prueba? Un aviso con un botón para pasarlas
+  // todas juntas (por ejemplo, las hojas de CL que venían dentro del PDF de M1)
+  function htmlAvisoOtraPrueba(e) {
+    const porClv = new Map();
+    hojasDelEnsayo(e.id).forEach((h) => {
+      const otra = pruebaQueCalzaHoja(e, h);
+      if (!otra) return;
+      if (!porClv.has(otra.clavijero.id)) porClv.set(otra.clavijero.id, { k: otra.clavijero, hojas: [] });
+      porClv.get(otra.clavijero.id).hojas.push(h);
+    });
+    if (!porClv.size) return "";
+    const c = est.cursos.find((x) => x.id === e.cursoId);
+    return Array.from(porClv.values())
+      .map(({ k, hojas }) => {
+        const dest = c && ensayosDelCurso(c.id).find((x) => clavePrueba(x) === clavePrueba(k));
+        const destino = dest ? `e:${dest.id}` : `k:${k.id}`;
+        const numeros = hojas.map((h) => hojasDelEnsayo(e.id).indexOf(h) + 1).join(", ");
+        return `<div class="paes-alerta-lista paes-aviso-otra-prueba"><p>⚠ <b>${plural(hojas.length, "hoja de este ensayo parece", "hojas de este ensayo parecen")} de ${esc(nombrePruebaDe(k))}</b> (hoja${hojas.length === 1 ? "" : "s"} ${esc(numeros)}): sus respuestas calzan mucho mejor con la clave «${esc(k.nombre)}». Probablemente venían mezcladas en el PDF.</p>
+          <button type="button" class="secundario chico paes-mandar ${clasePrueba(k)}" data-accion="otra-prueba-todas" data-ids="${esc(hojas.map((h) => h.id).join(","))}" data-destino="${esc(destino)}">↔ Pasar ${hojas.length === 1 ? "la hoja" : `las ${hojas.length} hojas`} a ${esc(siglaPrueba(k))}</button></div>`;
+      })
+      .join("");
   }
 
   // «↔ Mandar a CL» / «↔ Mandar a M1»: pasa la hoja a otra prueba del mismo curso (a su ensayo
@@ -2671,6 +2701,7 @@
     const otros = otrosEstudiantes(c.id);
     let h = htmlFichaEnsayo(c, e, "revision") + `<div class="tarjeta">
       <h2>Revisión de las hojas</h2>
+      ${htmlAvisoOtraPrueba(e)}
       <p class="ayuda">La app ya leyó, vinculó y corrigió. Aquí decides solo lo que quedó en duda: a quién corresponde una hoja, si se cuenta o no. Lo pendiente está en amarillo; cuando lo resuelvas, márcalo como revisado.</p>
       <div class="paes-cuenta">
         <span class="paes-chip">${plural(cuenta.total, "hoja", "hojas")}</span>
@@ -2699,9 +2730,30 @@
     return h;
   }
 
-  async function asignarHoja(hojaId, estudianteId, modo) {
+  async function asignarHoja(hojaId, estudianteId, modo, confirmado) {
     const h = est.hojas.find((x) => x.id === hojaId);
     if (!h) return;
+    if (estudianteId && !confirmado && modo !== "exacta") {
+      const aviso = otroDuenoDelRut(h, estudianteId);
+      if (aviso) {
+        const titulo = "⚠ ¿Seguro que la hoja es de este estudiante?";
+        const texto = `El RUT marcado en la hoja (<b>${esc(aviso.rut)}</b>) ${aviso.exacto ? "es el de" : "se parece mucho al de"} <b>${esc(L.nombreCompletoPaes(aviso.otro))}</b> (${esc(L.formatearRutPaes(aviso.otro.rut))}), no al de <b>${esc(L.nombreCompletoPaes(aviso.elegido))}</b> (${esc(L.formatearRutPaes(aviso.elegido.rut) || "sin RUT")}). Mira el nombre escrito a mano antes de decidir.`;
+        if (typeof elegirOpcion === "function") {
+          elegirOpcion({
+            titulo,
+            texto,
+            textoCancelar: "Cancelar",
+            opciones: [
+              { texto: `Sí, es de ${L.nombreCompletoPaes(aviso.elegido)}`, clase: "secundario", accion: () => asignarHoja(hojaId, estudianteId, modo, true) },
+              { texto: `Asignarla a ${L.nombreCompletoPaes(aviso.otro)}`, accion: () => asignarHoja(hojaId, aviso.otro.id, "manual", true) },
+            ],
+          });
+          pintar(); // el selector vuelve a mostrar lo que había hasta decidir
+          return;
+        }
+        if (!global.confirm(`El RUT marcado (${aviso.rut}) es de ${L.nombreCompletoPaes(aviso.otro)}. ¿Asignarla igual a ${L.nombreCompletoPaes(aviso.elegido)}?`)) return pintar();
+      }
+    }
     const antes = h.estudianteId;
     estudianteId = idLocal(cursoActual(), estudianteId);
     if ((antes || null) === (estudianteId || null)) return;
@@ -2717,6 +2769,28 @@
     auditar(h.ensayoId, h.id, "estudiante asignado", nombre(antes), nombre(estudianteId));
     pintar();
     toast(estudianteId ? "Hoja asignada" : "La hoja quedó sin identificar");
+  }
+
+  // ¿el RUT marcado en la hoja es (o se parece a un dígito) el de OTRO estudiante de la lista,
+  // y no el del elegido? Devuelve { otro, elegido, rut, exacto } o null.
+  function otroDuenoDelRut(h, estudianteId) {
+    const c = cursoActual();
+    const id = h.lectura && h.lectura.id;
+    if (!c || !id || L.estadoDelId(id) === "vacio") return null;
+    const opciones = gruposParaAsignar(c).reduce((a, g) => a.concat(g.estudiantes), []);
+    const todos = opciones.concat(c.estudiantes.filter((s) => !opciones.some((o) => o.id === s.id)));
+    const elegido = todos.find((s) => s.id === estudianteId);
+    if (!elegido) return null;
+    const delElegido = L.digitosDudososDelRut(id, elegido.rut);
+    if (delElegido <= 1) return null;
+    let mejor = null;
+    todos.forEach((s) => {
+      if (s.id === elegido.id || !s.rut) return;
+      const d = L.digitosDudososDelRut(id, s.rut);
+      if (!mejor || d < mejor.d) mejor = { s, d };
+    });
+    if (!mejor || mejor.d > 1) return null;
+    return { otro: mejor.s, elegido, rut: L.formatearRutPaes(id) || id, exacto: mejor.d === 0 };
   }
 
   async function cambiarHoja(hojaId, cambios, campo, mensaje) {
@@ -4942,7 +5016,11 @@
       h += `<details class="tarjeta paes-colegio" data-colegio="${esc(g.colegio)}" data-texto="${esc(textoBusqueda)}" ${est.colegiosAbiertos.has(g.colegio) ? "open" : ""}>
         <summary class="paes-colegio-cab"><span class="paes-colegio-nombre">🏫 ${esc(g.colegio)}</span>
           <span class="paes-colegio-datos">${plural(g.cursos.length, "curso", "cursos")} · ${plural(nEnsayos, "ensayo", "ensayos")}</span>
-          ${pendColegio ? `<span class="paes-pendientes quieto">⚠ ${plural(pendColegio, "hoja por revisar", "hojas por revisar")}</span>` : `<span class="paes-colegio-ok">✔ sin pendientes</span>`}</summary>`;
+          ${(() => {
+            const faltan = g.cursos.map(faltaParaEntregar).filter((f) => f.conHojas);
+            const conFalta = faltan.filter((f) => f.total).length;
+            return `${pendColegio ? `<span class="paes-pendientes quieto">⚠ ${plural(pendColegio, "hoja por revisar", "hojas por revisar")}</span>` : ""}${faltan.length ? (conFalta ? `<span class="paes-semaforo naranjo quieto">🟠 ${plural(conFalta, "curso con algo pendiente", "cursos con algo pendiente")}</span>` : `<span class="paes-semaforo verde">🟢 Todos listos para entregar</span>`) : pendColegio ? "" : `<span class="paes-colegio-ok">✔ sin pendientes</span>`}`;
+          })()}</summary>`;
       h += htmlBarraAgregarPrueba(g);
       g.cursos.forEach((c) => {
         const ensayos = ensayosDelCurso(c.id);
@@ -4951,7 +5029,7 @@
         h += `<details class="paes-detalle paes-res-curso" data-curso-id="${esc(c.id)}" data-texto="${esc(textoCurso)}" ${est.cursosAbiertos.has(c.id) || g.cursos.length === 1 || est.verCurso === c.id || est.editarEn === c.id || est.otroClv === c.id || est.nuevoClvEn === c.id ? "open" : ""}><summary><b class="paes-res-nombre">${esc(etiquetaCurso(c))}</b> ${(() => {
             const n = pendientesDelCurso(c);
             return n ? `<button type="button" class="secundario paes-pendientes" data-accion="ir-revision" data-curso="${esc(c.id)}" title="Ver las hojas que faltan por revisar de este curso">⚠ ${plural(n, "hoja por revisar", "hojas por revisar")}</button>` : "";
-          })()} <span class="paes-res-meta">${esc(c.anio)} · ${c.estudiantes.length || c.disperso ? plural(c.estudiantes.length, "estudiante", "estudiantes") : `<b class="paes-sin-lista">sin lista de curso</b>`}${c.listaOficial === false ? " · lista provisoria" : ""}</span> ${pildorasDePruebas(c)}
+          })()} ${htmlSemaforoCurso(c)} <span class="paes-res-meta">${esc(c.anio)} · ${c.estudiantes.length || c.disperso ? plural(c.estudiantes.length, "estudiante", "estudiantes") : `<b class="paes-sin-lista">sin lista de curso</b>`}${c.listaOficial === false ? " · lista provisoria" : ""}</span> ${pildorasDePruebas(c)}
           <span class="paes-res-botones">${c.disperso ? "" : `<button type="button" class="${c.estudiantes.length ? "secundario " : "secundario paes-btn-lista "}chico" data-accion="res-lista" data-curso="${esc(c.id)}" title="${c.estudiantes.length ? "Ver, corregir o reemplazar la lista de este curso" : "Este curso se cargó sin lista: súbela para que las hojas se identifiquen solas por RUT"}">📋 ${c.estudiantes.length ? "Editar lista del curso" : "Subir lista del curso"}</button>`}<button type="button" class="${est.verCurso === c.id ? "" : "secundario "}chico" data-accion="res-ver-curso" data-curso="${esc(c.id)}">👁 ${est.verCurso === c.id ? "Ocultar curso" : "Ver curso"}</button><button type="button" class="${est.editarEn === c.id ? "" : "secundario "}chico" data-accion="res-editar" data-curso="${esc(c.id)}">✏️ Editar resultados</button></span>
           ${htmlClavijerosDelCurso(c)}</summary>`;
         if (est.editarEn === c.id) h += htmlEditarResultados(c);
@@ -5039,6 +5117,33 @@
         </div></div>`;
     }
     return h;
+  }
+
+  // lo que falta para que los informes de un curso queden bien: por revisar, sin identificar,
+  // estudiantes con dos hojas en un ensayo y hojas que parecen de otra prueba
+  function faltaParaEntregar(c) {
+    const r = { revisar: pendientesDelCurso(c), sinId: 0, dobles: 0, otraPrueba: 0, conHojas: false };
+    ensayosDelCurso(c.id).forEach((e) => {
+      const hojas = hojasDelEnsayo(e.id).filter(vigente);
+      if (hojas.length) r.conHojas = true;
+      r.sinId += hojas.filter((h) => !h.estudianteId).length;
+      const vistos = new Map();
+      hojas.forEach((h) => h.estudianteId && vistos.set(h.estudianteId, (vistos.get(h.estudianteId) || 0) + 1));
+      r.dobles += Array.from(vistos.values()).filter((n) => n > 1).length;
+      r.otraPrueba += hojas.filter((h) => pruebaQueCalzaHoja(e, h)).length;
+    });
+    r.total = r.revisar + r.sinId + r.dobles + r.otraPrueba;
+    return r;
+  }
+  function htmlSemaforoCurso(c) {
+    const f = faltaParaEntregar(c);
+    if (!f.conHojas) return "";
+    if (!f.total) return `<span class="paes-semaforo verde" title="Sin pendientes, sin estudiantes sin identificar, sin hojas duplicadas ni de otra prueba">🟢 Listo para entregar</span>`;
+    const partes = [];
+    if (f.sinId) partes.push(`${f.sinId} sin identificar`);
+    if (f.dobles) partes.push(`${plural(f.dobles, "estudiante", "estudiantes")} con 2 hojas`);
+    if (f.otraPrueba) partes.push(`${plural(f.otraPrueba, "hoja", "hojas")} de otra prueba`);
+    return partes.length ? `<button type="button" class="secundario paes-semaforo naranjo" data-accion="${f.sinId && !f.dobles && !f.otraPrueba ? "rev-sin-id" : "ir-revision"}" data-curso="${esc(c.id)}" title="Lo que falta para que sus informes queden bien">🟠 Falta: ${esc(partes.join(" · "))}</button>` : "";
   }
 
   // «📄 Informe CL», «📄 Informe M1»...: descarga el informe PDF de cada prueba con hojas,
@@ -6052,6 +6157,9 @@
         break;
       case "hoja-a-prueba":
         pasarHojaAPrueba(id, b.dataset.destino);
+        break;
+      case "otra-prueba-todas":
+        pasarHojaAPrueba((b.dataset.ids || "").split(",").filter(Boolean), b.dataset.destino);
         break;
       case "comparar-esta-mandar":
         pasarHojaAPrueba((b.dataset.otras || "").split(",").filter(Boolean), b.dataset.destino);
