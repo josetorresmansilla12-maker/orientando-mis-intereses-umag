@@ -843,3 +843,8 @@ details.paes-colegio > .paes-res-curso { margin-left: 16px; margin-right: 16px; 
 .paes-comparar-datos li { padding: 2px 0; }
 .paes-comparar-datos li span { display: inline-block; min-width: 92px; color: #6b6480; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; }
 .paes-hoja > .paes-comparar { margin: 10px 0 0; }
+.paes-comparar-hoja.otra-prueba { border: 2px solid #f28c28; }
+.paes-comparar-otra { margin: 8px 0 0; font-size: 13px; color: #8a4b00; background: #fde7cf; border-radius: 8px; padding: 6px 8px; }
+#modulo-paes .paes-hoja-cuerpo button.paes-res-informe, #modulo-paes .paes-comparar button.paes-res-informe { color: white; }
+#modulo-paes button.paes-res-informe.cl:not(.secundario) { background: var(--paes-cl); border-color: var(--paes-cl); }
+#modulo-paes button.paes-res-informe.m1:not(.secundario) { background: var(--paes-m1); border-color: var(--paes-m1); }

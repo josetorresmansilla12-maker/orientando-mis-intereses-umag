@@ -779,6 +779,39 @@
       return dos && quedo && deshecho && erroresApp.length === antes;
     });
 
+    await prueba("Una hoja de CL que venía en el PDF de M1 se detecta sola y «↔ Pasar esta hoja a CL» la mueve (se puede deshacer)", async () => {
+      const antes = erroresApp.length;
+      const kCL = E.clavijeros.find((k) => k.prueba === "CL");
+      const eM1 = E.ensayos.find((e) => e.prueba === "M1" && E.hojas.some((h) => h.ensayoId === e.id && h.estado !== "ilegible" && !h.excluida && !h.repetidaDe && !h.eliminada));
+      if (!kCL || !eM1) return false;
+      const h = E.hojas.find((x) => x.ensayoId === eM1.id && x.estado !== "ilegible" && !x.excluida && !x.repetidaDe && !x.eliminada);
+      const previas = JSON.stringify(h.ediciones || null);
+      h.ediciones = { respuestas: {} };
+      kCL.clave.forEach((k) => k.r && (h.ediciones.respuestas[k.n] = k.r));
+      h.revisada = false;
+      await win.PaesDB.poner("hojas", h);
+      E.cursoId = eM1.cursoId;
+      E.ensayoId = eM1.id;
+      E.soloPorRevisar = false;
+      await clic('[data-vista="curso"]');
+      await clic('[data-paso="revision"]');
+      const tarjeta = q(`#paes-hoja-${win.CSS.escape(h.id)}`);
+      const aviso = !!tarjeta && /parece de Competencia Lectora/.test(tarjeta.textContent);
+      const boton = tarjeta && tarjeta.querySelector('[data-accion="hoja-a-prueba"]');
+      if (!boton) return false;
+      await clic(boton);
+      await espera(400);
+      const destino = E.ensayos.find((x) => x.id === h.ensayoId);
+      const movida = !!destino && destino.prueba === "CL" && destino.cursoId === eM1.cursoId;
+      doc.getElementById("paes-acciones-barra").querySelector('[data-que="deshacer"]').click();
+      for (let i = 0; i < 20 && E.hojas.find((x) => x.id === h.id).ensayoId !== eM1.id; i++) await espera(150);
+      const vuelve = E.hojas.find((x) => x.id === h.id).ensayoId === eM1.id;
+      const hh = E.hojas.find((x) => x.id === h.id);
+      hh.ediciones = JSON.parse(previas);
+      await win.PaesDB.poner("hojas", hh);
+      return aviso && movida && vuelve && erroresApp.length === antes;
+    });
+
     titulo("Errores");
     await prueba("La app no registró errores durante el recorrido", () => {
       if (erroresApp.length) throw new Error(erroresApp.slice(0, 3).join(" | "));

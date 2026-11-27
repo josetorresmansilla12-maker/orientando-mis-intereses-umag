@@ -562,6 +562,14 @@ El trabajo va en cinco pasos:
      resultados del ensayo y de su informe. Pregunta si estás seguro (sin escribir
      nada) y se puede deshacer y rehacer con "↩ Deshacer" / "↪ Rehacer". El
      estudiante sigue en la lista del curso.
+   - Hoja de otra prueba dentro de un PDF (por ejemplo, una hoja de CL que venía en
+     el PDF de M1): la app compara cada hoja con las claves de las otras pruebas. Si
+     calza mucho mejor con otra, la deja "por revisar" con el aviso "Esta hoja
+     parece de Competencia Lectora…" y el botón "↔ Pasar esta hoja a CL", que la
+     mueve al ensayo de CL del mismo curso (lo crea si no existe) y la corrige con
+     su clave. También aparece en "⚖️ Comparar hojas". Se puede deshacer. En
+     "Archivos subidos", dos archivos con el mismo nombre se distinguen por sus
+     páginas.
    - Dos hojas del mismo estudiante en un ensayo: el aviso dice cuál es la otra hoja
      (archivo, página, RUT marcado y cómo quedó vinculada) y trae el botón
      "⚖️ Comparar hojas": muestra las hojas lado a lado, con el nombre escrito a

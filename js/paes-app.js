@@ -270,6 +270,7 @@
     "eliminar-hoja": "Eliminar estudiante de los resultados",
     "comparar-conservar": "Conservar una de dos hojas del mismo estudiante",
     "comparar-soltar": "Quitar el estudiante a una hoja",
+    "hoja-a-prueba": "Pasar una hoja a otra prueba",
     asignar: "Asignar estudiante a una hoja",
     sugerencia: "Asignar estudiante a una hoja",
     "mover-hoja": "Pasar hoja a otro curso",
@@ -733,7 +734,10 @@
         return;
       }
       const dup = vigente(h) && h.estudianteId && (porEstudiante.get(h.estudianteId) || []).length > 1;
-      mapa.set(h.id, L.advertenciasDeHoja(h, ensayo, { duplicadaDeEstudiante: dup ? otrasDe(h) || true : false }));
+      const lista = L.advertenciasDeHoja(h, ensayo, { duplicadaDeEstudiante: dup ? otrasDe(h) || true : false });
+      const otra = pruebaQueCalzaHoja(ensayo, h);
+      if (otra && !h.revisada) lista.push({ tipo: "otra-prueba", detalle: `Esta hoja parece de ${nombrePruebaDe(otra.clavijero)}: sus respuestas calzan un ${numero(otra.ajuste * 100)} % con la clave «${otra.clavijero.nombre}» y solo un ${numero(otra.propio * 100)} % con la de ${nombrePrueba(ensayo)}. Mira lo que escribió en «Quiz».`, clavijeroId: otra.clavijero.id });
+      mapa.set(h.id, lista);
     });
     return mapa;
   }
@@ -2033,7 +2037,9 @@
         }
         const estados = g.hojas.map((x) => estadoDeHoja(x, adv.get(x.id) || []));
         const registro = [e].concat(hermanos(e)).reduce((a, x) => a.concat(x.archivos || []), []).find((a) => a.huella === g.clave);
-        h += `<tr><td>${esc(g.nombre)}</td><td class="num">${g.hojas.length}</td><td class="num">${estados.filter((s) => s === "ok").length}</td>
+        const mismoNombre = Array.from(grupos.values()).filter((o) => o.nombre === g.nombre).length > 1;
+        const pags = g.hojas.map((x) => x.pagina).filter((n) => n != null);
+        h += `<tr><td>${esc(g.nombre)}${mismoNombre ? ` <span class="paes-chip naranjo" title="Hay otro archivo subido con el mismo nombre en esta prueba">mismo nombre que otro · págs. ${Math.min(...pags)}–${Math.max(...pags)}</span>` : ""}</td><td class="num">${g.hojas.length}</td><td class="num">${estados.filter((s) => s === "ok").length}</td>
           <td class="num">${estados.filter((s) => s === "revisar" || s === "ilegible").length || "—"}</td>
           <td>${registro ? esc(PaesExcel.fechaCorta(registro.fecha)) : "incompleto"}</td>
           <td class="acciones"><button type="button" class="${est.moverArchivo === g.clave ? "" : "secundario "}chico" data-accion="mover-archivo" data-clave="${esc(g.clave)}" ${est.lectura ? "disabled" : ""}>↔ Cambiar de prueba</button>
@@ -2128,6 +2134,52 @@
       if (a != null && (!mejor || a > mejor.ajuste)) mejor = { clavijero: k, ajuste: a };
     });
     return mejor && mejor.ajuste - propio >= 0.12 && propio <= 0.36 ? Object.assign(mejor, { propio }) : null;
+  }
+
+  // ¿UNA hoja calza mucho mejor con la clave de otra prueba? (por ejemplo, una hoja de CL que
+  // venía dentro del PDF de M1). Con una sola hoja se exige más diferencia que con un archivo.
+  function pruebaQueCalzaHoja(e, h) {
+    if (!vigente(h) || !e.clave.some((k) => k.r)) return null;
+    const propio = ajusteConClave([h], e.clave);
+    if (propio == null) return null;
+    let mejor = null;
+    est.clavijeros.forEach((k) => {
+      if (k.id === e.clavijeroId || (k.prueba === e.prueba && (k.pruebaNombre || "") === (e.pruebaNombre || ""))) return;
+      const a = ajusteConClave([h], k.clave);
+      if (a != null && (!mejor || a > mejor.ajuste)) mejor = { clavijero: k, ajuste: a };
+    });
+    return mejor && mejor.ajuste >= 0.45 && mejor.ajuste - propio >= 0.22 ? Object.assign(mejor, { propio }) : null;
+  }
+
+  // pasa UNA hoja a otra prueba del mismo curso: valor «e:<ensayo>» o «k:<clavijero>» (crea el
+  // ensayo si el curso aún no tiene esa prueba). Se puede deshacer.
+  async function pasarHojaAPrueba(hojaId, valor) {
+    const h = est.hojas.find((x) => x.id === hojaId);
+    const e = h ? est.ensayos.find((x) => x.id === h.ensayoId) : null;
+    const c = e ? est.cursos.find((x) => x.id === e.cursoId) : null;
+    if (!h || !e || !c || !valor || est.lectura) return;
+    let d = valor.startsWith("e:") ? est.ensayos.find((x) => x.id === valor.slice(2) && x.cursoId === c.id) : null;
+    if (!d && valor.startsWith("k:")) {
+      const k = est.clavijeros.find((x) => x.id === valor.slice(2));
+      if (k) d = ensayosDelCurso(c.id).find((x) => x.clavijeroId === k.id) || (await crearEnsayoCon(c, { prueba: k.prueba, pruebaNombre: k.pruebaNombre, fecha: e.fecha, clavijero: k }));
+    }
+    if (!d || d.id === e.id) return;
+    const pares = [];
+    h.ensayoId = d.id;
+    h.repetidaDe = null;
+    pares.push(["hojas", h]);
+    const img = await PaesDB.obtener("imagenes", h.id);
+    if (img) pares.push(["imagenes", Object.assign(img, { ensayoId: d.id })]);
+    est.hojas.filter((x) => x.ensayoId === e.id && x.repetidaDe === h.id).forEach((x) => {
+      x.repetidaDe = null;
+      pares.push(["hojas", x]);
+    });
+    await PaesDB.ponerVarios(pares);
+    auditar(e.id, h.id, "hoja pasada a otra prueba", nombrePrueba(e), nombrePrueba(d));
+    est.comparar = null;
+    pintar();
+    const kd = clavijeroDe(d);
+    toast(`La hoja pasó a ${nombrePrueba(d)}${kd ? ` y se corrige con «${kd.nombre}»` : ""} · puedes deshacerlo con «↩ Deshacer»`);
   }
 
   // pasa las hojas de un archivo a otra prueba del mismo curso («e:<ensayo>» o «k:<clavijero>»)
@@ -2406,7 +2458,8 @@
           const cor = vigente(y) && hayClave ? L.corregirHoja(y, e.clave) : null;
           const p = cor ? L.puntajeDe(cor.correctas, e.tabla) : null;
           const rut = y.lectura && y.lectura.id ? L.formatearRutPaes(y.lectura.id) || y.lectura.id : "en blanco";
-          return `<div class="paes-comparar-hoja${y.id === x.id ? " esta" : ""}">
+          const otra = pruebaQueCalzaHoja(e, y);
+          return `<div class="paes-comparar-hoja${y.id === x.id ? " esta" : ""}${otra ? " otra-prueba" : ""}">
             <div class="paes-comparar-titulo"><b>Hoja ${hojas.indexOf(y) + 1}</b>${y.id === x.id ? ` <span class="paes-chip azul">esta tarjeta</span>` : ""}</div>
             <button type="button" class="paes-recorte" data-accion="ver-hoja" data-id="${esc(y.id)}" title="Ver la hoja completa"><img data-imagen="${esc(y.id)}:nombre" alt="Nombre escrito a mano en la hoja" /></button>
             <ul class="paes-comparar-datos">
@@ -2415,6 +2468,8 @@
               <li><span>Vinculada</span> ${como(y)}</li>
               ${cor ? `<li><span>Resultado</span> ${cor.correctas} correctas · ${p == null ? "sin tabla" : p + " puntos"}</li>` : ""}
             </ul>
+            ${otra ? `<p class="paes-comparar-otra">⚠ Parece de <b>${esc(nombrePruebaDe(otra.clavijero))}</b>: calza un ${numero(otra.ajuste * 100)} % con su clave y un ${numero(otra.propio * 100)} % con la de ${esc(siglaPrueba(e))}.</p>
+              <div class="acciones-form" style="margin-top:4px;"><button type="button" class="chico paes-res-informe ${clasePrueba(otra.clavijero)}" data-accion="hoja-a-prueba" data-id="${esc(y.id)}" data-destino="k:${esc(otra.clavijero.id)}">↔ Pasar esta hoja a ${esc(siglaPrueba(otra.clavijero))}</button></div>` : ""}
             <div class="acciones-form" style="margin-top:6px;">
               <button type="button" class="chico" data-accion="comparar-conservar" data-id="${esc(y.id)}" data-otras="${esc(otras(y))}">✓ Conservar esta</button>
               <button type="button" class="secundario chico" data-accion="comparar-soltar" data-id="${esc(y.id)}" title="Le quita el estudiante a esta hoja: queda sin identificar para asignarla a quien corresponda">No es suya: quitarle el estudiante</button>
@@ -2509,6 +2564,11 @@
         }
       }
       if (avisos.length) h += `<ul class="paes-advertencias">${avisos.map((a) => `<li>${esc(a.detalle)}</li>`).join("")}</ul>`;
+      const otraPrueba = avisos.find((a) => a.tipo === "otra-prueba");
+      if (otraPrueba) {
+        const k = est.clavijeros.find((y) => y.id === otraPrueba.clavijeroId);
+        if (k) h += `<div class="acciones-form" style="margin:6px 0;"><button type="button" class="chico paes-res-informe ${clasePrueba(k)}" data-accion="hoja-a-prueba" data-id="${esc(x.id)}" data-destino="k:${esc(k.id)}">↔ Pasar esta hoja a ${esc(siglaPrueba(k))}</button></div>`;
+      }
       const dosHojas = avisos.some((a) => a.tipo === "dos-hojas");
       if (dosHojas) h += `<div class="acciones-form" style="margin:6px 0;"><button type="button" class="chico paes-btn-comparar${est.comparar === x.id ? " activo" : ""}" data-accion="comparar" data-id="${esc(x.id)}">⚖️ ${est.comparar === x.id ? "Cerrar la comparación" : "Comparar hojas"}</button></div>`;
       const panelComparar = dosHojas && est.comparar === x.id ? htmlCompararHojas(x, e, hojas, porId, hayClave) : "";
@@ -5945,6 +6005,9 @@
         break;
       case "eliminar-hoja":
         eliminarHoja(id);
+        break;
+      case "hoja-a-prueba":
+        pasarHojaAPrueba(id, b.dataset.destino);
         break;
       case "comparar":
         est.comparar = est.comparar === id ? null : id;
