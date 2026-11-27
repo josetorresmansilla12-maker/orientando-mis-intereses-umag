@@ -574,9 +574,12 @@ El trabajo va en cinco pasos:
      (archivo, página, RUT marcado y cómo quedó vinculada) y trae el botón
      "⚖️ Comparar hojas": muestra las hojas lado a lado, con el nombre escrito a
      mano, el RUT, el resultado y cuántas respuestas coinciden. Si coinciden casi
-     todas, es la misma hoja subida dos veces; si no, son de dos estudiantes. En
-     cada una: "✓ Conservar esta" (elimina las otras), "No es suya: quitarle el
-     estudiante" (queda sin identificar) o "👁 Ver completa". Todo se puede deshacer.
+     todas, es la misma hoja subida dos veces: "✓ Conservar esta (eliminar la
+     copia)". Si no, son de dos estudiantes: "✓ Esta es la suya" deja la otra sin
+     identificar (no la elimina). También: "No es suya: quitarle el estudiante",
+     "👁 Ver completa" y "↔ Mandar a CL" / "↔ Mandar a M1" (con su color; la que la
+     app sugiere tiene un borde naranjo), que pasa la hoja a esa prueba del mismo
+     curso y la corrige con su clave. Todo se puede deshacer.
    - "👤 Revisar alumnos sin identificar (N)" (pestaña "🔎 Revisión"): reúne todas
      las hojas que cuentan pero no tienen estudiante (en el informe salen "sin
      identificar"), separadas por colegio, curso y prueba. En cada una buscas al

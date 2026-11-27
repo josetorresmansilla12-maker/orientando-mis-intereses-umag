@@ -750,7 +750,7 @@
       return pide && fuera && vuelve && rehecho && erroresApp.length === antes;
     });
 
-    await prueba("«⚖️ Comparar hojas» muestra las dos hojas del estudiante y «Conservar esta» elimina la otra (se puede deshacer)", async () => {
+    await prueba("«⚖️ Comparar hojas»: con hojas de dos estudiantes, «Esta es la suya» deja la otra sin identificar, sin eliminarla (se puede deshacer)", async () => {
       const antes = erroresApp.length;
       const ok = (h) => h.estado !== "ilegible" && !h.excluida && !h.repetidaDe && !h.eliminada && h.estudianteId;
       const e = E.ensayos.find((x) => E.hojas.filter((h) => h.ensayoId === x.id && ok(h)).length >= 2);
@@ -767,12 +767,14 @@
       await clic(`#paes-hoja-${win.CSS.escape(a.id)} [data-accion="comparar"]`);
       const panel = q(`#paes-hoja-${win.CSS.escape(a.id)} .paes-comparar`);
       const dos = !!panel && panel.querySelectorAll(".paes-comparar-hoja").length >= 2 && /Respuestas iguales en/.test(panel.textContent);
-      await clic(panel.querySelector(`[data-accion="comparar-conservar"][data-id="${a.id}"]`));
+      const suya = panel.querySelector(`[data-accion="comparar-suya"][data-id="${a.id}"]`);
+      if (!suya || panel.querySelector('[data-accion="comparar-conservar"]')) return false;
+      await clic(suya);
       await espera(400);
-      const quedo = !a.eliminada && b.eliminada === true;
+      const quedo = a.estudianteId && !a.eliminada && !b.eliminada && !b.estudianteId;
       doc.getElementById("paes-acciones-barra").querySelector('[data-que="deshacer"]').click();
-      for (let i = 0; i < 20 && E.hojas.find((h) => h.id === b.id).eliminada; i++) await espera(150);
-      const deshecho = !E.hojas.find((h) => h.id === b.id).eliminada;
+      for (let i = 0; i < 20 && !E.hojas.find((h) => h.id === b.id).estudianteId; i++) await espera(150);
+      const deshecho = E.hojas.find((h) => h.id === b.id).estudianteId === a.estudianteId;
       const bb = E.hojas.find((h) => h.id === b.id);
       bb.estudianteId = deB;
       await win.PaesDB.poner("hojas", bb);

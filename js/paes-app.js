@@ -270,6 +270,7 @@
     "eliminar-hoja": "Eliminar estudiante de los resultados",
     "comparar-conservar": "Conservar una de dos hojas del mismo estudiante",
     "comparar-soltar": "Quitar el estudiante a una hoja",
+    "comparar-suya": "Elegir cuál de dos hojas es del estudiante",
     "hoja-a-prueba": "Pasar una hoja a otra prueba",
     asignar: "Asignar estudiante a una hoja",
     sugerencia: "Asignar estudiante a una hoja",
@@ -2452,7 +2453,7 @@
     return `<div class="paes-comparar">
       <div class="paes-comparar-cab"><b>⚖️ Hojas de ${esc(alumno ? L.nombreCompletoPaes(alumno) : "este estudiante")} en este ensayo</b>
         <span class="paes-chip ${misma ? "naranjo" : "gris"}">${suyas.length === 2 ? `Respuestas iguales en ${minIgual} de ${preguntas.length}` : `Respuestas iguales en al menos ${minIgual} de ${preguntas.length}`}</span></div>
-      <p class="ayuda" style="margin:4px 0 10px;">${misma ? "Las respuestas son casi idénticas: <b>es la misma hoja subida dos veces</b>. Conserva una (cualquiera) y la otra se elimina." : "Las respuestas son distintas: <b>son hojas de dos estudiantes</b>. Mira el nombre escrito a mano: conserva la de este estudiante y a la otra quítale el estudiante (queda sin identificar para asignarla a quien corresponda)."} Todo se puede deshacer con «↩ Deshacer».</p>
+      <p class="ayuda" style="margin:4px 0 10px;">${misma ? "Las respuestas son casi idénticas: <b>es la misma hoja subida dos veces</b>. «Conservar esta» deja una y <b>elimina la otra</b> (es una copia)." : `Las respuestas son distintas: <b>son hojas de dos estudiantes</b>. Mira el nombre escrito a mano y pulsa «Esta es la suya» en la de ${esc(alumno ? L.nombreCompletoPaes(alumno) : "este estudiante")}: <b>la otra no se elimina</b>, queda sin identificar para asignarla a quien corresponda.`} Si una hoja es de otra prueba, usa «↔ Pasar esta hoja a…». Todo se puede deshacer con «↩ Deshacer».</p>
       <div class="paes-comparar-grilla">${suyas
         .map((y) => {
           const cor = vigente(y) && hayClave ? L.corregirHoja(y, e.clave) : null;
@@ -2468,15 +2469,34 @@
               <li><span>Vinculada</span> ${como(y)}</li>
               ${cor ? `<li><span>Resultado</span> ${cor.correctas} correctas · ${p == null ? "sin tabla" : p + " puntos"}</li>` : ""}
             </ul>
-            ${otra ? `<p class="paes-comparar-otra">⚠ Parece de <b>${esc(nombrePruebaDe(otra.clavijero))}</b>: calza un ${numero(otra.ajuste * 100)} % con su clave y un ${numero(otra.propio * 100)} % con la de ${esc(siglaPrueba(e))}.</p>
-              <div class="acciones-form" style="margin-top:4px;"><button type="button" class="chico paes-res-informe ${clasePrueba(otra.clavijero)}" data-accion="hoja-a-prueba" data-id="${esc(y.id)}" data-destino="k:${esc(otra.clavijero.id)}">↔ Pasar esta hoja a ${esc(siglaPrueba(otra.clavijero))}</button></div>` : ""}
+            ${otra ? `<p class="paes-comparar-otra">⚠ Parece de <b>${esc(nombrePruebaDe(otra.clavijero))}</b>: calza un ${numero(otra.ajuste * 100)} % con su clave y un ${numero(otra.propio * 100)} % con la de ${esc(siglaPrueba(e))}.</p>` : ""}
+            ${botonesMandarAPrueba(y, e, otra)}
             <div class="acciones-form" style="margin-top:6px;">
-              <button type="button" class="chico" data-accion="comparar-conservar" data-id="${esc(y.id)}" data-otras="${esc(otras(y))}">✓ Conservar esta</button>
+              ${misma
+                ? `<button type="button" class="chico" data-accion="comparar-conservar" data-id="${esc(y.id)}" data-otras="${esc(otras(y))}" title="Deja esta hoja y elimina la otra, que es una copia">✓ Conservar esta (eliminar la copia)</button>`
+                : `<button type="button" class="chico" data-accion="comparar-suya" data-id="${esc(y.id)}" data-otras="${esc(otras(y))}" title="Esta hoja queda con el estudiante; la otra queda sin identificar (no se elimina)">✓ Esta es la suya</button>`}
               <button type="button" class="secundario chico" data-accion="comparar-soltar" data-id="${esc(y.id)}" title="Le quita el estudiante a esta hoja: queda sin identificar para asignarla a quien corresponda">No es suya: quitarle el estudiante</button>
               <button type="button" class="secundario chico" data-accion="ver-hoja" data-id="${esc(y.id)}">👁 Ver completa</button>
             </div></div>`;
         })
         .join("")}</div></div>`;
+  }
+
+  // «↔ Mandar a CL» / «↔ Mandar a M1»: pasa la hoja a otra prueba del mismo curso (a su ensayo
+  // de esa prueba, o lo crea con el clavijero más reciente). otra: la prueba que la app detecta.
+  function botonesMandarAPrueba(y, e, otra) {
+    const c = est.cursos.find((x) => x.id === e.cursoId);
+    if (!c) return "";
+    const botones = pruebasConClavijero()
+      .filter((p) => p.clave !== clavePrueba(e))
+      .map((p) => {
+        const destinoEnsayo = ensayosDelCurso(c.id).find((x) => clavePrueba(x) === p.clave);
+        const destino = destinoEnsayo ? `e:${destinoEnsayo.id}` : `k:${p.clavijero.id}`;
+        const sugerida = otra && clavePrueba(otra.clavijero) === p.clave;
+        return `<button type="button" class="secundario chico paes-mandar ${p.clase}${sugerida ? " sugerida" : ""}" data-accion="hoja-a-prueba" data-id="${esc(y.id)}" data-destino="${esc(destino)}" title="Pasa esta hoja a ${esc(p.nombre)} de ${esc(nombreCurso(c))} y la corrige con su clave">↔ Mandar a ${esc(p.sigla)}</button>`;
+      })
+      .join("");
+    return botones ? `<div class="acciones-form paes-mandar-fila">${botones}</div>` : "";
   }
 
   // filtro (opcional): solo las hojas que cumplen (por ejemplo, las sin identificar)
@@ -2567,10 +2587,10 @@
       const otraPrueba = avisos.find((a) => a.tipo === "otra-prueba");
       if (otraPrueba) {
         const k = est.clavijeros.find((y) => y.id === otraPrueba.clavijeroId);
-        if (k) h += `<div class="acciones-form" style="margin:6px 0;"><button type="button" class="chico paes-res-informe ${clasePrueba(k)}" data-accion="hoja-a-prueba" data-id="${esc(x.id)}" data-destino="k:${esc(k.id)}">↔ Pasar esta hoja a ${esc(siglaPrueba(k))}</button></div>`;
+        if (k) h += `<div class="acciones-form" style="margin:6px 0;"><button type="button" class="secundario chico paes-res-informe ${clasePrueba(k)}" data-accion="hoja-a-prueba" data-id="${esc(x.id)}" data-destino="k:${esc(k.id)}">↔ Pasar esta hoja a ${esc(siglaPrueba(k))}</button></div>`;
       }
       const dosHojas = avisos.some((a) => a.tipo === "dos-hojas");
-      if (dosHojas) h += `<div class="acciones-form" style="margin:6px 0;"><button type="button" class="chico paes-btn-comparar${est.comparar === x.id ? " activo" : ""}" data-accion="comparar" data-id="${esc(x.id)}">⚖️ ${est.comparar === x.id ? "Cerrar la comparación" : "Comparar hojas"}</button></div>`;
+      if (dosHojas) h += `<div class="acciones-form" style="margin:6px 0;"><button type="button" class="secundario chico paes-btn-comparar${est.comparar === x.id ? " activo" : ""}" data-accion="comparar" data-id="${esc(x.id)}">⚖️ ${est.comparar === x.id ? "Cerrar la comparación" : "Comparar hojas"}</button></div>`;
       const panelComparar = dosHojas && est.comparar === x.id ? htmlCompararHojas(x, e, hojas, porId, hayClave) : "";
       h += `<div class="paes-hoja-acciones">
             <button type="button" class="secundario chico" data-accion="ver-hoja" data-id="${esc(x.id)}">${x.estado === "ilegible" ? "👁 Ver la hoja" : "👁 Ver y corregir respuestas"}</button>`;
@@ -4319,7 +4339,7 @@
             </div>
             ${listo
               ? `<div class="paes-sinid-listo">✔ Se identificaron todos los estudiantes de este ensayo. ¿Quieres descargar el informe actualizado?
-                  <button type="button" class="chico paes-res-informe ${clasePrueba(e)}" data-accion="res-informe-prueba" data-curso="${esc(c.id)}" data-ensayo="${esc(e.id)}" ${est.generando ? "disabled" : ""}>📄 Descargar el informe actualizado de ${esc(siglaPrueba(e))}</button>
+                  <button type="button" class="secundario chico paes-res-informe ${clasePrueba(e)}" data-accion="res-informe-prueba" data-curso="${esc(c.id)}" data-ensayo="${esc(e.id)}" ${est.generando ? "disabled" : ""}>📄 Descargar el informe actualizado de ${esc(siglaPrueba(e))}</button>
                   <button type="button" class="secundario chico" data-accion="sinid-listo" data-ensayo="${esc(e.id)}" title="Quitar esta franja de la página">Listo, ocultar</button></div>`
               : htmlHojasRevision(c, e, false, sinIdentificar).html}
           </section>`;
@@ -6022,6 +6042,21 @@
           est.comparar = null;
           pintar();
           toast(`Se conservó esa hoja; ${otras.length === 1 ? "la otra se eliminó" : `las otras ${otras.length} se eliminaron`} · puedes deshacerlo con «↩ Deshacer»`);
+        });
+        break;
+      }
+      case "comparar-suya": {
+        // hojas de dos estudiantes: esta queda con él y las otras quedan sin identificar (no se eliminan)
+        const otras = (b.dataset.otras || "").split(",").map((k) => est.hojas.find((y) => y.id === k)).filter(Boolean);
+        if (!otras.length) break;
+        otras.forEach((y) => {
+          y.estudianteId = null;
+          y.asignacion = null;
+        });
+        PaesDB.ponerVarios(otras.map((y) => ["hojas", y])).then(() => {
+          est.comparar = null;
+          pintar();
+          toast(`${otras.length === 1 ? "La otra hoja quedó" : `Las otras ${otras.length} hojas quedaron`} sin identificar: asígnala${otras.length === 1 ? "" : "s"} a quien corresponda · puedes deshacerlo con «↩ Deshacer»`);
         });
         break;
       }

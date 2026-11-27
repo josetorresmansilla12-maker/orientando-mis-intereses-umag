@@ -831,8 +831,8 @@ details.paes-colegio > .paes-res-curso { margin-left: 16px; margin-right: 16px; 
 .paes-clave-grilla.con-piloto { column-width: 158px; }
 .paes-clave-grilla > .paes-clave-celda { break-inside: avoid; margin-bottom: 6px; }
 /* «⚖️ Comparar hojas» del mismo estudiante */
-#modulo-paes button.paes-btn-comparar { background: #5b4a86; border-color: #5b4a86; color: white; }
-#modulo-paes button.paes-btn-comparar.activo { background: #3d3160; }
+#modulo-paes button.secundario.paes-btn-comparar { background: #5b4a86; border-color: #5b4a86; color: white; }
+#modulo-paes button.secundario.paes-btn-comparar.activo { background: #3d3160; }
 .paes-comparar { border: 2px solid #5b4a86; border-radius: 12px; padding: 12px 14px; margin: 8px 0 10px; background: #f7f4fd; }
 .paes-comparar-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .paes-comparar-grilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
@@ -848,3 +848,11 @@ details.paes-colegio > .paes-res-curso { margin-left: 16px; margin-right: 16px; 
 #modulo-paes .paes-hoja-cuerpo button.paes-res-informe, #modulo-paes .paes-comparar button.paes-res-informe { color: white; }
 #modulo-paes button.paes-res-informe.cl:not(.secundario) { background: var(--paes-cl); border-color: var(--paes-cl); }
 #modulo-paes button.paes-res-informe.m1:not(.secundario) { background: var(--paes-m1); border-color: var(--paes-m1); }
+/* «↔ Mandar a CL / M1» en la comparación de hojas */
+.paes-mandar-fila { margin-top: 6px; }
+#modulo-paes button.secundario.paes-mandar { color: white; font-weight: 700; }
+#modulo-paes button.secundario.paes-mandar.cl { background: var(--paes-cl); border-color: var(--paes-cl); }
+#modulo-paes button.secundario.paes-mandar.m1 { background: var(--paes-m1); border-color: var(--paes-m1); }
+#modulo-paes button.secundario.paes-mandar.otra { background: #5b4a86; border-color: #5b4a86; }
+#modulo-paes button.secundario.paes-mandar.sugerida { box-shadow: 0 0 0 3px #f28c28; }
+#modulo-paes button.secundario.paes-mandar:hover { filter: brightness(0.92); }
